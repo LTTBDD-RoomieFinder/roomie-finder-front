@@ -18,6 +18,7 @@ import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { useThemeLogo } from "@/hooks/use-theme-logo";
+import { authService } from "@/services/auth";
 
 export default function Register() {
   const colorScheme = useColorScheme() ?? "light";
@@ -33,10 +34,41 @@ export default function Register() {
     return base;
   }, [colorScheme]);
 
-  const [fullName, setFullName] = useState("");
+  const [userName, setUserName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleRegister = async () => {
+    if (loading) return;
+
+    if (!userName || !email || !password || !confirmPassword) {
+      alert("Please fill in all fields.");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      alert("Passwords do not match.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await authService.register({
+        username: userName,
+        email,
+        password,
+      });
+      console.log("Registration successful:", response);
+      alert("Registration successful!");
+    } catch (error) {
+      console.error("Registration failed:", error);
+      alert("Registration failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <ThemedView style={styles.root}>
@@ -60,12 +92,12 @@ export default function Register() {
 
           <View style={styles.form}>
             <View style={styles.field}>
-              <ThemedText type="defaultSemiBold">Full Name</ThemedText>
+              <ThemedText type="defaultSemiBold">Username</ThemedText>
               <TextInput
-                value={fullName}
-                onChangeText={setFullName}
+                value={userName}
+                onChangeText={setUserName}
                 autoCapitalize="words"
-                placeholder="Nguyễn Văn A"
+                placeholder="user"
                 placeholderTextColor={placeholderTextColor}
                 style={[
                   styles.input,
@@ -115,7 +147,7 @@ export default function Register() {
 
             <Pressable
               onPress={() => {
-                // Mock UI: implement real register later
+                handleRegister();
               }}
               style={[
                 styles.primaryButton,

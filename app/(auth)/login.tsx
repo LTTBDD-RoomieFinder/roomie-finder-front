@@ -1,5 +1,5 @@
 import { Link } from "expo-router";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -14,12 +14,13 @@ import { Image } from "expo-image";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import Divider from "@/components/ui/divider";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useThemeColor } from "@/hooks/use-theme-color";
-import Divider from "@/components/ui/divider";
 import { useThemeLogo } from "@/hooks/use-theme-logo";
+import { authService } from "@/services/auth";
 
 export default function Login() {
   const colorScheme = useColorScheme() ?? "light";
@@ -35,8 +36,42 @@ export default function Login() {
     return base;
   }, [colorScheme]);
 
-  const [email, setEmail] = useState("");
+  const [userName, setUserName] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async () => {
+    if (loading) return;
+
+    if (!userName || !password) {
+      setError("Please enter both username and password.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      await authService.login({ username: userName, password });
+    } catch (error) {
+      setError("Login failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async (idToken: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      await authService.googleLogin(idToken); 
+    } catch (error) {
+      setError("Google login failed.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <ThemedView style={styles.root}>
@@ -50,24 +85,20 @@ export default function Login() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.header}>
-            <Image
-              source={logo}
-              style={styles.logo}
-              contentFit="contain"
-            />
+            <Image source={logo} style={styles.logo} contentFit="contain" />
             <ThemedText type="title">Sign In</ThemedText>
           </View>
 
           <View style={styles.form}>
             <View style={styles.field}>
-              <ThemedText type="defaultSemiBold">Email</ThemedText>
+              <ThemedText type="defaultSemiBold">Username</ThemedText>
               <TextInput
-                value={email}
-                onChangeText={setEmail}
+                value={userName}
+                onChangeText={setUserName}
                 autoCapitalize="none"
                 autoCorrect={false}
-                keyboardType="email-address"
-                placeholder="roomie@example.com"
+                keyboardType="default"
+                placeholder="user"
                 placeholderTextColor={placeholderTextColor}
                 style={[
                   styles.input,
@@ -86,6 +117,16 @@ export default function Login() {
               onChangeText={setPassword}
             />
 
+            {error && (
+              <ThemedText
+                style={{
+                  color: Colors[colorScheme].error,
+                }}
+              >
+                {error}
+              </ThemedText>
+            )}
+
             <Link href="/(auth)/forgot-password" asChild>
               <Pressable style={styles.linkRow}>
                 <ThemedText type="link">Forgot password?</ThemedText>
@@ -94,7 +135,7 @@ export default function Login() {
 
             <Pressable
               onPress={() => {
-                // Mock UI: implement real login later
+                handleLogin();
               }}
               style={[
                 styles.primaryButton,
@@ -121,7 +162,7 @@ export default function Login() {
 
             <Pressable
               onPress={() => {
-                // Mock UI: implement real social login later
+                handleGoogleLogin("mock-google-id-token"); 
               }}
               style={[
                 styles.primaryButton,
