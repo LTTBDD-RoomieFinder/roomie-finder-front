@@ -1,5 +1,5 @@
 import { Image } from "expo-image";
-import { Link } from "expo-router";
+import { Link, useRouter } from "expo-router";
 import React, { useMemo, useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -21,6 +21,7 @@ import { useThemeLogo } from "@/hooks/use-theme-logo";
 import { authService } from "@/services/auth";
 
 export default function Register() {
+  const router = useRouter();
   const colorScheme = useColorScheme() ?? "light";
 
   const logo = useThemeLogo();
@@ -61,7 +62,8 @@ export default function Register() {
         password,
       });
       console.log("Registration successful:", response);
-      alert("Registration successful!");
+      await authService.login({ username: userName, password });
+      router.replace("/(tabs)/home");
     } catch (error) {
       console.error("Registration failed:", error);
       alert("Registration failed. Please try again.");
@@ -82,11 +84,7 @@ export default function Register() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.header}>
-            <Image
-              source={logo}
-              style={styles.logo}
-              contentFit="contain"
-            />
+            <Image source={logo} style={styles.logo} contentFit="contain" />
             <ThemedText type="title">Sign Up</ThemedText>
           </View>
 

@@ -1,5 +1,5 @@
-import { Link } from "expo-router";
-import React, { useEffect, useMemo, useState } from "react";
+import { Link, useRouter } from "expo-router";
+import React, { useMemo, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -23,6 +23,7 @@ import { useThemeLogo } from "@/hooks/use-theme-logo";
 import { authService } from "@/services/auth";
 
 export default function Login() {
+  const router = useRouter();
   const colorScheme = useColorScheme() ?? "light";
 
   const logo = useThemeLogo();
@@ -53,7 +54,8 @@ export default function Login() {
       setLoading(true);
       setError(null);
       await authService.login({ username: userName, password });
-    } catch (error) {
+      router.replace("/(tabs)/home");
+    } catch {
       setError("Login failed. Please try again.");
     } finally {
       setLoading(false);
@@ -65,8 +67,9 @@ export default function Login() {
       setLoading(true);
       setError(null);
 
-      await authService.googleLogin(idToken); 
-    } catch (error) {
+      await authService.googleLogin(idToken);
+      router.replace("/(tabs)/home");
+    } catch {
       setError("Google login failed.");
     } finally {
       setLoading(false);
@@ -162,7 +165,7 @@ export default function Login() {
 
             <Pressable
               onPress={() => {
-                handleGoogleLogin("mock-google-id-token"); 
+                handleGoogleLogin("mock-google-id-token");
               }}
               style={[
                 styles.primaryButton,

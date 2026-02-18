@@ -1,9 +1,10 @@
 import { Image } from "expo-image";
-import { StyleSheet } from "react-native";
+import { Pressable, StyleSheet } from "react-native";
 
 import ParallaxScrollView from "@/components/parallax-scroll-view";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { authService } from "@/services/auth";
 
 export default function HomeScreen() {
   return (
@@ -19,6 +20,10 @@ export default function HomeScreen() {
       <ThemedView style={styles.titleContainer}>
         <ThemedText type="title">This is Home!</ThemedText>
       </ThemedView>
+      {/* Logout */}
+      <Pressable onPress={() => authService.logout()}>
+        <ThemedText type="defaultSemiBold">Logout</ThemedText>
+      </Pressable>
     </ParallaxScrollView>
   );
 }
