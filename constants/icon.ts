@@ -18,5 +18,8 @@ export const ICON_MAPPING = {
   "map.fill": "map",
   "location.fill": "location-on",
   "person.fill": "person",
+
+  "eye": "visibility",
+  "eye.slash": "visibility-off",
   magnifyingglass: "search",
 } as IconMapping;
