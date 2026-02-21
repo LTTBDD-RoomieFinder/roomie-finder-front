@@ -6,8 +6,6 @@ import { useAuthStore } from "@/stores/useAuthStore";
 export const authService = {
   async login(req: LoginRequest) {
     const { data: response } = await authApi.login(req);
-    console.log("Login successful, response data:", response);
-
     if (
       typeof response?.accessToken !== "string" ||
       typeof response?.refreshToken !== "string"
@@ -31,8 +29,6 @@ export const authService = {
 
   async googleLogin(token: string) {
     const { data } = await authApi.googleLogin(token);
-    console.log("Google login successful, response data:", data);
-
     if (
       typeof data?.accessToken === "string" &&
       typeof data?.refreshToken === "string"

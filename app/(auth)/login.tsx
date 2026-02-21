@@ -21,6 +21,8 @@ import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { useThemeLogo } from "@/hooks/use-theme-logo";
 import { authService } from "@/services/auth";
+import { AUTH_TEXT } from "@/constants/auth-text";
+import FormError from "@/components/ui/form-error";
 
 export default function Login() {
   const router = useRouter();
@@ -46,7 +48,7 @@ export default function Login() {
     if (loading) return;
 
     if (!userName || !password) {
-      setError("Please enter both username and password.");
+      setError(AUTH_TEXT.ERRORS.EMPTY_FIELDS);
       return;
     }
 
@@ -55,8 +57,8 @@ export default function Login() {
       setError(null);
       await authService.login({ username: userName, password });
       router.replace("/(tabs)/home");
-    } catch {
-      setError("Login failed. Please try again.");
+    } catch (error) {
+      setError(AUTH_TEXT.ERRORS.LOGIN_FAILED);
     } finally {
       setLoading(false);
     }
@@ -69,8 +71,8 @@ export default function Login() {
 
       await authService.googleLogin(idToken);
       router.replace("/(tabs)/home");
-    } catch {
-      setError("Google login failed.");
+    } catch (error) {
+      setError(AUTH_TEXT.ERRORS.GOOGLE_LOGIN_FAILED);
     } finally {
       setLoading(false);
     }
@@ -120,15 +122,7 @@ export default function Login() {
               onChangeText={setPassword}
             />
 
-            {error && (
-              <ThemedText
-                style={{
-                  color: Colors[colorScheme].error,
-                }}
-              >
-                {error}
-              </ThemedText>
-            )}
+            <FormError message={error} />
 
             <Link href="/(auth)/forgot-password" asChild>
               <Pressable style={styles.linkRow}>

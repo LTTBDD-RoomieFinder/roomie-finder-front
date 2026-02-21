@@ -19,6 +19,7 @@ import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { useThemeLogo } from "@/hooks/use-theme-logo";
 import { authService } from "@/services/auth";
+import { AUTH_TEXT } from "@/constants/auth-text";
 
 export default function Register() {
   const router = useRouter();
@@ -45,12 +46,12 @@ export default function Register() {
     if (loading) return;
 
     if (!userName || !email || !password || !confirmPassword) {
-      alert("Please fill in all fields.");
+      alert(AUTH_TEXT.ERRORS.ALL_FIELDS_REQUIRED);
       return;
     }
 
     if (password !== confirmPassword) {
-      alert("Passwords do not match.");
+      alert(AUTH_TEXT.ERRORS.PASSWORD_MISMATCH);
       return;
     }
 
@@ -61,12 +62,11 @@ export default function Register() {
         email,
         password,
       });
-      console.log("Registration successful:", response);
       await authService.login({ username: userName, password });
       router.replace("/(tabs)/home");
     } catch (error) {
       console.error("Registration failed:", error);
-      alert("Registration failed. Please try again.");
+      alert(AUTH_TEXT.ERRORS.REGISTRATION_FAILED);
     } finally {
       setLoading(false);
     }
