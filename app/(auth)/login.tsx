@@ -58,6 +58,7 @@ export default function Login() {
       await authService.login({ username: userName, password });
       router.replace("/(tabs)/home");
     } catch (error) {
+      console.error("Login failed:", error);
       setError(AUTH_TEXT.ERRORS.LOGIN_FAILED);
     } finally {
       setLoading(false);

@@ -1,6 +1,6 @@
 import { authApi } from "@/apis/auth";
 import { LoginRequest, RegisterRequest } from "@/data/request";
-import { setAccessToken, setRefreshToken } from "@/storage/token";
+import { clearTokens, setAccessToken, setRefreshToken } from "@/storage/token";
 import { useAuthStore } from "@/stores/useAuthStore";
 
 export const authService = {
@@ -54,7 +54,11 @@ export const authService = {
   },
 
   async logout() {
-    await useAuthStore.getState().logout();
-    await authApi.logout();
+    try {
+      await authApi.logout();
+    } finally {
+      await clearTokens();
+      useAuthStore.getState().logout();
+    }
   },
 };
