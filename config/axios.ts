@@ -7,11 +7,11 @@ import axios, {
 import qs from "qs";
 
 import {
+  clearTokens,
   getAccessToken,
   getRefreshToken,
   setAccessToken,
   setRefreshToken,
-  clearTokens,
 } from "@/storage/token";
 
 import { useAuthStore } from "@/stores/useAuthStore";
@@ -63,8 +63,7 @@ axiosRequest.interceptors.request.use(
 );
 
 axiosRequest.interceptors.response.use(
-  (response: AxiosResponse) => response,
-
+  (response: AxiosResponse) => response.data,
   async (error: AxiosError) => {
     const originalRequest = error.config as AxiosRequestConfig & {
       _retry?: boolean;
@@ -95,22 +94,19 @@ axiosRequest.interceptors.response.use(
           (async () => {
             try {
               const refreshToken = await getRefreshToken();
+              if (!refreshToken) throw new Error("No refresh token");
 
-              if (!refreshToken) {
-                throw new Error("No refresh token");
-              }
-
-              const { data } = await refreshAxios.post("/auth/refresh", {
+              const data = await refreshAxios.post("/auth/refresh", {
                 refreshToken,
               });
 
-              await setAccessToken(data.accessToken);
-              if (data.refreshToken) {
-                await setRefreshToken(data.refreshToken);
+              await setAccessToken(data.data.accessToken);
+              if (data.data.refreshToken) {
+                await setRefreshToken(data.data.refreshToken);
               }
 
-              onRefreshed(data.accessToken);
-            } catch (err) {
+              onRefreshed(data.data.accessToken);
+            } catch {
               await clearTokens();
               useAuthStore.getState().logout();
               reject("Session expired");

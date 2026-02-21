@@ -1,5 +1,6 @@
+import { Image } from "expo-image";
 import { Link, useRouter } from "expo-router";
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -10,34 +11,18 @@ import {
   View,
 } from "react-native";
 
-import { Image } from "expo-image";
-
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import Divider from "@/components/ui/divider";
-import { PasswordInput } from "@/components/ui/password-input";
-import { Colors } from "@/constants/theme";
-import { useColorScheme } from "@/hooks/use-color-scheme";
-import { useThemeColor } from "@/hooks/use-theme-color";
-import { useThemeLogo } from "@/hooks/use-theme-logo";
-import { authService } from "@/services/auth";
-import { AUTH_TEXT } from "@/constants/auth-text";
 import FormError from "@/components/ui/form-error";
+import { PasswordInput } from "@/components/ui/password-input";
+import { AUTH_TEXT } from "@/constants/auth-text";
+import { useAppTheme } from "@/hooks/use-app-theme";
+import { authService } from "@/services/auth";
 
 export default function Login() {
   const router = useRouter();
-  const colorScheme = useColorScheme() ?? "light";
-
-  const logo = useThemeLogo();
-  const textColor = useThemeColor({}, "text");
-  const backgroundColor = useThemeColor({}, "background");
-  const tintColor = useThemeColor({}, "tint");
-  const borderColor = useThemeColor({}, "icon");
-
-  const placeholderTextColor = useMemo(() => {
-    const base = Colors[colorScheme].icon;
-    return base;
-  }, [colorScheme]);
+  const { logo, color } = useAppTheme();
 
   const [userName, setUserName] = useState("");
   const [password, setPassword] = useState("");
@@ -56,31 +41,17 @@ export default function Login() {
       setLoading(true);
       setError(null);
       await authService.login({ username: userName, password });
+      alert(AUTH_TEXT.SUCCESS.LOGIN_SUCCESS);
       router.replace("/(tabs)/home");
-    } catch (error) {
-      console.error("Login failed:", error);
-      setError(AUTH_TEXT.ERRORS.LOGIN_FAILED);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleGoogleLogin = async (idToken: string) => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      await authService.googleLogin(idToken);
-      router.replace("/(tabs)/home");
-    } catch (error) {
-      setError(AUTH_TEXT.ERRORS.GOOGLE_LOGIN_FAILED);
+    } catch (error: any) {
+      setError(error);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <ThemedView style={styles.root}>
+    <ThemedView style={[styles.root, { backgroundColor: color.background }]}>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={styles.flex}
@@ -103,15 +74,14 @@ export default function Login() {
                 onChangeText={setUserName}
                 autoCapitalize="none"
                 autoCorrect={false}
-                keyboardType="default"
                 placeholder="user"
-                placeholderTextColor={placeholderTextColor}
+                placeholderTextColor={color.placeholder}
                 style={[
                   styles.input,
                   {
-                    color: textColor,
-                    borderColor,
-                    backgroundColor,
+                    color: color.text,
+                    borderColor: color.border,
+                    backgroundColor: color.background,
                   },
                 ]}
               />
@@ -132,22 +102,18 @@ export default function Login() {
             </Link>
 
             <Pressable
-              onPress={() => {
-                handleLogin();
-              }}
+              onPress={handleLogin}
               style={[
                 styles.primaryButton,
-                { backgroundColor: tintColor, borderColor: tintColor },
+                {
+                  backgroundColor: color.primary,
+                  borderColor: color.border,
+                },
               ]}
             >
               <ThemedText
-                style={{
-                  color:
-                    colorScheme === "dark"
-                      ? Colors.dark.background
-                      : Colors.light.background,
-                }}
                 type="defaultSemiBold"
+                style={{ color: color.primaryText }}
               >
                 Login
               </ThemedText>
@@ -155,28 +121,23 @@ export default function Login() {
 
             <Divider
               text="Or continue with"
-              textStyle={{ color: textColor, opacity: 0.6 }}
+              textStyle={{ color: color.text, opacity: 0.6 }}
             />
 
             <Pressable
-              onPress={() => {
-                handleGoogleLogin("mock-google-id-token");
-              }}
               style={[
                 styles.primaryButton,
-                { backgroundColor: backgroundColor, borderColor: borderColor },
+                {
+                  backgroundColor: color.background,
+                  borderColor: color.border,
+                },
               ]}
             >
               <Image
                 source={require("@/assets/icons/google.png")}
                 style={{ width: 20, height: 20, marginRight: 8 }}
               />
-              <ThemedText
-                style={{
-                  color: textColor,
-                }}
-                type="defaultSemiBold"
-              >
+              <ThemedText type="defaultSemiBold">
                 Continue with Google
               </ThemedText>
             </Pressable>
@@ -207,19 +168,15 @@ const styles = StyleSheet.create({
     gap: 24,
   },
   header: {
-    gap: 8,
     alignItems: "center",
+    gap: 8,
   },
   logo: {
-    width: 250,
-    height: 250,
-  },
-  subtitle: {
-    opacity: 0.8,
-    textAlign: "center",
+    width: 220,
+    height: 220,
   },
   form: {
-    gap: 5,
+    gap: 10,
   },
   field: {
     gap: 8,
@@ -243,11 +200,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 12,
     paddingVertical: 14,
+    gap: 8,
   },
   footer: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    gap: 8,
+    gap: 6,
   },
 });

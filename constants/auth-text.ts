@@ -1,4 +1,7 @@
 export const AUTH_TEXT = {
+  SUCCESS: {
+    LOGIN_SUCCESS: "Login success!",
+  },
   ERRORS: {
     EMPTY_FIELDS: "Please enter both username and password.",
     LOGIN_FAILED: "Login failed. Please try again.",
@@ -6,5 +9,5 @@ export const AUTH_TEXT = {
     PASSWORD_MISMATCH: "Passwords do not match.",
     REGISTRATION_FAILED: "Registration failed. Please try again.",
     ALL_FIELDS_REQUIRED: "Please fill in all fields.",
-  }
-}
+  },
+};

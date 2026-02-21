@@ -5,22 +5,23 @@ import { useAuthStore } from "@/stores/useAuthStore";
 
 export const authService = {
   async login(req: LoginRequest) {
-    const { data: response } = await authApi.login(req);
+    const response = await authApi.login(req);
+    console.log(response);
     if (
-      typeof response?.accessToken !== "string" ||
-      typeof response?.refreshToken !== "string"
+      typeof response?.data?.accessToken !== "string" ||
+      typeof response?.data?.refreshToken !== "string"
     ) {
       throw new Error("Invalid login response");
     }
 
-    await setAccessToken(response.accessToken);
-    await setRefreshToken(response.refreshToken);
+    await setAccessToken(response.data?.accessToken);
+    await setRefreshToken(response.data?.refreshToken);
 
-    if (response?.user) {
+    if (response?.data?.user) {
       useAuthStore.getState().setSession({
-        user: response.user,
-        accessToken: response.accessToken,
-        refreshToken: response.refreshToken,
+        user: response.data?.user,
+        accessToken: response.data?.accessToken,
+        refreshToken: response.data?.refreshToken,
       });
     }
 
@@ -28,24 +29,24 @@ export const authService = {
   },
 
   async googleLogin(token: string) {
-    const { data } = await authApi.googleLogin(token);
+    const response = await authApi.googleLogin(token);
     if (
-      typeof data?.accessToken === "string" &&
-      typeof data?.refreshToken === "string"
+      typeof response?.data?.accessToken === "string" &&
+      typeof response?.data?.refreshToken === "string"
     ) {
-      await setAccessToken(data.accessToken);
-      await setRefreshToken(data.refreshToken);
+      await setAccessToken(response?.data?.accessToken);
+      await setRefreshToken(response?.data?.refreshToken);
 
-      if (data?.user) {
+      if (response?.data?.user) {
         useAuthStore.getState().setSession({
-          user: data.user,
-          accessToken: data.accessToken,
-          refreshToken: data.refreshToken,
+          user: response?.data?.user,
+          accessToken: response?.data?.accessToken,
+          refreshToken: response?.data?.refreshToken,
         });
       }
     }
 
-    return data;
+    return response;
   },
 
   async register(req: RegisterRequest) {

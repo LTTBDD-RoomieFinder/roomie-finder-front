@@ -1,6 +1,6 @@
 import { Image } from "expo-image";
 import { Link, useRouter } from "expo-router";
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -14,27 +14,13 @@ import {
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { PasswordInput } from "@/components/ui/password-input";
-import { Colors } from "@/constants/theme";
-import { useColorScheme } from "@/hooks/use-color-scheme";
-import { useThemeColor } from "@/hooks/use-theme-color";
-import { useThemeLogo } from "@/hooks/use-theme-logo";
-import { authService } from "@/services/auth";
 import { AUTH_TEXT } from "@/constants/auth-text";
+import { useAppTheme } from "@/hooks/use-app-theme";
+import { authService } from "@/services/auth";
 
 export default function Register() {
   const router = useRouter();
-  const colorScheme = useColorScheme() ?? "light";
-
-  const logo = useThemeLogo();
-  const textColor = useThemeColor({}, "text");
-  const backgroundColor = useThemeColor({}, "background");
-  const tintColor = useThemeColor({}, "tint");
-  const borderColor = useThemeColor({}, "icon");
-
-  const placeholderTextColor = useMemo(() => {
-    const base = Colors[colorScheme].icon;
-    return base;
-  }, [colorScheme]);
+  const { logo, color } = useAppTheme();
 
   const [userName, setUserName] = useState("");
   const [email, setEmail] = useState("");
@@ -57,16 +43,17 @@ export default function Register() {
 
     try {
       setLoading(true);
-      const response = await authService.register({
+
+      await authService.register({
         username: userName,
         email,
         password,
       });
+
       await authService.login({ username: userName, password });
       router.replace("/(tabs)/home");
     } catch (error) {
-      console.error("Registration failed:", error);
-      alert(AUTH_TEXT.ERRORS.REGISTRATION_FAILED);
+      alert(error);
     } finally {
       setLoading(false);
     }
@@ -96,13 +83,13 @@ export default function Register() {
                 onChangeText={setUserName}
                 autoCapitalize="words"
                 placeholder="user"
-                placeholderTextColor={placeholderTextColor}
+                placeholderTextColor={color.placeholder}
                 style={[
                   styles.input,
                   {
-                    color: textColor,
-                    borderColor,
-                    backgroundColor,
+                    color: color.text,
+                    borderColor: color.border,
+                    backgroundColor: color.background,
                   },
                 ]}
               />
@@ -117,13 +104,13 @@ export default function Register() {
                 autoCorrect={false}
                 keyboardType="email-address"
                 placeholder="you@example.com"
-                placeholderTextColor={placeholderTextColor}
+                placeholderTextColor={color.placeholder}
                 style={[
                   styles.input,
                   {
-                    color: textColor,
-                    borderColor,
-                    backgroundColor,
+                    color: color.text,
+                    borderColor: color.border,
+                    backgroundColor: color.background,
                   },
                 ]}
               />
@@ -133,33 +120,27 @@ export default function Register() {
               label="Password"
               value={password}
               onChangeText={setPassword}
-              placeholder="••••••••"
             />
 
             <PasswordInput
               label="Confirm Password"
               value={confirmPassword}
               onChangeText={setConfirmPassword}
-              placeholder="••••••••"
             />
 
             <Pressable
-              onPress={() => {
-                handleRegister();
-              }}
+              onPress={handleRegister}
               style={[
                 styles.primaryButton,
-                { backgroundColor: tintColor, borderColor: tintColor },
+                {
+                  backgroundColor: color.primary,
+                  borderColor: color.primary,
+                },
               ]}
             >
               <ThemedText
-                style={{
-                  color:
-                    colorScheme === "dark"
-                      ? Colors.dark.background
-                      : Colors.light.background,
-                }}
                 type="defaultSemiBold"
+                style={{ color: color.primaryText }}
               >
                 Sign Up
               </ThemedText>
@@ -191,16 +172,11 @@ const styles = StyleSheet.create({
     gap: 24,
   },
   header: {
-    // gap: 8,
     alignItems: "center",
   },
   logo: {
     width: 200,
     height: 200,
-  },
-  subtitle: {
-    opacity: 0.8,
-    textAlign: "center",
   },
   form: {
     gap: 14,
