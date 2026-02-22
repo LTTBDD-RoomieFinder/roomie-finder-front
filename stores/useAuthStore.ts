@@ -1,11 +1,6 @@
 import { create } from "zustand";
 import { clearTokens, getAccessToken, getRefreshToken } from "@/storage/token";
-
-interface User {
-  id: string;
-  email: string;
-  name?: string;
-}
+import { User } from "@/types/User";
 
 interface AuthState {
   user: User | null;
