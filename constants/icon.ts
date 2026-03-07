@@ -19,6 +19,8 @@ export const ICON_MAPPING = {
   "location.fill": "location-on",
   "person.fill": "person",
 
+  "bed.double.fill": "hotel",
+
   "eye": "visibility",
   "eye.slash": "visibility-off",
   magnifyingglass: "search",

@@ -44,3 +44,6 @@ app-example
 /android
 
 .vscode/
+skills-lock.json
+.agent/
+.agents/
