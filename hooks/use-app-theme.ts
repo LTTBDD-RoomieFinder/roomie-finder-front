@@ -14,6 +14,7 @@ export function useAppTheme() {
     color: {
       text: colors.text,
       background: colors.background,
+      card: colors.card,
 
       primary: colors.tint,
       primaryText: scheme === "dark" ? colors.background : colors.background,

@@ -1,3 +1,5 @@
+import { GenderRequirement, RoomType } from "@/types/enums";
+
 export type LoginRequest = {
   username: string;
   password: string;
@@ -7,4 +9,24 @@ export type RegisterRequest = {
   username: string;
   email: string;
   password: string;
+}
+
+export type RoomCreateRequest = {
+  title: string;
+  price: number;
+  area: number;
+  capacity: number;
+  roomType: RoomType;
+  genderRequirement: GenderRequirement;
+  description: string;
+  address: AddressCreateRequest;
+  imageUrls: string[];
+  amenityIds: number[];
+}
+
+export type AddressCreateRequest = {
+  streetAddress: string;
+  cityId: number;
+  districtId: number;
+  wardId: number;
 }
