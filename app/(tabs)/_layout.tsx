@@ -44,6 +44,15 @@ export default function TabLayout() {
         })}
       />
       <Tabs.Screen
+        name="requests"
+        options={{
+          title: "Requests",
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={28} name="envelope.fill" color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{
           title: "Profile",

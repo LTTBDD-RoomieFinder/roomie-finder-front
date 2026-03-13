@@ -1,7 +1,7 @@
 import {
-  DarkTheme,
-  DefaultTheme,
-  ThemeProvider,
+    DarkTheme,
+    DefaultTheme,
+    ThemeProvider,
 } from "@react-navigation/native";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -34,6 +34,8 @@ export default function RootLayout() {
     const first = segments[0];
     const inAuthGroup = first === "(auth)";
     const inTabsGroup = first === "(tabs)";
+    const inChat = first === "chat";
+    const inRequest = first === "request";
 
     if (!isAuthenticated && !inAuthGroup) {
       router.replace("/(auth)/login");
@@ -45,8 +47,7 @@ export default function RootLayout() {
       return;
     }
 
-    // If app opens at root or another group, normalize to home.
-    if (isAuthenticated && !inTabsGroup && !inAuthGroup) {
+    if (isAuthenticated && !inTabsGroup && !inAuthGroup && !inChat && !inRequest) {
       router.replace("/(tabs)/home");
     }
   }, [isAuthenticated, isInitialized, router, segments]);
@@ -60,6 +61,8 @@ export default function RootLayout() {
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="(auth)" />
+        <Stack.Screen name="request" />
+        <Stack.Screen name="chat/[id]" />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>

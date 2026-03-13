@@ -24,4 +24,9 @@ export const ICON_MAPPING = {
   "eye": "visibility",
   "eye.slash": "visibility-off",
   magnifyingglass: "search",
+  "checkmark.circle.fill": "check-circle",
+  "xmark.circle.fill": "cancel",
+  "envelope.fill": "mail",
+  "tray.and.arrow.down.fill": "inbox",
+  "tray.and.arrow.up.fill": "send",
 } as IconMapping;

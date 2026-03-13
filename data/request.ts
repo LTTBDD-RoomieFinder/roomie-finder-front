@@ -6,6 +6,15 @@ export type LoginRequest = {
   password: string;
 };
 
+export type RequestRequest = {
+  receiverId: number;
+  message?: string;
+};
+
+export type UpdateRequestStatusRequest = {
+  status: "ACCEPTED" | "REJECTED";
+};
+
 export type RegisterRequest = {
   username: string;
   email: string;
