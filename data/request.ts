@@ -1,4 +1,5 @@
 import { GenderRequirement, RoomType } from "@/types/enums";
+import { PostStatus } from "@/types/PostStatus";
 
 export type LoginRequest = {
   username: string;
@@ -29,4 +30,19 @@ export type AddressCreateRequest = {
   cityId: number;
   districtId: number;
   wardId: number;
+}
+
+export type PostCreateRequest = {
+  title: string;
+  content: string;
+  roomId: number;
+  status?: PostStatus;
+  expirationDate?: string;
+}
+
+export type PostUpdateRequest = {
+  title?: string;
+  content?: string;
+  status?: PostStatus;
+  expirationDate?: string;
 }

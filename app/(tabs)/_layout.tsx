@@ -34,6 +34,14 @@ export default function TabLayout() {
             <IconSymbol size={28} name="bed.double.fill" color={color} />
           ),
         }}
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            // Prevent default navigation to the last state of the tab
+            e.preventDefault();
+            // Force navigation to the index screen of the room stack
+            navigation.navigate("room", { screen: "index" });
+          },
+        })}
       />
       <Tabs.Screen
         name="profile"

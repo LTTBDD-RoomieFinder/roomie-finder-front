@@ -20,13 +20,15 @@ import { Image } from "expo-image";
 import { GENDER_REQ_LABELS, ROOM_TYPE_LABELS } from "@/constants/room-constants";
 import { GenderRequirement, RoomType } from "@/types/enums";
 import { BlurView } from "expo-blur";
+import { useAuthStore } from "@/stores/useAuthStore";
 
 const { width } = Dimensions.get("window");
 
 export default function RoomDetailScreen() {
-  const { id } = useLocalSearchParams();
+  const { id, from } = useLocalSearchParams();
   const router = useRouter();
   const { color } = useAppTheme();
+  const user = useAuthStore((state) => state.user);
 
   const [room, setRoom] = useState<RoomResponse | null>(null);
   const [loading, setLoading] = useState(false);
@@ -49,6 +51,16 @@ export default function RoomDetailScreen() {
     }
   };
 
+  const handleBack = () => {
+    if (from === 'home') {
+      router.push("/(tabs)/home");
+    } else if (from === 'room') {
+      router.push("/(tabs)/room");
+    } else {
+      router.back();
+    }
+  };
+
   const handleDelete = () => {
     Alert.alert("Xóa phòng", "Bạn có chắc muốn xóa phòng này không? Hành động này không thể hoàn tác.", [
       { text: "Hủy", style: "cancel" },
@@ -58,7 +70,7 @@ export default function RoomDetailScreen() {
         onPress: async () => {
           try {
             await roomService.deleteRoom(Number(id));
-            router.back();
+            handleBack();
           } catch (e) {
             console.error(e);
           }
@@ -91,33 +103,35 @@ export default function RoomDetailScreen() {
 
           {/* FLOATING HEADER CONTROLS */}
           <View style={styles.header}>
-            <Pressable onPress={() => router.back()} style={styles.iconBtn}>
+            <Pressable onPress={handleBack} style={styles.iconBtn}>
               <View style={styles.glassBtn}>
                 <MaterialIcons name="arrow-back" size={24} color="#fff" />
               </View>
             </Pressable>
 
-            <View style={styles.headerRight}>
-              <Pressable
-                onPress={() =>
-                  router.push({
-                    pathname: "/(tabs)/room/edit",
-                    params: { id: room.id },
-                  })
-                }
-                style={styles.iconBtn}
-              >
-                <View style={styles.glassBtn}>
-                  <MaterialIcons name="edit" size={24} color="#fff" />
-                </View>
-              </Pressable>
+            {String(user?.id) === String(room.ownerId) && (
+              <View style={styles.headerRight}>
+                <Pressable
+                  onPress={() =>
+                    router.push({
+                      pathname: "/(tabs)/room/edit",
+                      params: { id: room.id },
+                    })
+                  }
+                  style={styles.iconBtn}
+                >
+                  <View style={styles.glassBtn}>
+                    <MaterialIcons name="edit" size={24} color="#fff" />
+                  </View>
+                </Pressable>
 
-              <Pressable onPress={handleDelete} style={styles.iconBtn}>
-                <View style={styles.glassBtn}>
-                  <MaterialIcons name="delete" size={24} color="#ff4444" />
-                </View>
-              </Pressable>
-            </View>
+                <Pressable onPress={handleDelete} style={styles.iconBtn}>
+                  <View style={styles.glassBtn}>
+                    <MaterialIcons name="delete" size={24} color="#ff4444" />
+                  </View>
+                </Pressable>
+              </View>
+            )}
           </View>
         </View>
 

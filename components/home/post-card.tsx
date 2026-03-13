@@ -1,0 +1,302 @@
+import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
+import React from "react";
+import { Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from "react-native";
+import { router } from "expo-router";
+
+import { ThemedText } from "@/components/themed-text";
+import { PostResponse } from "@/data/response";
+import { useAppTheme } from "@/hooks/use-app-theme";
+import { formatDate } from "@/utils/format-post";
+
+type Props = {
+  post: PostResponse;
+  currentUserId?: number | string;
+  onEdit?: (post: PostResponse) => void;
+  onDelete?: (post: PostResponse) => void;
+};
+
+export function PostCard({ post, currentUserId, onEdit, onDelete }: Props) {
+  const { color } = useAppTheme();
+  const { width } = useWindowDimensions();
+  const isOwner = currentUserId !== undefined && String(post.user.id) === String(currentUserId);
+
+  return (
+    <View style={[styles.card]}>
+      <View style={styles.header}>
+        <Image
+          source={require("@/assets/images/default-avatar.png")}
+          style={[styles.avatar, { backgroundColor: color.backgroundSecondary }]}
+          contentFit="cover"
+        />
+        <View style={{ flex: 1 }}>
+          <ThemedText type="defaultSemiBold" style={styles.userName}>
+            {post.user.fullName}
+          </ThemedText>
+          <View style={styles.metaRow}>
+            <ThemedText style={[styles.metaText, { color: color.textSecondary }]}>
+              {formatDate(post.createdAt)}
+            </ThemedText>
+            <ThemedText style={{ color: color.textSecondary, fontSize: 12, marginHorizontal: 4 }}>·</ThemedText>
+            <Ionicons
+              name={post.status === "PUBLISHED" ? "earth" : post.status === "DRAFT" ? "document-text" : "eye-off"}
+              size={12}
+              color={color.textSecondary}
+            />
+          </View>
+        </View>
+
+        {/* Owner actions menu */}
+        {isOwner && (
+          <View style={styles.ownerActions}>
+            <Pressable
+              style={({ pressed }) => [
+                styles.actionBtn,
+                { backgroundColor: pressed ? color.backgroundSecondary : "transparent" },
+              ]}
+              onPress={() => onEdit?.(post)}
+            >
+              <Ionicons name="pencil-outline" size={18} color={color.textSecondary} />
+            </Pressable>
+            <Pressable
+              style={({ pressed }) => [
+                styles.actionBtn,
+                { backgroundColor: pressed ? color.backgroundSecondary : "transparent" },
+              ]}
+              onPress={() => onDelete?.(post)}
+            >
+              <Ionicons name="trash-outline" size={18} color={color.error} />
+            </Pressable>
+          </View>
+        )}
+      </View>
+
+      {/* Content */}
+      <ThemedText type="defaultSemiBold" style={styles.title}>
+        {post.title}
+      </ThemedText>
+      <ThemedText style={[styles.content, { color: color.text }]} numberOfLines={5}>
+        {post.content}
+      </ThemedText>
+
+      {post.room && (
+        <Pressable style={[styles.roomAttachment, { backgroundColor: color.backgroundSecondary }]}>
+          {post.room.imageUrls && post.room.imageUrls.length > 0 ? (
+            <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false}>
+              {post.room.imageUrls.map((url, index) => (
+                <Image
+                  key={index}
+                  source={{ uri: url }}
+                  style={[styles.roomImage, { width }]}
+                  contentFit="cover"
+                />
+              ))}
+            </ScrollView>
+          ) : (
+            <Image
+              source={require("@/assets/images/placeholder.png")}
+              style={[styles.roomImage, { width }]}
+              contentFit="cover"
+            />
+          )}
+
+          <View style={styles.roomInfo}>
+            <ThemedText type="defaultSemiBold" numberOfLines={2} style={styles.roomTitle}>
+              {post.room.title}
+            </ThemedText>
+
+            <View style={styles.roomMetaRow}>
+              <ThemedText style={[styles.roomPrice, { color: color.tint }]}>
+                {post.room.price.toLocaleString("vi-VN")} đ/tháng
+              </ThemedText>
+              <ThemedText style={{ color: color.textSecondary, fontSize: 13, marginHorizontal: 6 }}>•</ThemedText>
+              <ThemedText style={{ color: color.textSecondary, fontSize: 13 }}>
+                {post.room.area}m²
+              </ThemedText>
+              <ThemedText style={{ color: color.textSecondary, fontSize: 13, marginHorizontal: 6 }}>•</ThemedText>
+              <ThemedText style={{ color: color.textSecondary, fontSize: 13 }}>
+                Tối đa {post.room.capacity} người
+              </ThemedText>
+            </View>
+
+            <View style={styles.roomAddressRow}>
+              <Ionicons name="location" size={14} color={color.textSecondary} />
+              <ThemedText style={{ color: color.textSecondary, fontSize: 13, flex: 1 }} numberOfLines={1}>
+                {post.room.address.district}, {post.room.address.city}
+              </ThemedText>
+            </View>
+
+            <Pressable
+              style={({ pressed }) => [
+                styles.viewMoreBtn,
+                { backgroundColor: pressed ? color.border : color.background, borderColor: color.border }
+              ]}
+              onPress={() => router.push({
+                pathname: "/(tabs)/room/[id]",
+                params: { id: post.room.id, from: 'home' }
+              })}
+            >
+              <ThemedText style={[styles.viewMoreText, { color: color.tint }]}>
+                Xem chi tiết phòng
+              </ThemedText>
+            </Pressable>
+          </View>
+        </Pressable>
+      )}
+
+      {/* Footer stats */}
+      <View style={[styles.footer, { borderTopColor: color.border }]}>
+        <View style={styles.stat}>
+          <Ionicons name="eye-outline" size={16} color={color.textSecondary} />
+          <ThemedText style={[styles.statText, { color: color.textSecondary }]}>
+            {post.viewCount.toLocaleString("vi-VN")} lượt xem
+          </ThemedText>
+        </View>
+        {post.expirationDate && (
+          <View style={styles.stat}>
+            <Ionicons name="time-outline" size={16} color={color.textSecondary} />
+            <ThemedText style={[styles.statText, { color: color.textSecondary }]}>
+              HH:{" "}
+              {new Date(post.expirationDate).toLocaleDateString("vi-VN")}
+            </ThemedText>
+          </View>
+        )}
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  card: {
+    marginBottom: 10,
+    paddingTop: 16,
+    paddingBottom: 4,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(150, 150, 150, 0.2)',
+  } as any,
+  header: {
+    paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 10,
+  },
+  avatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  userName: {
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  metaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 2,
+  },
+  metaText: {
+    fontSize: 12,
+  },
+  ownerActions: {
+    flexDirection: "row",
+    gap: 4,
+  },
+  actionBtn: {
+    padding: 6,
+    borderRadius: 8,
+  },
+  statusBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 99,
+    marginBottom: 8,
+    gap: 5,
+  },
+  statusDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+  },
+  statusText: {
+    fontSize: 11,
+    fontWeight: "600",
+  },
+  title: {
+    paddingHorizontal: 16,
+    fontSize: 16,
+    marginBottom: 6,
+    lineHeight: 22,
+  },
+  content: {
+    paddingHorizontal: 16,
+    fontSize: 15,
+    lineHeight: 22,
+    marginBottom: 4,
+  },
+  footer: {
+    flexDirection: "row",
+    gap: 16,
+    marginTop: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  stat: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  statText: {
+    fontSize: 13,
+  },
+  roomAttachment: {
+    marginTop: 8,
+    overflow: "hidden",
+  },
+  roomImage: {
+    height: 250,
+  },
+  roomInfo: {
+    padding: 16,
+    gap: 6,
+  },
+  roomTitle: {
+    fontSize: 16,
+    lineHeight: 22,
+  },
+  roomMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+  },
+  roomPrice: {
+    fontWeight: "700",
+    fontSize: 15,
+  },
+  roomAddressRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 2,
+    marginBottom: 4,
+  },
+  viewMoreBtn: {
+    marginTop: 8,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: StyleSheet.hairlineWidth,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  viewMoreText: {
+    fontWeight: "600",
+    fontSize: 14,
+  },
+});
