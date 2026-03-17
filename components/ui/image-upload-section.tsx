@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, Image, ScrollView, Alert } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
 import { ThemedText } from "@/components/themed-text";
-import { Ionicons } from "@expo/vector-icons";
 import { IMAGE_CONSTANTS } from '@/constants/room-constants';
+import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from 'expo-image-picker';
+import React, { useState } from 'react';
+import { Alert, Image, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 type Props = {
   data: string[]; // Danh sách URI của ảnh đã chọn
@@ -24,7 +24,7 @@ export default function ImageUploadSection({ data, onChange }: Props) {
 
     // Mở bộ sưu tập
     let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsMultipleSelection: true, // Cho phép chọn nhiều ảnh
       selectionLimit: IMAGE_CONSTANTS.IMAGE_PICKER.MAX_SELECTION, // Giới hạn tối đa 
       quality: 0.7, // Nén ảnh nhẹ để tối ưu dung lượng
