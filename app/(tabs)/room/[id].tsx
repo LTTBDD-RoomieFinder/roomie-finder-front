@@ -1,26 +1,25 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
 import {
-  Alert,
-  Dimensions,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  View,
+    Alert,
+    Dimensions,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    View,
 } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { GENDER_REQ_LABELS, ROOM_TYPE_LABELS } from "@/constants/room-constants";
 import { RoomResponse } from "@/data/response";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { roomService } from "@/services/room-service";
+import { useAuthStore } from "@/stores/useAuthStore";
+import { GenderRequirement, RoomType } from "@/types/enums";
 import { formatRoomAddress, formatRoomPrice } from "@/utils/format-room";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Image } from "expo-image";
-import { GENDER_REQ_LABELS, ROOM_TYPE_LABELS } from "@/constants/room-constants";
-import { GenderRequirement, RoomType } from "@/types/enums";
-import { BlurView } from "expo-blur";
-import { useAuthStore } from "@/stores/useAuthStore";
 
 const { width } = Dimensions.get("window");
 
@@ -33,6 +32,9 @@ export default function RoomDetailScreen() {
   const [room, setRoom] = useState<RoomResponse | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const roomId = Number(Array.isArray(id) ? id[0] : id);
+  const isValidRoomId = Number.isFinite(roomId) && roomId > 0;
+
   useFocusEffect(
     useCallback(() => {
       fetchRoom();
@@ -40,9 +42,13 @@ export default function RoomDetailScreen() {
   );
 
   const fetchRoom = async () => {
+    if (!isValidRoomId) {
+      return;
+    }
+
     setLoading(true);
     try {
-      const res = await roomService.getRoomById(Number(id));
+      const res = await roomService.getRoomById(roomId);
       setRoom(res.data);
     } catch (err) {
       console.error(err);
@@ -69,7 +75,8 @@ export default function RoomDetailScreen() {
         style: "destructive",
         onPress: async () => {
           try {
-            await roomService.deleteRoom(Number(id));
+            if (!isValidRoomId) return;
+            await roomService.deleteRoom(roomId);
             handleBack();
           } catch (e) {
             console.error(e);

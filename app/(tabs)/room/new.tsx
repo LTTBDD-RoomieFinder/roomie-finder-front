@@ -18,7 +18,7 @@ export default function NewRoomScreen() {
   const handleSubmit = async (data: RoomCreateRequest) => {
     await roomService.createRoom(data);
     alert("Tạo phòng thành công!");
-    router.replace("/(tabs)/room/index");
+    router.replace("/(tabs)/room");
   };
 
   return (
