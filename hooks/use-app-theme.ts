@@ -26,6 +26,10 @@ export function useAppTheme() {
 
       error: colors.error,
 
+      textSecondary: colors.textSecondary,
+      backgroundSecondary: colors.backgroundSecondary,
+      tint: colors.tint,
+
       tab: {
         default: colors.tabIconDefault,
         active: colors.tabIconSelected,
