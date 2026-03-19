@@ -1,6 +1,6 @@
 import { Image } from "expo-image";
 import React from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Platform, Pressable, StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import { useAppTheme } from "@/hooks/use-app-theme";
@@ -114,7 +114,18 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderCurve: "continuous",
     overflow: "hidden",
-    boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.08)",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOpacity: 0.08,
+        shadowRadius: 16,
+        shadowOffset: { width: 0, height: 6 },
+      },
+      android: {
+        elevation: 2,
+      },
+      default: {},
+    }),
   },
 
   imageWrapper: {
