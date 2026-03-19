@@ -25,4 +25,7 @@ export const postApi = {
   getMyPosts: () => {
     return axiosRequest.get("/posts/me");
   },
+
+  joinChatEligibilityBatch: (postIds: number[]) =>
+    axiosRequest.post("/posts/join-eligibility/batch", { postIds }),
 };

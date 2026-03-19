@@ -12,38 +12,16 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import { REQUEST_REJECT_COOLDOWN_DAYS } from "@/constants/request";
+import {
+  REQUEST_REJECT_COOLDOWN_DAYS,
+  REQUEST_STATUS_COLOR,
+  REQUEST_STATUS_LABEL,
+} from "@/constants/request";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useUpdateRequestStatus } from "@/hooks/use-update-request-status";
 import { useRequestDetailStore } from "@/stores/useRequestDetailStore";
 import type { RequestResponse, RequestStatus } from "@/types/request";
-
-const STATUS_LABEL: Record<RequestStatus, string> = {
-  PENDING: "Chờ xử lý",
-  ACCEPTED: "Đã chấp nhận",
-  REJECTED: "Đã từ chối",
-  CANCELLED: "Đã hủy",
-  EXPIRED: "Đã hết hạn",
-};
-
-const STATUS_COLOR: Record<RequestStatus, string> = {
-  PENDING: "#f59e0b",
-  ACCEPTED: "#22c55e",
-  REJECTED: "#ef4444",
-  CANCELLED: "#6b7280",
-  EXPIRED: "#6b7280",
-};
-
-function formatDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString("vi-VN", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+import { formatDateLongVi } from "@/utils/format-date";
 
 export default function RequestDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -115,7 +93,7 @@ export default function RequestDetailScreen() {
   const variant: "incoming" | "outgoing" = storedVariant ?? "outgoing";
   const otherUser = variant === "incoming" ? request.sender : request.receiver;
   const displayName = otherUser?.fullName || otherUser?.username || "Người dùng";
-  const statusColor = STATUS_COLOR[request.status];
+  const statusColor = REQUEST_STATUS_COLOR[request.status];
   const canRespond =
     variant === "incoming" &&
     request.status === "PENDING";
@@ -170,11 +148,11 @@ export default function RequestDetailScreen() {
               <View style={[styles.statusBadge, { backgroundColor: statusColor + "1a" }]}>
                 <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
                 <ThemedText style={[styles.statusText, { color: statusColor }]}>
-                  {STATUS_LABEL[request.status]}
+                  {REQUEST_STATUS_LABEL[request.status]}
                 </ThemedText>
               </View>
               <ThemedText style={[styles.date, { color: color.text, opacity: 0.6 }]}>
-                {formatDate(request.createdAt)}
+                {formatDateLongVi(request.createdAt)}
               </ThemedText>
             </View>
 

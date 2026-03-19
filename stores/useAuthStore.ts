@@ -17,6 +17,14 @@ interface AuthState {
     accessToken: string;
     refreshToken: string;
   }) => void;
+  /**
+   * Update tokens after refresh without touching user/session.
+   * Used so websocket code can reuse the latest access token.
+   */
+  updateTokens: (payload: {
+    accessToken: string;
+    refreshToken: string | null;
+  }) => void;
   logout: () => Promise<void>;
 }
 
@@ -66,6 +74,15 @@ export const useAuthStore = create<AuthState>((set) => ({
       isLoading: false,
     });
   },
+  updateTokens: ({ accessToken, refreshToken }) => {
+    set({
+      accessToken,
+      refreshToken,
+      isAuthenticated: !!accessToken && !!refreshToken,
+      isLoading: false,
+      isInitialized: true,
+    });
+  },
 
   logout: async () => {
     await clearTokens();
@@ -75,6 +92,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       refreshToken: null,
       isAuthenticated: false,
       isLoading: false,
+      isInitialized: true,
     });
   },
 }));

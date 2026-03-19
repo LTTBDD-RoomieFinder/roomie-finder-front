@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
-import { requestService } from "@/services/request";
+import { requestService } from "@/services/request-service";
+import { useAuthStore } from "@/stores/useAuthStore";
 import type { RequestResponse } from "@/types/request";
 
 export type UseRequestsResult = {
@@ -18,6 +19,13 @@ export function useRequests(): UseRequestsResult {
   const [error, setError] = useState<string | null>(null);
 
   const refetch = useCallback(async () => {
+    if (!useAuthStore.getState().isAuthenticated) {
+      setIncoming([]);
+      setOutgoing([]);
+      setError(null);
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
     setError(null);
     try {
@@ -28,7 +36,7 @@ export function useRequests(): UseRequestsResult {
       setIncoming(incomingData ?? []);
       setOutgoing(outgoingData ?? []);
     } catch (err) {
-      setError(typeof err === "string" ? err : "Failed to load invitations.");
+      setError(typeof err === "string" ? err : "Không thể tải danh sách lời mời.");
     } finally {
       setIsLoading(false);
     }

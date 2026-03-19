@@ -31,11 +31,15 @@ export default function RootLayout() {
   useEffect(() => {
     if (!isInitialized) return;
 
-    const first = segments[0];
-    const inAuthGroup = first === "(auth)";
-    const inTabsGroup = first === "(tabs)";
-    const inChat = first === "chat";
-    const inRequest = first === "request";
+    // `useSegments()` typing can be strict; cast to string[] for safe includes().
+    const seg = segments as unknown as string[];
+    const first = seg[0];
+    const inAuthGroup = seg.some((s) => s === "(auth)" || s.startsWith("(auth)"));
+    const inTabsGroup = seg.some((s) => s === "(tabs)" || s.startsWith("(tabs)"));
+    // Expo-router segments may vary by anchor/navigation; be tolerant.
+    const inChat = seg.some((s) => s === "chat" || s.startsWith("chat"));
+    const inRequest = seg.some((s) => s === "request" || s.startsWith("request"));
+    const inPost = seg.some((s) => s === "post" || s.startsWith("post"));
 
     if (!isAuthenticated && !inAuthGroup) {
       router.replace("/(auth)/login");
@@ -47,7 +51,7 @@ export default function RootLayout() {
       return;
     }
 
-    if (isAuthenticated && !inTabsGroup && !inAuthGroup && !inChat && !inRequest) {
+    if (isAuthenticated && !inTabsGroup && !inAuthGroup && !inChat && !inRequest && !inPost) {
       router.replace("/(tabs)/home");
     }
   }, [isAuthenticated, isInitialized, router, segments]);
@@ -63,6 +67,7 @@ export default function RootLayout() {
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="request" />
         <Stack.Screen name="chat/[id]" />
+        <Stack.Screen name="post" />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>

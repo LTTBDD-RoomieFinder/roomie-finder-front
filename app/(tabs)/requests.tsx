@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
     ActivityIndicator,
@@ -54,16 +54,27 @@ export default function RequestsScreen() {
     [router],
   );
 
-  useEffect(() => {
-    refetch();
-  }, [refetch]);
+  useFocusEffect(
+    useCallback(() => {
+      refetch().catch(() => undefined);
+    }, [refetch]),
+  );
+
+  // Only reload when needed (mount/focus + user actions). No polling interval.
 
   const handleAccept = useCallback(
     async (id: number) => {
       const result = await updateStatus(id, { status: "ACCEPTED" });
-      if (result) refetch();
+      if (result) {
+        refetch();
+        // Real-time flow: when receiver ACCEPTs and chatRoom is created,
+        // navigate directly into chat.
+        if (result.status === "ACCEPTED" && result.chatRoom?.id) {
+          router.push(`/chat/${result.chatRoom.id}`);
+        }
+      }
     },
-    [updateStatus, refetch],
+    [updateStatus, refetch, router],
   );
 
   const handleReject = useCallback(

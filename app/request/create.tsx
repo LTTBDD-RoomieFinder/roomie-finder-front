@@ -16,10 +16,12 @@ import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useCreateRequest } from "@/hooks/use-create-request";
+import { usePostsJoinEligibility } from "@/hooks/use-posts-join-eligibility";
 import type { UserResponse } from "@/types/request";
 
 type CreateRequestParams = {
   receiverId: string;
+  postId?: string;
   receiver?: string;
 };
 
@@ -31,7 +33,28 @@ export default function CreateRequestScreen() {
 
   const [message, setMessage] = useState("");
 
-  const receiverId = params.receiverId ? Number(params.receiverId) : NaN;
+  const rawReceiverId = params.receiverId;
+  const receiverId = rawReceiverId ? Number(rawReceiverId) : NaN;
+  const rawPostId = params.postId;
+  const postId = rawPostId ? Number(rawPostId) : NaN;
+  const hasPostContext = !Number.isNaN(postId) && postId > 0;
+
+  const {
+    eligibilityByPostId,
+    loading: eligLoading,
+    error: eligError,
+    refresh: refreshElig,
+  } = usePostsJoinEligibility(
+    hasPostContext ? [postId] : [],
+    hasPostContext && !Number.isNaN(receiverId),
+  );
+  const elig = hasPostContext ? eligibilityByPostId[postId] : undefined;
+  const canSubmitWithPost =
+    !hasPostContext ||
+    (!eligLoading &&
+      !eligError &&
+      (elig?.canRequestJoinChatRoom === true ||
+        elig?.disabledReason === "CHAT_ROOM_FULL"));
   const receiver: UserResponse | null = params.receiver
     ? (() => {
         try {
@@ -46,27 +69,34 @@ export default function CreateRequestScreen() {
     receiver?.fullName || receiver?.username || "Người dùng";
 
   useEffect(() => {
+    // expo-router có thể render 1 frame đầu khi params chưa kịp load => rawReceiverId === undefined.
+    // Chỉ redirect khi rawReceiverId đã có nhưng parse ra không hợp lệ.
+    if (rawReceiverId === undefined) return;
     if (!receiverId || Number.isNaN(receiverId)) {
       router.replace("/(tabs)/requests");
     }
-  }, [receiverId, router]);
+  }, [rawReceiverId, receiverId, router]);
 
   const handleSubmit = useCallback(async () => {
     if (Number.isNaN(receiverId)) return;
     const result = await create({
       receiverId,
+      postId: hasPostContext ? postId : undefined,
       message: message.trim() || undefined,
     });
     if (result) {
       resetError();
       router.replace("/(tabs)/requests?tab=outgoing");
     }
-  }, [create, receiverId, message, resetError, router]);
+  }, [create, receiverId, postId, hasPostContext, message, resetError, router]);
 
   const handleBack = useCallback(() => {
     router.back();
   }, [router]);
 
+  if (rawReceiverId === undefined) {
+    return null; // waiting params
+  }
   if (!receiverId || Number.isNaN(receiverId)) {
     return null;
   }
@@ -113,9 +143,50 @@ export default function CreateRequestScreen() {
             <View style={[styles.tipBlock, { backgroundColor: color.border + "18", borderColor: color.border + "40" }]}>
               <IconSymbol name="info.circle.fill" size={16} color={color.primary} />
               <ThemedText style={[styles.tipText, { color: color.text, opacity: 0.75 }]}>
-                Sau khi chấp nhận, cả hai sẽ có phòng chat riêng để thảo luận về giá cả và nội quy nhà.
+                {hasPostContext
+                  ? "Theo bài đăng này, bạn sẽ vào cùng nhóm chat với chủ phòng và các bạn cùng phòng (nếu đã được chấp nhận)."
+                  : "Sau khi chấp nhận, cả hai sẽ có phòng chat riêng để thảo luận về giá cả và nội quy nhà."}
               </ThemedText>
             </View>
+
+            {hasPostContext && eligLoading ? (
+              <View style={[styles.tipBlock, { borderColor: color.border + "40" }]}>
+                <ActivityIndicator size="small" color={color.primary} />
+                <ThemedText style={[styles.tipText, { color: color.text, opacity: 0.75 }]}>
+                  Đang kiểm tra còn chỗ trong nhóm chat…
+                </ThemedText>
+              </View>
+            ) : null}
+
+            {hasPostContext && eligError ? (
+              <Pressable
+                onPress={refreshElig}
+                style={[styles.tipBlock, { borderColor: color.error + "40", backgroundColor: color.error + "10" }]}
+              >
+                <IconSymbol name="exclamationmark.circle.fill" size={16} color={color.error} />
+                <ThemedText style={[styles.tipText, { color: color.error }]}>
+                  Không kiểm tra được chỗ trống — chạm để thử lại.
+                </ThemedText>
+              </Pressable>
+            ) : null}
+
+            {hasPostContext && !eligLoading && !eligError && elig && !elig.canRequestJoinChatRoom ? (
+              elig.disabledReason === "CHAT_ROOM_FULL" ? (
+                <View style={[styles.tipBlock, { borderColor: color.tint + "40", backgroundColor: color.tint + "10" }]}>
+                  <ThemedText style={[styles.tipText, { color: color.icon }]}>
+                    {`Phòng đã đủ người (${elig.currentOccupancy}/${elig.roomCapacity}). Bạn sẽ được xếp hàng.`}
+                  </ThemedText>
+                </View>
+              ) : (
+                <View style={[styles.tipBlock, { borderColor: color.error + "40", backgroundColor: color.error + "12" }]}>
+                  <ThemedText style={[styles.tipText, { color: color.error }]}>
+                    {elig.disabledReason === "ALREADY_REQUESTED"
+                      ? "Bạn đã gửi lời mời cho bài đăng này rồi."
+                      : `Không thể gửi lời mời: ${elig.disabledReason ?? "UNKNOWN"}.`}
+                  </ThemedText>
+                </View>
+              )
+            ) : null}
 
             {/* Lời nhắn */}
             <ThemedText style={[styles.label, { color: color.text }]}>
@@ -152,7 +223,7 @@ export default function CreateRequestScreen() {
                 { backgroundColor: isLoading ? color.primary + "80" : color.primary },
               ]}
               onPress={handleSubmit}
-              disabled={isLoading}
+              disabled={isLoading || !canSubmitWithPost}
             >
               {isLoading ? (
                 <ActivityIndicator color={color.primaryText} size="small" />

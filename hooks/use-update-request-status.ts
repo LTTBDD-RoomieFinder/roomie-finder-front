@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { requestService } from "@/services/request";
+import { requestService } from "@/services/request-service";
 import type { UpdateRequestStatusRequest } from "@/data/request";
 import type { RequestResponse } from "@/types/request";
 
@@ -25,7 +25,7 @@ export function useUpdateRequestStatus(): UseUpdateRequestStatusResult {
       try {
         return await requestService.updateStatus(id, payload);
       } catch (err) {
-        const msg = typeof err === "string" ? err : "Failed to update status.";
+        const msg = typeof err === "string" ? err : "Không thể cập nhật trạng thái.";
         setError(msg);
         return null;
       } finally {

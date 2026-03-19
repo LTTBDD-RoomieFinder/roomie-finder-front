@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { requestService } from "@/services/request";
+import { requestService } from "@/services/request-service";
 import type { RequestRequest } from "@/data/request";
 import type { RequestResponse } from "@/types/request";
 
@@ -21,7 +21,7 @@ export function useCreateRequest(): UseCreateRequestResult {
     try {
       return await requestService.create(payload);
     } catch (err) {
-      const msg = typeof err === "string" ? err : "Failed to send invitation.";
+      const msg = typeof err === "string" ? err : "Không thể gửi lời mời.";
       setError(msg);
       return null;
     } finally {

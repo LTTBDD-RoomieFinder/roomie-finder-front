@@ -3,9 +3,14 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import { REQUEST_REJECT_COOLDOWN_DAYS } from "@/constants/request";
+import {
+  REQUEST_REJECT_COOLDOWN_DAYS,
+  REQUEST_STATUS_COLOR,
+  REQUEST_STATUS_LABEL,
+} from "@/constants/request";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import type { RequestResponse, RequestStatus } from "@/types/request";
+import { formatDate } from "@/utils/format-post";
 
 type RequestCardProps = {
   request: RequestResponse;
@@ -17,41 +22,6 @@ type RequestCardProps = {
   isUpdating?: boolean;
 };
 
-const STATUS_LABEL: Record<RequestStatus, string> = {
-  PENDING: "Chờ xử lý",
-  ACCEPTED: "Đã chấp nhận",
-  REJECTED: "Đã từ chối",
-  CANCELLED: "Đã hủy",
-  EXPIRED: "Đã hết hạn",
-};
-
-const STATUS_COLOR: Record<RequestStatus, string> = {
-  PENDING: "#f59e0b",
-  ACCEPTED: "#22c55e",
-  REJECTED: "#ef4444",
-  CANCELLED: "#6b7280",
-  EXPIRED: "#6b7280",
-};
-
-function formatDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffMins < 1) return "Vừa xong";
-  if (diffMins < 60) return `${diffMins} phút trước`;
-  if (diffHours < 24) return `${diffHours} giờ trước`;
-  if (diffDays < 7) return `${diffDays} ngày trước`;
-  return date.toLocaleDateString("vi-VN", {
-    month: "numeric",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
 export function RequestCard({
   request,
   variant,
@@ -62,7 +32,7 @@ export function RequestCard({
   isUpdating = false,
 }: RequestCardProps) {
   const { color } = useAppTheme();
-  const statusColor = STATUS_COLOR[request.status];
+  const statusColor = REQUEST_STATUS_COLOR[request.status];
 
   const otherUser = variant === "incoming" ? request.sender : request.receiver;
   const displayName = otherUser?.fullName || otherUser?.username || "Người dùng";
@@ -101,7 +71,7 @@ export function RequestCard({
               >
                 <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
                 <ThemedText style={[styles.statusText, { color: statusColor }]}>
-                  {STATUS_LABEL[request.status]}
+                  {REQUEST_STATUS_LABEL[request.status]}
                 </ThemedText>
               </View>
               <ThemedText

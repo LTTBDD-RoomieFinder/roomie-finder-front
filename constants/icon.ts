@@ -14,6 +14,7 @@ export const ICON_MAPPING = {
   "paperplane.fill": "send",
   "chevron.left.forwardslash.chevron.right": "code",
   "chevron.right": "chevron-right",
+  "chevron.left": "chevron-left",
 
   "map.fill": "map",
   "location.fill": "location-on",
@@ -29,4 +30,11 @@ export const ICON_MAPPING = {
   "envelope.fill": "mail",
   "tray.and.arrow.down.fill": "inbox",
   "tray.and.arrow.up.fill": "send",
+
+  "info.circle.fill": "info",
+  "exclamationmark.circle.fill": "error",
+  "clock.fill": "schedule",
+  "checkmark.seal.fill": "verified",
+  "bubble.left.and.bubble.right.fill": "chat",
+  "questionmark.circle": "help",
 } as IconMapping;

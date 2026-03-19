@@ -127,7 +127,7 @@ export function EditPostModal({ visible, post, onClose, onSuccess }: Props) {
               </View>
               <View style={{ flex: 1, justifyContent: "center" }}>
                 <ThemedText type="defaultSemiBold" style={styles.userName}>
-                  {post.user.fullName}
+                  {post.user.username}
                 </ThemedText>
                 {/* Status Picker Badge */}
                 <View style={{ zIndex: 10, elevation: 10 }}>

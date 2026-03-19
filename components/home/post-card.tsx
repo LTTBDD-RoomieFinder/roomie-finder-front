@@ -4,9 +4,11 @@ import React from "react";
 import { Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from "react-native";
 import { router } from "expo-router";
 
+import { PostRequestChatIcon } from "@/components/post/post-request-chat-icon";
 import { ThemedText } from "@/components/themed-text";
 import { PostResponse } from "@/data/response";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { usePostsJoinEligibility } from "@/hooks/use-posts-join-eligibility";
 import { formatDate } from "@/utils/format-post";
 
 type Props = {
@@ -20,6 +22,17 @@ export function PostCard({ post, currentUserId, onEdit, onDelete }: Props) {
   const { color } = useAppTheme();
   const { width } = useWindowDimensions();
   const isOwner = currentUserId !== undefined && String(post.user.id) === String(currentUserId);
+  const myUserIdNumber =
+    currentUserId === undefined ? undefined : Number(currentUserId);
+
+  // Eligibility cho icon request chat (xếp hàng khi full).
+  const {
+    eligibilityByPostId,
+    loading: eligLoading,
+    error: eligError,
+    refresh: refreshElig,
+  } = usePostsJoinEligibility([post.id], Boolean(myUserIdNumber && !isOwner));
+  const elig = eligibilityByPostId[post.id];
 
   return (
     <View style={[styles.card]}>
@@ -31,7 +44,7 @@ export function PostCard({ post, currentUserId, onEdit, onDelete }: Props) {
         />
         <View style={{ flex: 1 }}>
           <ThemedText type="defaultSemiBold" style={styles.userName}>
-            {post.user.fullName}
+            {post.user.username}
           </ThemedText>
           <View style={styles.metaRow}>
             <ThemedText style={[styles.metaText, { color: color.textSecondary }]}>
@@ -72,15 +85,17 @@ export function PostCard({ post, currentUserId, onEdit, onDelete }: Props) {
       </View>
 
       {/* Content */}
-      <ThemedText type="defaultSemiBold" style={styles.title}>
-        {post.title}
-      </ThemedText>
-      <ThemedText style={[styles.content, { color: color.text }]} numberOfLines={5}>
-        {post.content}
-      </ThemedText>
+      <View>
+        <ThemedText type="defaultSemiBold" style={styles.title}>
+          {post.title}
+        </ThemedText>
+        <ThemedText style={[styles.content, { color: color.text }]} numberOfLines={5}>
+          {post.content}
+        </ThemedText>
+      </View>
 
       {post.room && (
-        <Pressable style={[styles.roomAttachment, { backgroundColor: color.backgroundSecondary }]}>
+        <View style={[styles.roomAttachment, { backgroundColor: color.backgroundSecondary }]}>
           {post.room.imageUrls && post.room.imageUrls.length > 0 ? (
             <ScrollView horizontal pagingEnabled showsHorizontalScrollIndicator={false}>
               {post.room.imageUrls.map((url, index) => (
@@ -126,22 +141,70 @@ export function PostCard({ post, currentUserId, onEdit, onDelete }: Props) {
               </ThemedText>
             </View>
 
-            <Pressable
-              style={({ pressed }) => [
-                styles.viewMoreBtn,
-                { backgroundColor: pressed ? color.border : color.background, borderColor: color.border }
-              ]}
-              onPress={() => router.push({
-                pathname: "/(tabs)/room/[id]",
-                params: { id: post.room.id, from: 'home' }
-              })}
-            >
-              <ThemedText style={[styles.viewMoreText, { color: color.tint }]}>
-                Xem chi tiết phòng
-              </ThemedText>
-            </Pressable>
+            {!isOwner ? (
+              <View style={styles.roomActionsRow}>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.viewMoreBtn,
+                    {
+                      backgroundColor: pressed
+                        ? color.border
+                        : color.background,
+                      borderColor: color.border,
+                      flex: 1,
+                    },
+                  ]}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/(tabs)/room/[id]",
+                      params: { id: post.room.id, from: "home" },
+                    })
+                  }
+                >
+                  <ThemedText
+                    style={[styles.viewMoreText, { color: color.tint }]}
+                  >
+                    Xem chi tiết phòng
+                  </ThemedText>
+                </Pressable>
+
+                {/* Nút request chat nhỏ (xếp hàng khi full). */}
+                <PostRequestChatIcon
+                  post={post}
+                  currentUserId={currentUserId}
+                  eligibility={elig}
+                  eligibilityLoading={eligLoading}
+                  eligibilityError={eligError}
+                  onRetryEligibility={refreshElig}
+                />
+              </View>
+            ) : (
+              <Pressable
+                style={({ pressed }) => [
+                  styles.viewMoreBtn,
+                  {
+                    backgroundColor: pressed
+                      ? color.border
+                      : color.background,
+                    borderColor: color.border,
+                  },
+                ]}
+                onPress={() =>
+                  router.push({
+                    pathname: "/(tabs)/room/[id]",
+                    params: { id: post.room.id, from: "home" },
+                  })
+                }
+              >
+                <ThemedText
+                  style={[styles.viewMoreText, { color: color.tint }]}
+                >
+                  Xem chi tiết phòng
+                </ThemedText>
+              </Pressable>
+            )}
           </View>
-        </Pressable>
+        </View>
       )}
 
       {/* Footer stats */}
@@ -295,8 +358,25 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  roomActionsRow: {
+    marginTop: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
   viewMoreText: {
     fontWeight: "600",
     fontSize: 14,
+  },
+  detailHint: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    marginTop: 8,
+    gap: 4,
+  },
+  detailHintText: {
+    fontSize: 14,
+    fontWeight: "600",
   },
 });

@@ -8,11 +8,20 @@ export type LoginRequest = {
 
 export type RequestRequest = {
   receiverId: number;
+  /** Bắt buộc khi gửi từ bài đăng — backend kiểm tra còn chỗ trong nhóm chat theo sức chứa phòng. */
+  postId?: number;
   message?: string;
 };
 
 export type UpdateRequestStatusRequest = {
   status: "ACCEPTED" | "REJECTED";
+};
+
+/** Payload sent via STOMP to backend to create/send a chat message. */
+export type SendMessagePayload = {
+  chatRoomId: number;
+  content: string;
+  type?: string;
 };
 
 export type RegisterRequest = {
