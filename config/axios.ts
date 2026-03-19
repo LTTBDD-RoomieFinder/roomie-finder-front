@@ -15,7 +15,13 @@ import {
 } from "@/storage/token";
 
 import { useAuthStore } from "@/stores/useAuthStore";
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
+
+// Base URL: use full path to API (e.g. http://localhost:8080/api/v1) or server root (http://localhost:8080).
+// If root is given, /api/v1 is appended to match backend (AuthController, RequestController).
+const RAW_API_URL =
+  process.env.EXPO_PUBLIC_API_URL || "http://localhost:8080";
+const base = RAW_API_URL.replace(/\/+$/, "");
+const API_URL = base.endsWith("/api/v1") ? base : base + "/api/v1";
 
 const axiosRequest: AxiosInstance = axios.create({
   baseURL: API_URL,
@@ -99,6 +105,7 @@ axiosRequest.interceptors.response.use(
               const data = await refreshAxios.post("/auth/refresh", {
                 refreshToken,
               });
+              const payload = res?.data ?? res;
 
               await setAccessToken(data.data.accessToken);
               if (data.data.refreshToken) {
@@ -119,15 +126,37 @@ axiosRequest.interceptors.response.use(
     }
 
     if (error.code === AxiosError.ERR_NETWORK) {
-      return Promise.reject("Network error");
+      const hint =
+        "Cannot reach server. Ensure backend is running (e.g. port 8080) and EXPO_PUBLIC_API_URL in .env is correct (e.g. http://localhost:8080). Restart with: npx expo start -c.";
+      return Promise.reject(hint);
     }
 
-    const message =
-      typeof error.response?.data === "object" &&
-      error.response?.data &&
-      "message" in error.response.data
-        ? (error.response.data as any).message
-        : "Unexpected error";
+    const data = error.response?.data;
+    const status = error.response?.status;
+    let message: string;
+
+    if (data && typeof data === "object") {
+      const obj = data as Record<string, unknown>;
+      const msg =
+        typeof obj.message === "string"
+          ? obj.message
+          : typeof obj.error === "string"
+            ? obj.error
+            : null;
+      message =
+        msg && msg.trim() ? msg : `Server error (${status ?? "?"})`;
+    } else if (typeof data === "string" && data.trim()) {
+      message = data.length > 200 ? data.slice(0, 200) + "…" : data;
+    } else {
+      message =
+        status === 403
+          ? "You don't have permission for this action"
+          : status === 404
+            ? "Not found"
+            : status === 500
+              ? "Server error, please try again later"
+              : `Unexpected error (${status ?? "?"})`;
+    }
 
     return Promise.reject(message);
   },

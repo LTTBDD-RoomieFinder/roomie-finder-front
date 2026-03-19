@@ -18,12 +18,13 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
-import { PostStatus, RoomResponse } from "@/data/response";
+import { RoomResponse } from "@/data/response";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { postService } from "@/services/post-service";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { RoomSelectorModal } from "./room-selector-modal";
 import { STATUS_OPTIONS } from "@/constants/post-constants";
+import { PostStatus } from "@/types/PostStatus";
 
 type Props = {
   visible: boolean;

@@ -1,6 +1,14 @@
 import { postApi } from "@/apis/post-api";
 import { PostCreateRequest, PostUpdateRequest } from "@/data/request";
 import { PostResponse } from "@/data/response";
+import type { PostJoinEligibility } from "@/types/post-join-eligibility";
+
+function unwrapData<T>(res: unknown): T {
+  if (res !== null && typeof res === "object" && "data" in res) {
+    return (res as { data: T }).data;
+  }
+  return res as T;
+}
 
 export const postService = {
   async createPost(body: PostCreateRequest): Promise<PostResponse> {
@@ -30,5 +38,13 @@ export const postService = {
   async getMyPosts(): Promise<PostResponse[]> {
     const res = await postApi.getMyPosts();
     return (res as any).data as PostResponse[];
+  },
+
+  async getJoinChatEligibilityBatch(
+    postIds: number[],
+  ): Promise<PostJoinEligibility[]> {
+    if (postIds.length === 0) return [];
+    const res = await postApi.joinChatEligibilityBatch(postIds);
+    return unwrapData<PostJoinEligibility[]>(res);
   },
 };
