@@ -1,3 +1,4 @@
+import { Gender } from "@/constants/gender";
 import { GenderRequirement, RoomType } from "@/types/enums";
 import { PostStatus } from "@/types/PostStatus";
 
@@ -28,7 +29,7 @@ export type RegisterRequest = {
   username: string;
   email: string;
   password: string;
-}
+};
 
 export type RoomCreateRequest = {
   title: string;
@@ -41,14 +42,14 @@ export type RoomCreateRequest = {
   address: AddressCreateRequest;
   imageUrls: string[];
   amenityIds: number[];
-}
+};
 
 export type AddressCreateRequest = {
   streetAddress: string;
   cityId: number;
   districtId: number;
   wardId: number;
-}
+};
 
 export type PostCreateRequest = {
   title: string;
@@ -56,11 +57,33 @@ export type PostCreateRequest = {
   roomId: number;
   status?: PostStatus;
   expirationDate?: string;
-}
+};
 
 export type PostUpdateRequest = {
   title?: string;
   content?: string;
   status?: PostStatus;
   expirationDate?: string;
+};
+
+export interface BaseProfileRequest {
+  fullName: string;
+  gender: Gender;
+  avatarUrl: string;
+  budgetMin: number;
+  budgetMax: number;
+  isSmoker: boolean;
+  hasPet: boolean;
+  sleepSchedule: string;
+  cleanliness: number;
+  hometown: string;
+  workplace: string;
+  streetAddress: string;
+  wardId: number;
+  districtId: number;
+  cityId: number;
+  tagIds: number[];
 }
+
+export type CreateProfileRequest = BaseProfileRequest;
+export type UpdateProfileRequest = BaseProfileRequest;
