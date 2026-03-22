@@ -8,7 +8,7 @@ export type UseRequestsResult = {
   outgoing: RequestResponse[];
   isLoading: boolean;
   error: string | null;
-  refetch: () => Promise<void>;
+  refetch: (opts?: { silent?: boolean }) => Promise<void>;
 };
 
 /** Incoming (received) and outgoing (sent) requests; refetch loads both in parallel. */
@@ -18,7 +18,8 @@ export function useRequests(): UseRequestsResult {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const refetch = useCallback(async () => {
+  const refetch = useCallback(async (opts?: { silent?: boolean }) => {
+    const silent = Boolean(opts?.silent);
     if (!useAuthStore.getState().isAuthenticated) {
       setIncoming([]);
       setOutgoing([]);
@@ -26,8 +27,10 @@ export function useRequests(): UseRequestsResult {
       setIsLoading(false);
       return;
     }
-    setIsLoading(true);
-    setError(null);
+    if (!silent) {
+      setIsLoading(true);
+      setError(null);
+    }
     try {
       const [incomingData, outgoingData] = await Promise.all([
         requestService.getIncoming(),
@@ -36,9 +39,11 @@ export function useRequests(): UseRequestsResult {
       setIncoming(incomingData ?? []);
       setOutgoing(outgoingData ?? []);
     } catch (err) {
-      setError(typeof err === "string" ? err : "Không thể tải danh sách lời mời.");
+      if (!silent) {
+        setError(typeof err === "string" ? err : "Không thể tải danh sách lời mời.");
+      }
     } finally {
-      setIsLoading(false);
+      if (!silent) setIsLoading(false);
     }
   }, []);
 

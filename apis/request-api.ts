@@ -15,4 +15,7 @@ export const requestApi = {
 
   getOutgoing: () =>
     axiosRequest.get(`${API_PATH}/outgoing`),
+
+  getById: (id: number) =>
+    axiosRequest.get(`${API_PATH}/${id}`),
 };

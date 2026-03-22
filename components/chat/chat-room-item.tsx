@@ -3,11 +3,12 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { ThemedText } from "@/components/themed-text";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useAppTheme } from "@/hooks/use-app-theme";
-import type { ChatRoomItem } from "@/types/chat";
+import type { ChatRoomItem as ChatRoomRow } from "@/types/chat";
+import { formatChatListPreview } from "@/utils/chat-system-message";
 import { formatDateVi } from "@/utils/format-date";
 
 type Props = {
-  room: ChatRoomItem;
+  room: ChatRoomRow;
   onPress: (id: number) => void;
 };
 
@@ -19,8 +20,9 @@ export function ChatRoomItem({ room, onPress }: Props) {
   const title = room.postTitle?.trim()
     ? room.postTitle
     : `Phòng chat #${room.id}`;
-  const preview = room.lastMessagePreview?.trim()
-    ? room.lastMessagePreview
+  const rawPreview = room.lastMessagePreview?.trim();
+  const preview = rawPreview
+    ? formatChatListPreview(rawPreview)
     : "Tin nhắn mới sẽ xuất hiện ở đây";
   const time = room.lastMessageAt ?? room.createdAt;
 

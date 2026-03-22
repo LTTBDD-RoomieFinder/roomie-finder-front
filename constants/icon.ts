@@ -22,7 +22,7 @@ export const ICON_MAPPING = {
 
   "bed.double.fill": "hotel",
 
-  "eye": "visibility",
+  eye: "visibility",
   "eye.slash": "visibility-off",
   magnifyingglass: "search",
   "checkmark.circle.fill": "check-circle",
@@ -37,4 +37,10 @@ export const ICON_MAPPING = {
   "checkmark.seal.fill": "verified",
   "bubble.left.and.bubble.right.fill": "chat",
   "questionmark.circle": "help",
+
+  "bell.fill": "notifications",
+  "camera.fill": "camera-front",
+  "heart.fill": "monitor-heart",
+  "dollarsign.circle.fill": "money",
+  "tag.fill": "tag-faces",
 } as IconMapping;

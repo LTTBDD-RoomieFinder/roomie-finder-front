@@ -5,23 +5,17 @@ import type {
   ChatRoomItem,
   CursorPage,
 } from "@/types/chat";
-
-function unwrap<T>(res: unknown): T {
-  if (res !== null && typeof res === "object" && "data" in res) {
-    return (res as { data: T }).data;
-  }
-  return res as T;
-}
+import { unwrapApiData } from "@/utils/unwrap-api-response";
 
 export const chatService = {
   async getChatRooms(): Promise<ChatRoomItem[]> {
     const res = await chatApi.getChatRooms();
-    return unwrap<ChatRoomItem[]>(res);
+    return unwrapApiData<ChatRoomItem[]>(res);
   },
 
   async getChatRoomDetails(id: number): Promise<ChatRoomDetails> {
     const res = await chatApi.getChatRoomDetails(id);
-    return unwrap<ChatRoomDetails>(res);
+    return unwrapApiData<ChatRoomDetails>(res);
   },
 
   async deleteChatRoom(id: number): Promise<void> {
@@ -33,7 +27,7 @@ export const chatService = {
     params?: { cursor?: number; size?: number },
   ): Promise<CursorPage<ChatMessage>> {
     const res = await chatApi.getMessages(id, params);
-    return unwrap<CursorPage<ChatMessage>>(res);
+    return unwrapApiData<CursorPage<ChatMessage>>(res);
   },
 
   async markMessagesSeen(id: number): Promise<void> {

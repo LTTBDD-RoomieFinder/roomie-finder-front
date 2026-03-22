@@ -1,5 +1,6 @@
 import { ThemedText } from "@/components/themed-text";
 import { IMAGE_CONSTANTS } from "@/constants/room-constants";
+import { useAppTheme } from "@/hooks/use-app-theme";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import React, { useEffect, useState } from "react";
@@ -23,16 +24,17 @@ export default function ImageUploadSection({
   onChange,
   isProfile = false,
 }: Props) {
+  const { color, scheme } = useAppTheme();
+  const isDark = scheme === "dark";
+
   const [images, setImages] = useState<string[]>(data || []);
 
-  // 🔥 Sync lại khi parent thay đổi (fix bug UI không update)
   useEffect(() => {
     setImages(data || []);
   }, [data]);
 
   const pickImage = async () => {
-    const { status } =
-      await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (status !== "granted") {
       Alert.alert("Thông báo", "Cần quyền truy cập thư viện ảnh!");
@@ -52,9 +54,7 @@ export default function ImageUploadSection({
       const selectedUris = result.assets.map((asset) => asset.uri);
 
       let newImages: string[];
-
       if (isProfile) {
-        // 🔥 chỉ 1 ảnh → replace luôn
         newImages = [selectedUris[0]];
       } else {
         newImages = [...images, ...selectedUris].slice(
@@ -75,111 +75,150 @@ export default function ImageUploadSection({
     onChange(newImages);
   };
 
+  if (isProfile) {
+    return (
+      <TouchableOpacity
+        style={styles.avatarWrapper}
+        onPress={pickImage}
+        activeOpacity={0.85}
+      >
+        {images[0] ? (
+          <Image source={{ uri: images[0] }} style={styles.avatarImg} />
+        ) : (
+          <View
+            style={[
+              styles.avatarImg,
+              styles.avatarPlaceholder,
+              {
+                backgroundColor: isDark ? color.card : "#f0f0f0",
+                borderColor: color.border,
+              },
+            ]}
+          >
+            <Ionicons name="person" size={44} color={color.textSecondary} />
+          </View>
+        )}
+
+        <View
+          style={[
+            styles.editBadge,
+            { backgroundColor: color.primary, borderColor: color.background },
+          ]}
+        >
+          <Ionicons name="pencil" size={14} color="#fff" />
+        </View>
+      </TouchableOpacity>
+    );
+  }
+
   return (
-    <View style={styles.container}>
-      <ThemedText style={styles.label}>
-        {isProfile ? "Ảnh đại diện" : "Hình ảnh phòng"}
+    <View style={styles.roomContainer}>
+      <ThemedText style={[styles.label, { color: color.text }]}>
+        Hình ảnh phòng
       </ThemedText>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        {/* Upload button */}
-        <TouchableOpacity style={styles.uploadButton} onPress={pickImage}>
-          <Ionicons name="camera" size={32} color="#888" />
-          <ThemedText style={styles.uploadText}>
-            {isProfile ? "Chọn avatar" : "Thêm ảnh"}
+        <TouchableOpacity
+          style={[
+            styles.uploadButton,
+            {
+              backgroundColor: isDark ? color.card : "#f5f5f5",
+              borderColor: color.border,
+            },
+          ]}
+          onPress={pickImage}
+        >
+          <Ionicons name="camera" size={32} color={color.textSecondary} />
+          <ThemedText style={[styles.uploadText, { color: color.textSecondary }]}>
+            Thêm ảnh
           </ThemedText>
         </TouchableOpacity>
 
-        {/* ===== PROFILE MODE ===== */}
-        {isProfile ? (
-          images.length > 0 && (
-            <View style={styles.imageWrapper}>
-              <Image source={{ uri: images[0] }} style={styles.avatar} />
-
-              <TouchableOpacity
-                style={styles.deleteBadge}
-                onPress={() => {
-                  setImages([]);
-                  onChange([]);
-                }}
-              >
-                <Ionicons name="close-circle" size={22} color="red" />
-              </TouchableOpacity>
-            </View>
-          )
-        ) : (
-          /* ===== ROOM MODE ===== */
-          images.map((uri, index) => (
-            <View key={index} style={styles.imageWrapper}>
-              <Image source={{ uri }} style={styles.image} />
-
-              <TouchableOpacity
-                style={styles.deleteBadge}
-                onPress={() => removeImage(index)}
-              >
-                <Ionicons name="close-circle" size={20} color="red" />
-              </TouchableOpacity>
-            </View>
-          ))
-        )}
+        {images.map((uri, index) => (
+          <View key={index} style={styles.imageWrapper}>
+            <Image source={{ uri }} style={styles.image} />
+            <TouchableOpacity
+              style={[styles.deleteBadge, { backgroundColor: color.background }]}
+              onPress={() => removeImage(index)}
+            >
+              <Ionicons name="close-circle" size={20} color={color.error} />
+            </TouchableOpacity>
+          </View>
+        ))}
       </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    marginBottom: 20,
+  avatarWrapper: {
+    alignSelf: "center",
+    marginBottom: 4,
+    position: "relative",
+  },
+  avatarImg: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+  },
+  avatarPlaceholder: {
+    borderWidth: 1.5,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  editBadge: {
+    position: "absolute",
+    bottom: 2,
+    right: 2,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 2,
+    justifyContent: "center",
+    alignItems: "center",
+    // shadow cho iOS
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    // elevation Android
+    elevation: 3,
   },
 
+  roomContainer: {
+    marginBottom: 20,
+  },
   label: {
     fontWeight: "bold",
     marginBottom: 10,
   },
-
   uploadButton: {
     width: 100,
     height: 100,
-    backgroundColor: "#f5f5f5",
     borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#ddd",
     borderStyle: "dashed",
     marginRight: 10,
   },
-
   uploadText: {
     fontSize: 12,
-    color: "#888",
     marginTop: 4,
   },
-
   imageWrapper: {
     position: "relative",
     marginRight: 10,
   },
-
-  // 🔥 room image
   image: {
     width: 100,
     height: 100,
     borderRadius: 12,
   },
-
-  // 🔥 avatar tròn
-  avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-  },
-
   deleteBadge: {
     position: "absolute",
     top: -5,
     right: -5,
-    backgroundColor: "#fff",
     borderRadius: 12,
   },
 });
