@@ -5,7 +5,7 @@ import { ThemedText } from "../themed-text";
 
 interface Props {
   label: string;
-  data: any[]; // Có thể là City[], District[], hoặc Ward[]
+  data: any[];
   selectedValue: any;
   onValueChange: (value: any) => void;
   disabled?: boolean;
@@ -21,7 +21,11 @@ export default function LocationPicker({
 ) {
   const [visible, setVisible] = React.useState(false);
 
-  const selectedItem = data.find((item) => item.id === selectedValue);
+  const safeData = data ?? [];
+
+  const selectedItem = safeData.find(
+    (item) => item.id === selectedValue
+  );
 
   return (
     <View style={[styles.wrapper, disabled && { opacity: 0.5 }]}>
@@ -49,7 +53,7 @@ export default function LocationPicker({
             </View>
 
             <FlatList
-              data={data}
+              data={data || []}
               keyExtractor={(item) => item.id.toString()}
               renderItem={({ item }) => (
                 <TouchableOpacity
@@ -73,7 +77,7 @@ export default function LocationPicker({
 
 const styles = StyleSheet.create({
   wrapper: {
-    width: "100%", 
+    width: "100%",
   },
   label: { fontSize: 16, fontWeight: '600', marginBottom: 8 },
   selector: {
