@@ -64,7 +64,27 @@ export type PostUpdateRequest = {
   content?: string;
   status?: PostStatus;
   expirationDate?: string;
-};
+}
+
+export type PostSearchRequest = {
+  keyword?: string;
+  genderRequirement?: GenderRequirement;
+  roomType?: RoomType;
+  minPrice?: number;
+  maxPrice?: number;
+  minArea?: number;
+  maxArea?: number;
+  capacity?: number;
+  amenityIds?: number[];
+  cityName?: string;
+  districtName?: string;
+  wardName?: string;
+  userLat?: number;
+  userLng?: number;
+  radiusInKm?: number;
+  cursor?: number;
+  size?: number;
+}
 
 export interface BaseProfileRequest {
   fullName: string;
