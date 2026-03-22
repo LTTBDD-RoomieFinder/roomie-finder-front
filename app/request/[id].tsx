@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -18,9 +18,13 @@ import {
   REQUEST_STATUS_LABEL,
 } from "@/constants/request";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { requestService } from "@/services/request-service";
 import { useUpdateRequestStatus } from "@/hooks/use-update-request-status";
+import { useAuthStore } from "@/stores/useAuthStore";
 import { useRequestDetailStore } from "@/stores/useRequestDetailStore";
 import type { RequestResponse, RequestStatus } from "@/types/request";
+import { syncTabBadgesToStore } from "@/services/tab-badge-service";
+import { decodeJwtPayload } from "@/utils/jwt";
 import { formatDateLongVi } from "@/utils/format-date";
 
 export default function RequestDetailScreen() {
@@ -29,14 +33,43 @@ export default function RequestDetailScreen() {
   const { color } = useAppTheme();
   const { request, variant: storedVariant, setRequest } = useRequestDetailStore();
   const { updateStatus, isLoading: isUpdating, error: updateError } = useUpdateRequestStatus();
+  const accessToken = useAuthStore((s) => s.accessToken);
+  const [isLoadingDetail, setIsLoadingDetail] = useState(false);
 
   const requestId = id ? Number(id) : NaN;
+  const currentUserId = decodeJwtPayload(accessToken ?? "")?.userId ?? null;
 
   useEffect(() => {
     return () => {
       setRequest(null);
     };
   }, [setRequest]);
+
+  useEffect(() => {
+    if (!Number.isFinite(requestId)) return;
+    if (request && request.id === requestId) return;
+
+    let cancelled = false;
+    setIsLoadingDetail(true);
+    requestService
+      .getById(requestId)
+      .then((res) => {
+        if (cancelled) return;
+        const isIncoming =
+          currentUserId != null && Number(res.receiver?.id) === Number(currentUserId);
+        setRequest(res, isIncoming ? "incoming" : "outgoing");
+      })
+      .catch(() => {
+        if (!cancelled) setRequest(null);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingDetail(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [requestId, request, setRequest, currentUserId]);
 
   const handleBack = useCallback(() => {
     router.back();
@@ -47,6 +80,7 @@ export default function RequestDetailScreen() {
     const result = await updateStatus(request.id, { status: "ACCEPTED" });
     if (result) {
       setRequest(result, storedVariant);
+      void syncTabBadgesToStore();
     }
   }, [request, requestId, storedVariant, updateStatus, setRequest]);
 
@@ -55,6 +89,7 @@ export default function RequestDetailScreen() {
     const result = await updateStatus(request.id, { status: "REJECTED" });
     if (result) {
       setRequest(result, storedVariant);
+      void syncTabBadgesToStore();
     }
   }, [request, requestId, storedVariant, updateStatus, setRequest]);
 
@@ -63,6 +98,24 @@ export default function RequestDetailScreen() {
       router.push(`/chat/${request.chatRoom.id}`);
     }
   }, [request, router]);
+
+  if (isLoadingDetail) {
+    return (
+      <SafeAreaView style={styles.safe} edges={["top"]}>
+        <ThemedView style={styles.container}>
+          <View style={[styles.header, { borderBottomColor: color.border + "60" }]}>
+            <Pressable onPress={handleBack} style={styles.backButton} hitSlop={12}>
+              <IconSymbol name="chevron.left" size={24} color={color.primary} />
+            </Pressable>
+            <ThemedText style={styles.headerTitle}>Lời mời</ThemedText>
+          </View>
+          <View style={styles.centered}>
+            <ActivityIndicator size="large" color={color.primary} />
+          </View>
+        </ThemedView>
+      </SafeAreaView>
+    );
+  }
 
   if (!request || request.id !== requestId) {
     return (

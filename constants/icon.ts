@@ -37,4 +37,5 @@ export const ICON_MAPPING = {
   "checkmark.seal.fill": "verified",
   "bubble.left.and.bubble.right.fill": "chat",
   "questionmark.circle": "help",
+  "bell.fill": "notifications",
 } as IconMapping;

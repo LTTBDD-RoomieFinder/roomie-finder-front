@@ -2,12 +2,16 @@ import { Tabs } from "expo-router";
 import React from "react";
 
 import { HapticTab } from "@/components/haptic-tab";
+import { TabBarIconWithBadge } from "@/components/tab-bar-icon-with-badge";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import { useNotificationStore } from "@/stores/use-notification-store";
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  const requestUnread = useNotificationStore((s) => s.requestUnreadCount);
+  const chatUnreadRooms = useNotificationStore((s) => s.chatUnreadRoomsCount);
 
   return (
     <Tabs
@@ -15,6 +19,10 @@ export default function TabLayout() {
         tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
         headerShown: false,
         tabBarButton: HapticTab,
+        // Phụ thuộc badge để layout re-render khi store đổi (một số bản RN/React Navigation không cập nhật icon tab khi chỉ child subscribe).
+        tabBarStyle: {
+          opacity: 1 + (requestUnread + chatUnreadRooms) * 0,
+        },
       }}
     >
       <Tabs.Screen
@@ -36,9 +44,7 @@ export default function TabLayout() {
         }}
         listeners={({ navigation }) => ({
           tabPress: (e) => {
-            // Prevent default navigation to the last state of the tab
             e.preventDefault();
-            // Force navigation to the index screen of the room stack
             navigation.navigate("room", { screen: "index" });
           },
         })}
@@ -48,7 +54,11 @@ export default function TabLayout() {
         options={{
           title: "Requests",
           tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="envelope.fill" color={color} />
+            <TabBarIconWithBadge
+              name="envelope.fill"
+              color={color}
+              variant="requests"
+            />
           ),
         }}
       />
@@ -57,7 +67,11 @@ export default function TabLayout() {
         options={{
           title: "Chats",
           tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="bubble.left.and.bubble.right.fill" color={color} />
+            <TabBarIconWithBadge
+              name="bubble.left.and.bubble.right.fill"
+              color={color}
+              variant="chats"
+            />
           ),
         }}
       />

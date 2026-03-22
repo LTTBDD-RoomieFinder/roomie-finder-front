@@ -14,7 +14,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { ChatInput, MessageBubble } from "@/components/chat";
+import { ChatInput, ChatMembershipNotice, MessageBubble } from "@/components/chat";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
@@ -25,8 +25,13 @@ import { useChatSocket } from "@/hooks/use-chat-socket";
 import { chatService } from "@/services/chat-service";
 import { useAuthStore } from "@/stores/useAuthStore";
 import type { ChatMessage } from "@/types/chat";
+import { syncTabBadgesToStore } from "@/services/tab-badge-service";
 import { decodeJwtPayload } from "@/utils/jwt";
 import { formatDateVi } from "@/utils/format-date";
+import {
+  getMembershipNoticeModel,
+  parseMemberKickedUserId,
+} from "@/utils/chat-system-message";
 
 export default function ChatRoomScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -110,11 +115,9 @@ export default function ChatRoomScreen() {
         return;
       }
 
-      // Backend broadcasts a SYSTEM message when owner kicks a member:
-      // content format: "MEMBER_KICKED:{memberUserId}".
+      // Backend: SYSTEM MEMBER_KICKED (optional "|" display suffix); show alert for kicked user.
       if (msg.type === "SYSTEM" && msg.content?.startsWith("MEMBER_KICKED:")) {
-        const kickedIdStr = msg.content.split(":")[1];
-        const kickedId = kickedIdStr ? Number(kickedIdStr) : NaN;
+        const kickedId = parseMemberKickedUserId(msg.content);
         if (myUserId != null && kickedId === myUserId) {
           if (kickedAlertShownRef.current) return;
           kickedAlertShownRef.current = true;
@@ -135,7 +138,6 @@ export default function ChatRoomScreen() {
             ],
           );
         }
-        return;
       }
 
       addMessage(msg);
@@ -147,27 +149,32 @@ export default function ChatRoomScreen() {
         clearTimeout(markSeenDebounceRef.current);
       }
       markSeenDebounceRef.current = setTimeout(() => {
-        chatService.markMessagesSeen(chatRoomId).catch((err) => {
-          const msg =
-            typeof err === "string" ? err : typeof err?.message === "string" ? err.message : "";
-          if (
-            msg.toLowerCase().includes("not a member") &&
-            !kickedAlertShownRef.current &&
-            !isLeavingOrDeletingRef.current
-          ) {
-            kickedAlertShownRef.current = true;
-            Alert.alert(
-              "Bạn không còn trong phòng",
-              "Bạn đã bị rời/đuổi khỏi phòng chat.",
-              [
-                {
-                  text: "OK",
-                  onPress: () => router.replace("/(tabs)/chats"),
-                },
-              ],
-            );
-          }
-        });
+        chatService
+          .markMessagesSeen(chatRoomId)
+          .then(() => {
+            void syncTabBadgesToStore();
+          })
+          .catch((err) => {
+            const msg =
+              typeof err === "string" ? err : typeof err?.message === "string" ? err.message : "";
+            if (
+              msg.toLowerCase().includes("not a member") &&
+              !kickedAlertShownRef.current &&
+              !isLeavingOrDeletingRef.current
+            ) {
+              kickedAlertShownRef.current = true;
+              Alert.alert(
+                "Bạn không còn trong phòng",
+                "Bạn đã bị rời/đuổi khỏi phòng chat.",
+                [
+                  {
+                    text: "OK",
+                    onPress: () => router.replace("/(tabs)/chats"),
+                  },
+                ],
+              );
+            }
+          });
       }, 600);
     },
     [addMessage, myUserId, chatRoomId, router],
@@ -309,20 +316,26 @@ export default function ChatRoomScreen() {
   }, [detailsError, error, router]);
 
   const renderItem = useCallback(
-    ({ item }: { item: ChatMessage }) => (
-      <MessageBubble
-        message={item}
-        isMine={item.senderId === myUserId}
-        senderName={memberNameById.get(item.senderId)}
-        seenByNames={
-          item.seenByIds?.length ?
-            item.seenByIds
-              .map((uid) => memberNameById.get(uid))
-              .filter((n): n is string => Boolean(n))
-          : undefined
-        }
-      />
-    ),
+    ({ item }: { item: ChatMessage }) => {
+      const notice = getMembershipNoticeModel(item, memberNameById);
+      if (notice) {
+        return <ChatMembershipNotice model={notice} />;
+      }
+      return (
+        <MessageBubble
+          message={item}
+          isMine={item.senderId === myUserId}
+          senderName={memberNameById.get(item.senderId)}
+          seenByNames={
+            item.seenByIds?.length ?
+              item.seenByIds
+                .map((uid) => memberNameById.get(uid))
+                .filter((n): n is string => Boolean(n))
+            : undefined
+          }
+        />
+      );
+    },
     [myUserId, memberNameById],
   );
 

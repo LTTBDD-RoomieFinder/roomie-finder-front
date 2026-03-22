@@ -20,6 +20,8 @@ type RequestCardProps = {
   onOpenChat?: (chatRoomId: number) => void;
   onPress?: (request: RequestResponse) => void;
   isUpdating?: boolean;
+  /** Vừa có thông báo chưa đọc — tô đậm để dễ nhận biết. */
+  emphasizeNew?: boolean;
 };
 
 export function RequestCard({
@@ -30,6 +32,7 @@ export function RequestCard({
   onOpenChat,
   onPress,
   isUpdating = false,
+  emphasizeNew = false,
 }: RequestCardProps) {
   const { color } = useAppTheme();
   const statusColor = REQUEST_STATUS_COLOR[request.status];
@@ -59,7 +62,13 @@ export function RequestCard({
             <IconSymbol name="person.fill" size={24} color={color.primary} />
           </View>
           <View style={styles.body}>
-            <ThemedText style={styles.displayName} numberOfLines={1}>
+            <ThemedText
+              style={[
+                styles.displayName,
+                emphasizeNew && styles.displayNameNew,
+              ]}
+              numberOfLines={1}
+            >
               {displayName}
             </ThemedText>
             <View style={styles.meta}>
@@ -229,6 +238,9 @@ const styles = StyleSheet.create({
   displayName: {
     fontSize: 16,
     fontWeight: "700",
+  },
+  displayNameNew: {
+    fontWeight: "900",
   },
   meta: {
     flexDirection: "row",

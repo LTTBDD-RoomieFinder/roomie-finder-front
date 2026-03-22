@@ -1,18 +1,12 @@
 import { requestApi } from "@/apis/request-api";
 import type { RequestRequest, UpdateRequestStatusRequest } from "@/data/request";
 import type { RequestResponse } from "@/types/request";
-
-function unwrap<T>(res: unknown): T {
-  if (res !== null && typeof res === "object" && "data" in res) {
-    return (res as { data: T }).data;
-  }
-  return res as T;
-}
+import { unwrapApiData } from "@/utils/unwrap-api-response";
 
 export const requestService = {
   async create(payload: RequestRequest): Promise<RequestResponse> {
     const res = await requestApi.create(payload);
-    return unwrap<RequestResponse>(res);
+    return unwrapApiData<RequestResponse>(res);
   },
 
   async updateStatus(
@@ -20,16 +14,21 @@ export const requestService = {
     payload: UpdateRequestStatusRequest,
   ): Promise<RequestResponse> {
     const res = await requestApi.updateStatus(id, payload);
-    return unwrap<RequestResponse>(res);
+    return unwrapApiData<RequestResponse>(res);
   },
 
   async getIncoming(): Promise<RequestResponse[]> {
     const res = await requestApi.getIncoming();
-    return unwrap<RequestResponse[]>(res);
+    return unwrapApiData<RequestResponse[]>(res);
   },
 
   async getOutgoing(): Promise<RequestResponse[]> {
     const res = await requestApi.getOutgoing();
-    return unwrap<RequestResponse[]>(res);
+    return unwrapApiData<RequestResponse[]>(res);
+  },
+
+  async getById(id: number): Promise<RequestResponse> {
+    const res = await requestApi.getById(id);
+    return unwrapApiData<RequestResponse>(res);
   },
 };
