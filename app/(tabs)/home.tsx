@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import { Alert, Pressable, StyleSheet, View } from "react-native";
 
@@ -12,6 +13,7 @@ import { PostList } from "@/components/home/post-list";
 import { PostResponse } from "@/data/response";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { postService } from "@/services/post-service";
+import { syncTabBadgesToStore } from "@/services/tab-badge-service";
 import { useAuthStore } from "@/stores/useAuthStore";
 
 export default function HomeScreen() {
@@ -44,8 +46,15 @@ export default function HomeScreen() {
     fetchPosts();
   }, [fetchPosts]);
 
+  useFocusEffect(
+    useCallback(() => {
+      void syncTabBadgesToStore();
+    }, []),
+  );
+
   const handleRefresh = () => {
     setRefreshing(true);
+    void syncTabBadgesToStore();
     fetchPosts(false);
   };
 

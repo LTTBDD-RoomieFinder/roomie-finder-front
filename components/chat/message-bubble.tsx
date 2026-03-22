@@ -76,6 +76,20 @@ export function MessageBubble({
 }
 
 const styles = StyleSheet.create({
+  systemRow: {
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    alignItems: "center",
+  },
+  systemLine: {
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: "center",
+  },
+  systemMeta: {
+    fontSize: 11,
+    marginTop: 4,
+  },
   row: {
     paddingHorizontal: 14,
     paddingVertical: 3,

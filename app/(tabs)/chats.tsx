@@ -1,6 +1,7 @@
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useEffect } from "react";
 import {
+  Alert,
   ActivityIndicator,
   FlatList,
   RefreshControl,
@@ -15,7 +16,9 @@ import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useChatRooms } from "@/hooks/use-chat-rooms";
-import { useChatRoomsRealtime } from "@/hooks/use-chat-rooms-realtime";
+import { syncTabBadgesToStore } from "@/services/tab-badge-service";
+import { useChatRoomListRealtimeStore } from "@/stores/use-chat-room-list-realtime-store";
+import { useNotificationStore } from "@/stores/use-notification-store";
 import type { ChatRoomItem as ChatRoomItemType } from "@/types/chat";
 
 const HEADER_HEIGHT = 130;
@@ -24,24 +27,28 @@ export default function ChatsScreen() {
   const { color } = useAppTheme();
   const router = useRouter();
   const { rooms, isLoading, error, refetch } = useChatRooms();
+  const messageSeq = useNotificationStore((s) => s.messageSeq);
+  const lastNotification = useNotificationStore((s) => s.lastNotification);
+  const roomListMessageSeq = useChatRoomListRealtimeStore(
+    (s) => s.roomListMessageSeq,
+  );
 
   useFocusEffect(
     useCallback(() => {
       refetch().catch(() => undefined);
-    }, [refetch]),
+      void syncTabBadgesToStore();
+      if (lastNotification?.type === "NEW_MESSAGE") {
+        Alert.alert(lastNotification.title, lastNotification.content);
+      }
+    }, [refetch, messageSeq, lastNotification]),
   );
 
-  // Reload chỉ khi có sự kiện: websocket (tin nhắn mới) hoặc refresh thủ công.
-
-  // Realtime: khi nhận tin nhắn qua websocket, refresh lại danh sách để
-  // cập nhật lastMessage/unreadCount và sắp xếp theo tin mới nhất.
-  useChatRoomsRealtime(
-    rooms.map((r) => r.id),
-    useCallback(() => {
-      // Avoid UI "reload" animation: fetch silently when new message arrives.
-      refetch({ silent: true }).catch(() => undefined);
-    }, [refetch]),
-  );
+  // Realtime danh sách: STOMP đăng ký ở root (`useGlobalChatBadgeRealtime`);
+  // khi có tin, store tăng seq → refetch silent tại đây.
+  useEffect(() => {
+    if (roomListMessageSeq === 0) return;
+    refetch({ silent: true }).catch(() => undefined);
+  }, [roomListMessageSeq, refetch]);
 
   const handlePress = useCallback(
     (id: number) => {

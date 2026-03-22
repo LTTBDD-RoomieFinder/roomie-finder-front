@@ -1,6 +1,7 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
+    Alert,
     ActivityIndicator,
     FlatList,
     Pressable,
@@ -17,13 +18,36 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useRequests } from "@/hooks/use-requests";
 import { useUpdateRequestStatus } from "@/hooks/use-update-request-status";
+import { notificationService } from "@/services/notification-service";
 import { useRequestDetailStore } from "@/stores/useRequestDetailStore";
+import { useNotificationStore } from "@/stores/use-notification-store";
+import { useRequestListRealtimeStore } from "@/stores/use-request-list-realtime-store";
+import { syncTabBadgesToStore } from "@/services/tab-badge-service";
+import type { NotificationItem } from "@/types/notification";
 import type { RequestResponse } from "@/types/request";
 
 const HEADER_HEIGHT = 148;
 const TAB_BAR_RADIUS = 14;
 
 type TabType = "incoming" | "outgoing";
+
+function unreadRequestReferenceIdsFromNotifications(
+  list: NotificationItem[],
+): number[] {
+  const ids: number[] = [];
+  for (const n of list) {
+    if (
+      !n.read &&
+      (n.type === "REQUEST_RECEIVED" ||
+        n.type === "REQUEST_ACCEPTED" ||
+        n.type === "REQUEST_REJECTED") &&
+      n.referenceId != null
+    ) {
+      ids.push(n.referenceId);
+    }
+  }
+  return [...new Set(ids)];
+}
 
 export default function RequestsScreen() {
   const params = useLocalSearchParams<{ tab?: string }>();
@@ -42,6 +66,25 @@ export default function RequestsScreen() {
   const router = useRouter();
 
   const data = activeTab === "incoming" ? incoming : outgoing;
+  const lastNotification = useNotificationStore((s) => s.lastNotification);
+  const requestListSeq = useRequestListRealtimeStore((s) => s.requestListSeq);
+  const [highlightedRequestIds, setHighlightedRequestIds] = useState<number[]>(
+    [],
+  );
+
+  const applyRequestTabReadAndHighlight = useCallback(async () => {
+    try {
+      const list = await notificationService.getMyNotifications();
+      const ids = unreadRequestReferenceIdsFromNotifications(list);
+      setHighlightedRequestIds(ids);
+      await notificationService.markRequestTabRead();
+      void syncTabBadgesToStore();
+      await refetch({ silent: true });
+    } catch {
+      await refetch().catch(() => undefined);
+      void syncTabBadgesToStore();
+    }
+  }, [refetch]);
 
   useEffect(() => {
     if (params.tab === "outgoing") setActiveTab("outgoing");
@@ -56,8 +99,32 @@ export default function RequestsScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      refetch().catch(() => undefined);
-    }, [refetch]),
+      let active = true;
+      void (async () => {
+        try {
+          await applyRequestTabReadAndHighlight();
+          if (!active) return;
+          if (
+            lastNotification &&
+            (lastNotification.type === "REQUEST_RECEIVED" ||
+              lastNotification.type === "REQUEST_ACCEPTED" ||
+              lastNotification.type === "REQUEST_REJECTED")
+          ) {
+            Alert.alert(lastNotification.title, lastNotification.content);
+          }
+        } catch {
+          // tránh Uncaught (in promise) nếu API lỗi
+        }
+      })().catch(() => undefined);
+      return () => {
+        active = false;
+        setHighlightedRequestIds([]);
+      };
+    }, [
+      applyRequestTabReadAndHighlight,
+      lastNotification,
+      requestListSeq,
+    ]),
   );
 
   // Only reload when needed (mount/focus + user actions). No polling interval.
@@ -67,6 +134,7 @@ export default function RequestsScreen() {
       const result = await updateStatus(id, { status: "ACCEPTED" });
       if (result) {
         refetch();
+        void syncTabBadgesToStore();
         // Real-time flow: when receiver ACCEPTs and chatRoom is created,
         // navigate directly into chat.
         if (result.status === "ACCEPTED" && result.chatRoom?.id) {
@@ -80,13 +148,19 @@ export default function RequestsScreen() {
   const handleReject = useCallback(
     async (id: number) => {
       const result = await updateStatus(id, { status: "REJECTED" });
-      if (result) refetch();
+      if (result) {
+        refetch();
+        void syncTabBadgesToStore();
+      }
     },
     [updateStatus, refetch],
   );
 
   const handlePressRequest = useCallback(
     (request: RequestResponse) => {
+      setHighlightedRequestIds((prev) =>
+        prev.filter((id) => id !== request.id),
+      );
       setRequestDetail(request, activeTab);
       router.push(`/request/${request.id}`);
     },
@@ -103,9 +177,18 @@ export default function RequestsScreen() {
         onOpenChat={handleOpenChat}
         onPress={handlePressRequest}
         isUpdating={isUpdating}
+        emphasizeNew={highlightedRequestIds.includes(item.id)}
       />
     ),
-    [activeTab, handleAccept, handleReject, handleOpenChat, handlePressRequest, isUpdating],
+    [
+      activeTab,
+      handleAccept,
+      handleReject,
+      handleOpenChat,
+      handlePressRequest,
+      highlightedRequestIds,
+      isUpdating,
+    ],
   );
 
   const keyExtractor = useCallback(
