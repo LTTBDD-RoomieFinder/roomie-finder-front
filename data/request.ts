@@ -92,10 +92,6 @@ export interface BaseProfileRequest {
   avatarUrl: string;
   budgetMin: number;
   budgetMax: number;
-  isSmoker: boolean;
-  hasPet: boolean;
-  sleepSchedule: string;
-  cleanliness: number;
   hometown: string;
   workplace: string;
   streetAddress: string;
@@ -105,5 +101,13 @@ export interface BaseProfileRequest {
   tagIds: number[];
 }
 
-export type CreateProfileRequest = BaseProfileRequest;
-export type UpdateProfileRequest = BaseProfileRequest;
+/** Optional profile fields — omit from request unless user set/changed them. */
+export type ProfileOptionalFields = {
+  isSmoker?: boolean | null;
+  hasPet?: boolean | null;
+  sleepSchedule?: string | null;
+  cleanliness?: number | null;
+};
+
+export type CreateProfileRequest = BaseProfileRequest & ProfileOptionalFields;
+export type UpdateProfileRequest = BaseProfileRequest & ProfileOptionalFields;

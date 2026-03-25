@@ -8,10 +8,10 @@ export interface Profile {
   avatarUrl: string;
   budgetMin: number;
   budgetMax: number;
-  isSmoker: boolean;
-  hasPet: boolean;
-  sleepSchedule: string;
-  cleanliness: number;
+  isSmoker: boolean | null;
+  hasPet: boolean | null;
+  sleepSchedule: string | null;
+  cleanliness: number | null;
   hometown: string;
   workplace: string;
   address: Address;
