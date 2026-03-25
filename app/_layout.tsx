@@ -1,22 +1,22 @@
 import {
-    DarkTheme,
-    DefaultTheme,
-    ThemeProvider,
+  DarkTheme,
+  DefaultTheme,
+  ThemeProvider,
 } from "@react-navigation/native";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useRef } from "react";
 import "react-native-reanimated";
 
+import { useColorScheme } from "@/hooks/use-color-scheme";
+import { useFcmToken } from "@/hooks/use-fcm-token";
 import { useGlobalChatBadgeRealtime } from "@/hooks/use-global-chat-badge-realtime";
 import { useNotificationSocket } from "@/hooks/use-notification-socket";
-import { useColorScheme } from "@/hooks/use-color-scheme";
-import { useAuthStore } from "@/stores/useAuthStore";
-import { useNotificationStore } from "@/stores/use-notification-store";
-import { useRequestListRealtimeStore } from "@/stores/use-request-list-realtime-store";
-import { useFcmToken } from "@/hooks/use-fcm-token";
 import { useTabBadgeSync } from "@/hooks/use-tab-badge-sync";
 import { syncTabBadgesToStore } from "@/services/tab-badge-service";
+import { useNotificationStore } from "@/stores/use-notification-store";
+import { useRequestListRealtimeStore } from "@/stores/use-request-list-realtime-store";
+import { useAuthStore } from "@/stores/useAuthStore";
 import { isRequestNotificationType } from "@/utils/notification-helpers";
 
 export const unstable_settings = {
@@ -118,6 +118,7 @@ export default function RootLayout() {
         <Stack.Screen name="request" />
         <Stack.Screen name="chat/[id]" />
         <Stack.Screen name="post" />
+        <Stack.Screen name="profile" />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
