@@ -10,6 +10,9 @@ import { GENDER_REQ_LABELS, ROOM_TYPE_LABELS } from "@/constants/room-constants"
 import Divider from "@/components/ui/divider";
 import Slider from "@react-native-community/slider";
 import { AmenityService } from "@/services/amenity-service";
+// MapPicker được tách theo platform: `map-picker.native.tsx` (mobile) và `map-picker.web.tsx` (web).
+// ESLint import resolver không hiểu được suffix `.native/.web`, nên cần disable rule này.
+// eslint-disable-next-line import/no-unresolved
 import MapPicker from "@/components/ui/map-picker";
 
 interface Amenity {
@@ -235,8 +238,8 @@ export function FilterModal({ visible, onClose, onApply, initialFilters = {} }: 
                 onLocationSelect={(lat, lng) => {
                   setFilters((prev) => ({
                     ...prev,
-                    latitude: lat,
-                    longitude: lng,
+                    userLat: lat,
+                    userLng: lng,
                     cityName: undefined,
                     districtName: undefined,
                     wardName: undefined,

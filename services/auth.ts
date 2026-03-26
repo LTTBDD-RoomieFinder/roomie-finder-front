@@ -6,47 +6,48 @@ import { useAuthStore } from "@/stores/useAuthStore";
 export const authService = {
   async login(req: LoginRequest) {
     const response = await authApi.login(req);
-    console.log(response);
+    const payload = response?.data ?? response;
     if (
-      typeof response?.data?.accessToken !== "string" ||
-      typeof response?.data?.refreshToken !== "string"
+      typeof payload?.accessToken !== "string" ||
+      typeof payload?.refreshToken !== "string"
     ) {
       throw new Error("Invalid login response");
     }
 
-    await setAccessToken(response.data?.accessToken);
-    await setRefreshToken(response.data?.refreshToken);
+    await setAccessToken(payload.accessToken);
+    await setRefreshToken(payload.refreshToken);
 
-    if (response?.data?.user) {
+    if (payload?.user) {
       useAuthStore.getState().setSession({
-        user: response.data?.user,
-        accessToken: response.data?.accessToken,
-        refreshToken: response.data?.refreshToken,
+        user: payload.user,
+        accessToken: payload.accessToken,
+        refreshToken: payload.refreshToken,
       });
     }
 
-    return response;
+    return payload;
   },
 
   async googleLogin(token: string) {
     const response = await authApi.googleLogin(token);
+    const payload = response?.data ?? response;
     if (
-      typeof response?.data?.accessToken === "string" &&
-      typeof response?.data?.refreshToken === "string"
+      typeof payload?.accessToken === "string" &&
+      typeof payload?.refreshToken === "string"
     ) {
-      await setAccessToken(response?.data?.accessToken);
-      await setRefreshToken(response?.data?.refreshToken);
+      await setAccessToken(payload.accessToken);
+      await setRefreshToken(payload.refreshToken);
 
-      if (response?.data?.user) {
+      if (payload?.user) {
         useAuthStore.getState().setSession({
-          user: response?.data?.user,
-          accessToken: response?.data?.accessToken,
-          refreshToken: response?.data?.refreshToken,
+          user: payload.user,
+          accessToken: payload.accessToken,
+          refreshToken: payload.refreshToken,
         });
       }
     }
 
-    return response;
+    return payload;
   },
 
   async register(req: RegisterRequest) {

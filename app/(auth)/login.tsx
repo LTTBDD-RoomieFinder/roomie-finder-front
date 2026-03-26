@@ -44,7 +44,13 @@ export default function Login() {
       alert(AUTH_TEXT.SUCCESS.LOGIN_SUCCESS);
       router.replace("/(tabs)/home");
     } catch (error: any) {
-      setError(error);
+      const message =
+        typeof error === "string"
+          ? error
+          : error instanceof Error
+            ? error.message
+            : "Login failed";
+      setError(message);
     } finally {
       setLoading(false);
     }
