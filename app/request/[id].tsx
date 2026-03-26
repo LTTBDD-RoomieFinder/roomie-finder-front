@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { ProfileMatchSection } from "@/components/matching/profile-match-section";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
@@ -182,6 +183,16 @@ export default function RequestDetailScreen() {
               ) : null}
             </View>
           </View>
+
+          <ProfileMatchSection
+            targetUserId={otherUser?.id}
+            currentUserId={currentUserId ?? undefined}
+            hint={
+              variant === "incoming"
+                ? "So khớp hồ sơ của bạn với người gửi lời mời"
+                : "So khớp hồ sơ của bạn với người nhận lời mời"
+            }
+          />
 
           {/* Thẻ chi tiết */}
           <View

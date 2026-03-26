@@ -1,6 +1,7 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useState } from "react";
 import {
+    ActivityIndicator,
     Alert,
     Dimensions,
     Pressable,
@@ -9,6 +10,7 @@ import {
     View,
 } from "react-native";
 
+import { ProfileMatchSection } from "@/components/matching/profile-match-section";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { GENDER_REQ_LABELS, ROOM_TYPE_LABELS } from "@/constants/room-constants";
@@ -86,6 +88,22 @@ export default function RoomDetailScreen() {
     ]);
   };
 
+  if (!isValidRoomId) {
+    return (
+      <ThemedView style={[styles.root, styles.centered]}>
+        <ThemedText>Không tìm thấy phòng.</ThemedText>
+      </ThemedView>
+    );
+  }
+
+  if (loading && !room) {
+    return (
+      <ThemedView style={[styles.root, styles.centered]}>
+        <ActivityIndicator size="large" color={color.primary} />
+      </ThemedView>
+    );
+  }
+
   if (!room) return null;
 
   return (
@@ -150,6 +168,14 @@ export default function RoomDetailScreen() {
             <ThemedText style={[styles.price, { color: color.primary }]}>
               {formatRoomPrice(room.price)}
             </ThemedText>
+          </View>
+
+          <View style={styles.matchSection}>
+            <ProfileMatchSection
+              targetUserId={room.ownerId}
+              currentUserId={user?.id}
+              hint="So khớp hồ sơ của bạn với chủ phòng đăng tin"
+            />
           </View>
 
           {/* ADDRESS */}
@@ -224,6 +250,14 @@ export default function RoomDetailScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
+  },
+  centered: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  matchSection: {
+    marginTop: -8,
+    marginBottom: 8,
   },
 
   imageContainer: {
