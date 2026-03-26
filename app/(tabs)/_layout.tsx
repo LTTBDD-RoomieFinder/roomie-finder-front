@@ -2,6 +2,7 @@ import { Tabs } from "expo-router";
 import React from "react";
 
 import { HapticTab } from "@/components/haptic-tab";
+import { profileTabGuard } from "@/utils/profile-tab-guard";
 import { TabBarIconWithBadge } from "@/components/tab-bar-icon-with-badge";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { Colors } from "@/constants/theme";
@@ -27,6 +28,16 @@ export default function TabLayout() {
     >
       <Tabs.Screen
         name="home"
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            const state = navigation.getState();
+            const current = state.routes[state.index];
+            if (current.name === "profile" && profileTabGuard.isDirty()) {
+              e.preventDefault();
+              profileTabGuard.requestNavigation("home");
+            }
+          },
+        })}
         options={{
           title: "Home",
           tabBarIcon: ({ color }) => (
@@ -44,6 +55,13 @@ export default function TabLayout() {
         }}
         listeners={({ navigation }) => ({
           tabPress: (e) => {
+            const state = navigation.getState();
+            const current = state.routes[state.index];
+            if (current.name === "profile" && profileTabGuard.isDirty()) {
+              e.preventDefault();
+              profileTabGuard.requestNavigation("room");
+              return;
+            }
             e.preventDefault();
             navigation.navigate("room", { screen: "index" });
           },
@@ -51,6 +69,16 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="requests"
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            const state = navigation.getState();
+            const current = state.routes[state.index];
+            if (current.name === "profile" && profileTabGuard.isDirty()) {
+              e.preventDefault();
+              profileTabGuard.requestNavigation("requests");
+            }
+          },
+        })}
         options={{
           title: "Requests",
           tabBarIcon: ({ color }) => (
@@ -64,6 +92,16 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="chats"
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            const state = navigation.getState();
+            const current = state.routes[state.index];
+            if (current.name === "profile" && profileTabGuard.isDirty()) {
+              e.preventDefault();
+              profileTabGuard.requestNavigation("chats");
+            }
+          },
+        })}
         options={{
           title: "Chats",
           tabBarIcon: ({ color }) => (

@@ -1,6 +1,5 @@
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-4
 
 type Props = {
   visible: boolean;

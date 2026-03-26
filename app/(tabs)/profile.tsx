@@ -4,20 +4,26 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Switch,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import { authService } from "@/services/auth";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Controller, useForm } from "react-hook-form";
+import { Controller, FieldNamesMarkedBoolean, useForm } from "react-hook-form";
 
 import { profileApi } from "@/apis/profile";
 import { tagApi } from "@/apis/tag";
+import { Gender } from "@/constants/gender";
+import {
+  BaseProfileRequest,
+  CreateProfileRequest,
+  ProfileOptionalFields,
+  UpdateProfileRequest,
+} from "@/data/request";
 import { Profile } from "@/types/Profile";
 
 import ImageUploadSection from "@/components/ui/image-upload-section";
@@ -26,30 +32,67 @@ import { locationService } from "@/services/location-service";
 import { City, District, Ward } from "@/types/Address";
 
 import ConfirmModal from "@/components/ui/confirm-modal";
+import DirtyLeaveModal from "@/components/ui/dirty-leave-modal";
 import { Tag } from "@/types/Tag";
-import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import { useNavigation } from "@react-navigation/native";
 
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { profileTabGuard } from "@/utils/profile-tab-guard";
 
 type FormValues = {
   fullName: string;
   gender: string;
   budgetMin: number;
   budgetMax: number;
-  isSmoker: boolean;
-  hasPet: boolean;
+  isSmoker: boolean | null;
+  hasPet: boolean | null;
   sleepSchedule: string;
-  cleanliness: number;
+  cleanliness: number | undefined;
   hometown: string;
   workplace: string;
   streetAddress: string;
-  cityId: number;
-  districtId: number;
-  wardId: number;
+  cityId: number | undefined;
+  districtId: number | undefined;
+  wardId: number | undefined;
   tagIds: number[];
   avatarUrl: string;
 };
+
+function buildProfilePayload(
+  data: FormValues,
+  dirtyFields: FieldNamesMarkedBoolean<FormValues>
+): CreateProfileRequest | UpdateProfileRequest {
+  const tagIds = !data.tagIds || data.tagIds.length === 0 ? [1] : data.tagIds;
+
+  const base: BaseProfileRequest = {
+    fullName: data.fullName,
+    gender: data.gender as Gender,
+    avatarUrl: data.avatarUrl || "",
+    budgetMin: data.budgetMin,
+    budgetMax: data.budgetMax,
+    hometown: data.hometown,
+    workplace: data.workplace || "",
+    streetAddress: data.streetAddress,
+    wardId: data.wardId as number,
+    districtId: data.districtId as number,
+    cityId: data.cityId as number,
+    tagIds,
+  };
+
+  const optional: ProfileOptionalFields = {};
+  if (dirtyFields.isSmoker) optional.isSmoker = data.isSmoker;
+  if (dirtyFields.hasPet) optional.hasPet = data.hasPet;
+  if (dirtyFields.sleepSchedule) {
+    optional.sleepSchedule = data.sleepSchedule.trim() === "" ? null : data.sleepSchedule;
+  }
+  if (dirtyFields.cleanliness) {
+    optional.cleanliness =
+      data.cleanliness === undefined || data.cleanliness === null ? null : data.cleanliness;
+  }
+
+  return { ...base, ...optional };
+}
 
 export default function ProfileScreen() {
   const navigation = useNavigation();
@@ -58,15 +101,48 @@ export default function ProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [isCreated, setIsCreated] = useState(true);
   const [images, setImages] = useState<string[]>([]);
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [tags, setTags] = useState<Tag[]>([]);
 
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [confirmAction, setConfirmAction] = useState<null | (() => void)>(null);
   const [confirmConfig, setConfirmConfig] = useState({ title: "", message: "" });
 
-  const { control, handleSubmit, setValue, watch, formState, reset } =
-    useForm<FormValues>();
+  const [leaveModalVisible, setLeaveModalVisible] = useState(false);
+  const [leaveSaving, setLeaveSaving] = useState(false);
+  const pendingNavRef = useRef<"home" | "room" | "requests" | "chats" | null>(null);
+
+  const {
+    control,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { errors, dirtyFields, isDirty },
+    reset,
+  } = useForm<FormValues>({
+    mode: "onSubmit",
+    reValidateMode: "onChange",
+    shouldFocusError: true,
+    criteriaMode: "all",
+    defaultValues: {
+      fullName: "",
+      gender: "",
+      budgetMin: 0,
+      budgetMax: 0,
+      isSmoker: null,
+      hasPet: null,
+      sleepSchedule: "",
+      cleanliness: undefined,
+      hometown: "",
+      workplace: "",
+      streetAddress: "",
+      cityId: undefined,
+      districtId: undefined,
+      wardId: undefined,
+      tagIds: [],
+      avatarUrl: "",
+    },
+  });
 
   const [cities, setCities] = useState<City[]>([]);
   const [districts, setDistricts] = useState<District[]>([]);
@@ -76,10 +152,24 @@ export default function ProfileScreen() {
   const districtId = watch("districtId");
   const wardId = watch("wardId");
 
+  const dirtyFieldsRef = useRef(dirtyFields);
+  dirtyFieldsRef.current = dirtyFields;
+
   const isDark = scheme === "dark";
   const onPrimary = isDark ? "#151718" : "#fff";
   const primaryLight = isDark ? "#1f3333" : "#e6faf9";
   const primaryBorder = isDark ? "#2e5c58" : "#99ddd9";
+
+  useEffect(() => {
+    profileTabGuard.setDirty(isDirty);
+  }, [isDirty]);
+
+  useEffect(() => {
+    return profileTabGuard.subscribe((target) => {
+      pendingNavRef.current = target;
+      setLeaveModalVisible(true);
+    });
+  }, []);
 
   const styles = StyleSheet.create({
     container: {
@@ -179,7 +269,7 @@ export default function ProfileScreen() {
       borderColor: color.border,
       padding: 14,
       borderRadius: 12,
-      marginBottom: 12,
+      marginBottom: 4,
       color: color.text,
       backgroundColor: color.background,
       fontSize: 16,
@@ -188,6 +278,14 @@ export default function ProfileScreen() {
       shadowOpacity: 0.05,
       shadowRadius: 2,
       elevation: 1,
+    },
+    inputError: {
+      borderColor: color.error,
+    },
+    errorText: {
+      color: color.error,
+      fontSize: 12,
+      marginBottom: 8,
     },
     row: { flexDirection: "row", gap: 12 },
     inputHalf: {
@@ -233,7 +331,7 @@ export default function ProfileScreen() {
     genderRow: {
       flexDirection: "row",
       gap: 10,
-      marginBottom: 12,
+      marginBottom: 4,
     },
     genderOption: {
       flex: 1,
@@ -334,6 +432,32 @@ export default function ProfileScreen() {
       fontWeight: "600",
       fontSize: 16,
     },
+    triRow: {
+      flexDirection: "row",
+      gap: 8,
+      marginBottom: 4,
+    },
+    triBtn: {
+      flex: 1,
+      paddingVertical: 10,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: color.border,
+      alignItems: "center",
+      backgroundColor: color.background,
+    },
+    triBtnActive: {
+      borderColor: color.primary,
+      backgroundColor: primaryLight,
+    },
+    triBtnText: {
+      fontSize: 14,
+      color: color.textSecondary,
+    },
+    triBtnTextActive: {
+      color: color.primary,
+      fontWeight: "600",
+    },
   });
 
   const openConfirm = (config: {
@@ -353,15 +477,18 @@ export default function ProfileScreen() {
         gender: p.gender,
         budgetMin: p.budgetMin,
         budgetMax: p.budgetMax,
-        isSmoker: p.isSmoker,
-        hasPet: p.hasPet,
-        sleepSchedule: p.sleepSchedule,
-        cleanliness: p.cleanliness,
+        isSmoker: p.isSmoker ?? null,
+        hasPet: p.hasPet ?? null,
+        sleepSchedule: p.sleepSchedule ?? "",
+        cleanliness: p.cleanliness ?? undefined,
         hometown: p.hometown,
         workplace: p.workplace || "",
         streetAddress: p.address?.streetAddress ?? "",
         tagIds: p.tags?.map((t) => Number(t.id)) || [],
         avatarUrl: p.avatarUrl || "",
+        cityId: undefined,
+        districtId: undefined,
+        wardId: undefined,
       });
       if (p.avatarUrl) setImages([p.avatarUrl]);
     },
@@ -375,7 +502,7 @@ export default function ProfileScreen() {
       setProfile(p);
       setIsCreated(true);
       populateForm(p);
-    } catch (err) {
+    } catch {
       setIsCreated(false);
     } finally {
       setLoading(false);
@@ -386,7 +513,7 @@ export default function ProfileScreen() {
     try {
       const res = await tagApi.getTag();
       setTags(res.data);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.log(err);
     }
   }, []);
@@ -395,125 +522,127 @@ export default function ProfileScreen() {
     fetchProfile();
     fetchTags();
     locationService.getCities().then(setCities);
-  }, []);
+  }, [fetchProfile, fetchTags]);
 
   useEffect(() => {
     if (cityId) {
       locationService.getDistricts(cityId).then(setDistricts);
-      setValue("districtId", undefined as any);
-      setValue("wardId", undefined as any);
+      setValue("districtId", undefined);
+      setValue("wardId", undefined);
     }
-  }, [cityId]);
+  }, [cityId, setValue]);
 
   useEffect(() => {
     if (districtId) {
       locationService.getWards(districtId).then(setWards);
-      setValue("wardId", undefined as any);
+      setValue("wardId", undefined);
     }
-  }, [districtId]);
+  }, [districtId, setValue]);
 
   useEffect(() => {
     if (!profile || !cities.length) return;
-    const city = cities.find((c) => c.name === profile.address?.city);
+    const cityName = profile.address?.city?.name;
+    const city = cityName ? cities.find((c) => c.name === cityName) : undefined;
     if (city) setValue("cityId", city.id);
-  }, [cities, profile]);
+  }, [cities, profile, setValue]);
 
   useEffect(() => {
     if (!profile || !districts.length) return;
-    const district = districts.find((d) => d.name === profile.address?.district);
+    const districtName = profile.address?.district?.name;
+    const district = districtName
+      ? districts.find((d) => d.name === districtName)
+      : undefined;
     if (district) setValue("districtId", district.id);
-  }, [districts, profile]);
+  }, [districts, profile, setValue]);
 
   useEffect(() => {
     if (!profile || !wards.length) return;
-    const ward = wards.find((w) => w.name === profile.address?.ward);
+    const wardName = profile.address?.ward?.name;
+    const ward = wardName ? wards.find((w) => w.name === wardName) : undefined;
     if (ward) setValue("wardId", ward.id);
-  }, [wards, profile]);
+  }, [wards, profile, setValue]);
+
+  const submitProfile = useCallback(
+    async (
+      data: FormValues,
+      dirtySnapshot: FieldNamesMarkedBoolean<FormValues>,
+      options?: { showSuccessAlert?: boolean }
+    ) => {
+      const merged: FormValues = {
+        ...data,
+        avatarUrl: images[0] || data.avatarUrl || "",
+      };
+
+      const payload: UpdateProfileRequest | CreateProfileRequest = buildProfilePayload(
+        merged,
+        dirtySnapshot
+      );
+
+      if (isCreated) await profileApi.updateProfile(payload);
+      else await profileApi.createProfile(payload);
+
+      if (options?.showSuccessAlert !== false) {
+        Alert.alert("Lưu thay đổi thành công!");
+      }
+
+      reset(merged);
+    },
+    [images, isCreated, reset]
+  );
 
   const onSubmit = async (data: FormValues) => {
-    data.avatarUrl = images[0] || data.avatarUrl || "";
-    if (!data.cityId) data.cityId = cityId;
-    if (!data.districtId) data.districtId = districtId;
-    if (!data.wardId) data.wardId = wardId;
-
-    if (isCreated) await profileApi.updateProfile(data as any);
-    else await profileApi.createProfile(data as any);
-
-    Alert.alert("Lưu thay đổi thành công!");
-    reset(data);
+    const snapshot = { ...dirtyFieldsRef.current };
+    await submitProfile(data, snapshot, { showSuccessAlert: true });
   };
 
-  const isDirtyRef = useRef(formState.isDirty);
-  useEffect(() => {
-    isDirtyRef.current = formState.isDirty;
-  }, [formState.isDirty]);
+  const navigateToPendingTab = useCallback(() => {
+    const target = pendingNavRef.current;
+    pendingNavRef.current = null;
+    if (!target) return;
+    const nav = navigation as {
+      navigate: (name: string, params?: { screen: string }) => void;
+    };
+    if (target === "room") {
+      nav.navigate("room", { screen: "index" });
+    } else {
+      nav.navigate(target);
+    }
+  }, [navigation]);
 
-  const pendingTabIndexRef = useRef<number | null>(null);
-
-  useFocusEffect(
-    useCallback(() => {
-      const unsubBlur = navigation.addListener("blur" as any, () => {
-        if (!isDirtyRef.current) return;
-
-        const state = navigation.getState();
-        const newIndex = state?.index;
-        const profileIndex = state?.routes.findIndex((r: any) =>
-          r.name.includes("profile")
-        );
-
-        if (newIndex !== profileIndex) {
-          pendingTabIndexRef.current = newIndex ?? null;
-
-          if (profileIndex !== undefined && profileIndex >= 0 && state) {
-            navigation.navigate(state.routeNames[profileIndex] as never);
-          }
-
-          Alert.alert(
-            "Bạn có thay đổi chưa lưu",
-            "Bạn có muốn lưu các thay đổi không?",
-            [
-              { text: "Ở lại", style: "cancel" },
-              {
-                text: "Không lưu",
-                style: "destructive",
-                onPress: async () => {
-                  await fetchProfile();
-                  if (pendingTabIndexRef.current !== null) {
-                    const s = navigation.getState();
-                    if (s) {
-                      navigation.navigate(
-                        s.routeNames[pendingTabIndexRef.current] as never
-                      );
-                      pendingTabIndexRef.current = null;
-                    }
-                  }
-                },
-              },
-              {
-                text: "Lưu",
-                onPress: () => {
-                  handleSubmit(async (data) => {
-                    await onSubmit(data);
-                    if (pendingTabIndexRef.current !== null) {
-                      const s = navigation.getState();
-                      if (s) {
-                        navigation.navigate(
-                          s.routeNames[pendingTabIndexRef.current] as never
-                        );
-                        pendingTabIndexRef.current = null;
-                      }
-                    }
-                  })();
-                },
-              },
-            ]
-          );
+  const handleLeaveSave = useCallback(() => {
+    handleSubmit(
+      async (data) => {
+        setLeaveSaving(true);
+        try {
+          const snapshot = { ...dirtyFieldsRef.current };
+          await submitProfile(data, snapshot, { showSuccessAlert: false });
+          setLeaveModalVisible(false);
+          navigateToPendingTab();
+        } finally {
+          setLeaveSaving(false);
         }
-      });
+      },
+      () => {}
+    )();
+  }, [handleSubmit, navigateToPendingTab, submitProfile]);
 
-      return () => unsubBlur();
-    }, [navigation, fetchProfile, handleSubmit])
-  );
+  const handleLeaveDiscard = useCallback(async () => {
+    setLeaveModalVisible(false);
+    try {
+      const res = await profileApi.getProfile();
+      const p: Profile = res.data;
+      setProfile(p);
+      populateForm(p);
+    } catch {
+      /* keep form if refetch fails */
+    }
+    navigateToPendingTab();
+  }, [navigateToPendingTab, populateForm]);
+
+  const handleLeaveStay = useCallback(() => {
+    pendingNavRef.current = null;
+    setLeaveModalVisible(false);
+  }, []);
 
   if (loading) {
     return <ActivityIndicator style={{ marginTop: 50 }} color={color.primary} />;
@@ -535,7 +664,6 @@ export default function ProfileScreen() {
         </View>
       </View>
       <ScrollView contentContainerStyle={styles.container}>
-
         <View style={styles.card}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionIcon}>
@@ -558,9 +686,10 @@ export default function ProfileScreen() {
           <Controller
             control={control}
             name="fullName"
+            rules={{ required: "Vui lòng nhập họ tên" }}
             render={({ field }) => (
               <TextInput
-                style={styles.input}
+                style={[styles.input, errors.fullName && styles.inputError]}
                 placeholder="Họ tên"
                 placeholderTextColor={color.placeholder}
                 value={field.value}
@@ -568,11 +697,15 @@ export default function ProfileScreen() {
               />
             )}
           />
+          {errors.fullName?.message ? (
+            <ThemedText style={styles.errorText}>{String(errors.fullName.message)}</ThemedText>
+          ) : null}
 
           <ThemedText style={styles.label}>Giới tính</ThemedText>
           <Controller
             control={control}
             name="gender"
+            rules={{ required: "Vui lòng chọn giới tính" }}
             render={({ field }) => (
               <View style={styles.genderRow}>
                 {[
@@ -585,6 +718,7 @@ export default function ProfileScreen() {
                     style={[
                       styles.genderOption,
                       field.value === opt.value && styles.genderOptionActive,
+                      errors.gender && styles.inputError,
                     ]}
                     onPress={() => field.onChange(opt.value)}
                   >
@@ -601,14 +735,18 @@ export default function ProfileScreen() {
               </View>
             )}
           />
+          {errors.gender?.message ? (
+            <ThemedText style={styles.errorText}>{String(errors.gender.message)}</ThemedText>
+          ) : null}
 
           <ThemedText style={styles.label}>Quê quán</ThemedText>
           <Controller
             control={control}
             name="hometown"
+            rules={{ required: "Vui lòng nhập quê quán" }}
             render={({ field }) => (
               <TextInput
-                style={styles.input}
+                style={[styles.input, errors.hometown && styles.inputError]}
                 placeholder="Quê quán"
                 placeholderTextColor={color.placeholder}
                 value={field.value}
@@ -616,6 +754,9 @@ export default function ProfileScreen() {
               />
             )}
           />
+          {errors.hometown?.message ? (
+            <ThemedText style={styles.errorText}>{String(errors.hometown.message)}</ThemedText>
+          ) : null}
 
           <ThemedText style={styles.label}>Nơi làm việc</ThemedText>
           <Controller
@@ -664,45 +805,89 @@ export default function ProfileScreen() {
               <TextInput
                 style={styles.input}
                 keyboardType="numeric"
-                placeholder="1–5"
+                placeholder="1–5 (để trống nếu không áp dụng)"
                 placeholderTextColor={color.placeholder}
-                value={field.value?.toString()}
-                onChangeText={(v) => field.onChange(Number(v))}
+                value={field.value === undefined || field.value === null ? "" : String(field.value)}
+                onChangeText={(v) => {
+                  if (v.trim() === "") field.onChange(undefined);
+                  else {
+                    const n = Number(v);
+                    field.onChange(Number.isNaN(n) ? undefined : n);
+                  }
+                }}
               />
             )}
           />
 
-          <View style={styles.rowBetween}>
-            <ThemedText>Hút thuốc</ThemedText>
-            <Controller
-              control={control}
-              name="isSmoker"
-              render={({ field }) => (
-                <Switch
-                  value={field.value}
-                  onValueChange={field.onChange}
-                  trackColor={{ false: color.border, true: color.primary }}
-                  thumbColor={onPrimary}
-                />
-              )}
-            />
-          </View>
+          <ThemedText style={styles.label}>Hút thuốc</ThemedText>
+          <Controller
+            control={control}
+            name="isSmoker"
+            render={({ field }) => (
+              <View style={styles.triRow}>
+                {(
+                  [
+                    { label: "Chưa chọn", value: null as boolean | null },
+                    { label: "Có", value: true },
+                    { label: "Không", value: false },
+                  ] as const
+                ).map((opt) => (
+                  <TouchableOpacity
+                    key={String(opt.value)}
+                    style={[
+                      styles.triBtn,
+                      field.value === opt.value && styles.triBtnActive,
+                    ]}
+                    onPress={() => field.onChange(opt.value)}
+                  >
+                    <ThemedText
+                      style={[
+                        styles.triBtnText,
+                        field.value === opt.value && styles.triBtnTextActive,
+                      ]}
+                    >
+                      {opt.label}
+                    </ThemedText>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          />
 
-          <View style={styles.rowBetween}>
-            <ThemedText>Có thú cưng</ThemedText>
-            <Controller
-              control={control}
-              name="hasPet"
-              render={({ field }) => (
-                <Switch
-                  value={field.value}
-                  onValueChange={field.onChange}
-                  trackColor={{ false: color.border, true: color.primary }}
-                  thumbColor={onPrimary}
-                />
-              )}
-            />
-          </View>
+          <ThemedText style={styles.label}>Có thú cưng</ThemedText>
+          <Controller
+            control={control}
+            name="hasPet"
+            render={({ field }) => (
+              <View style={styles.triRow}>
+                {(
+                  [
+                    { label: "Chưa chọn", value: null as boolean | null },
+                    { label: "Có", value: true },
+                    { label: "Không", value: false },
+                  ] as const
+                ).map((opt) => (
+                  <TouchableOpacity
+                    key={String(opt.value)}
+                    style={[
+                      styles.triBtn,
+                      field.value === opt.value && styles.triBtnActive,
+                    ]}
+                    onPress={() => field.onChange(opt.value)}
+                  >
+                    <ThemedText
+                      style={[
+                        styles.triBtnText,
+                        field.value === opt.value && styles.triBtnTextActive,
+                      ]}
+                    >
+                      {opt.label}
+                    </ThemedText>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          />
         </View>
 
         <View style={styles.card}>
@@ -718,34 +903,53 @@ export default function ProfileScreen() {
               <Controller
                 control={control}
                 name="budgetMin"
+                rules={{
+                  required: "Bắt buộc",
+                  validate: (v) =>
+                    (typeof v === "number" && !Number.isNaN(v) && v >= 0) || "Nhập số hợp lệ",
+                }}
                 render={({ field }) => (
                   <TextInput
-                    style={styles.inputHalf}
+                    style={[styles.inputHalf, errors.budgetMin && styles.inputError]}
                     keyboardType="numeric"
                     placeholder="Min"
                     placeholderTextColor={color.placeholder}
-                    value={field.value?.toString()}
-                    onChangeText={(v) => field.onChange(Number(v))}
+                    value={field.value?.toString() ?? ""}
+                    onChangeText={(v) => field.onChange(v === "" ? 0 : Number(v))}
                   />
                 )}
               />
+              {errors.budgetMin?.message ? (
+                <ThemedText style={styles.errorText}>{String(errors.budgetMin.message)}</ThemedText>
+              ) : null}
             </View>
             <View style={{ flex: 1 }}>
               <ThemedText style={styles.label}>Tối đa</ThemedText>
               <Controller
                 control={control}
                 name="budgetMax"
+                rules={{
+                  required: "Bắt buộc",
+                  validate: (v, form) => {
+                    if (typeof v !== "number" || Number.isNaN(v) || v < 0) return "Nhập số hợp lệ";
+                    if (v < (form.budgetMin ?? 0)) return "Tối đa phải ≥ tối thiểu";
+                    return true;
+                  },
+                }}
                 render={({ field }) => (
                   <TextInput
-                    style={styles.inputHalf}
+                    style={[styles.inputHalf, errors.budgetMax && styles.inputError]}
                     keyboardType="numeric"
                     placeholder="Max"
                     placeholderTextColor={color.placeholder}
-                    value={field.value?.toString()}
-                    onChangeText={(v) => field.onChange(Number(v))}
+                    value={field.value?.toString() ?? ""}
+                    onChangeText={(v) => field.onChange(v === "" ? 0 : Number(v))}
                   />
                 )}
               />
+              {errors.budgetMax?.message ? (
+                <ThemedText style={styles.errorText}>{String(errors.budgetMax.message)}</ThemedText>
+              ) : null}
             </View>
           </View>
         </View>
@@ -762,9 +966,10 @@ export default function ProfileScreen() {
           <Controller
             control={control}
             name="streetAddress"
+            rules={{ required: "Vui lòng nhập địa chỉ" }}
             render={({ field }) => (
               <TextInput
-                style={styles.input}
+                style={[styles.input, errors.streetAddress && styles.inputError]}
                 placeholder="Số nhà, tên đường"
                 placeholderTextColor={color.placeholder}
                 value={field.value}
@@ -772,25 +977,69 @@ export default function ProfileScreen() {
               />
             )}
           />
+          {errors.streetAddress?.message ? (
+            <ThemedText style={styles.errorText}>{String(errors.streetAddress.message)}</ThemedText>
+          ) : null}
 
-          <LocationPicker
-            label="Thành phố"
-            data={cities}
-            selectedValue={cityId}
-            onValueChange={(v) => setValue("cityId", v)}
+          <ThemedText style={styles.label}>Thành phố</ThemedText>
+          <Controller
+            control={control}
+            name="cityId"
+            rules={{
+              validate: (v) => (v !== undefined && v !== null) || "Chọn thành phố",
+            }}
+            render={({ field }) => (
+              <LocationPicker
+                label="Thành phố"
+                data={cities}
+                selectedValue={field.value}
+                onValueChange={field.onChange}
+              />
+            )}
           />
-          <LocationPicker
-            label="Quận / Huyện"
-            data={districts}
-            selectedValue={districtId}
-            onValueChange={(v) => setValue("districtId", v)}
+          {errors.cityId?.message ? (
+            <ThemedText style={styles.errorText}>{String(errors.cityId.message)}</ThemedText>
+          ) : null}
+
+          <ThemedText style={styles.label}>Quận / Huyện</ThemedText>
+          <Controller
+            control={control}
+            name="districtId"
+            rules={{
+              validate: (v) => (v !== undefined && v !== null) || "Chọn quận/huyện",
+            }}
+            render={({ field }) => (
+              <LocationPicker
+                label="Quận / Huyện"
+                data={districts}
+                selectedValue={field.value}
+                onValueChange={field.onChange}
+              />
+            )}
           />
-          <LocationPicker
-            label="Phường / Xã"
-            data={wards}
-            selectedValue={wardId}
-            onValueChange={(v) => setValue("wardId", v)}
+          {errors.districtId?.message ? (
+            <ThemedText style={styles.errorText}>{String(errors.districtId.message)}</ThemedText>
+          ) : null}
+
+          <ThemedText style={styles.label}>Phường / Xã</ThemedText>
+          <Controller
+            control={control}
+            name="wardId"
+            rules={{
+              validate: (v) => (v !== undefined && v !== null) || "Chọn phường/xã",
+            }}
+            render={({ field }) => (
+              <LocationPicker
+                label="Phường / Xã"
+                data={wards}
+                selectedValue={field.value}
+                onValueChange={field.onChange}
+              />
+            )}
           />
+          {errors.wardId?.message ? (
+            <ThemedText style={styles.errorText}>{String(errors.wardId.message)}</ThemedText>
+          ) : null}
 
           <ThemedText style={styles.preview}>
             📍{" "}
@@ -850,9 +1099,7 @@ export default function ProfileScreen() {
                             style={styles.tag}
                             onPress={() => addTag(t.id)}
                           >
-                            <ThemedText style={{ color: color.primary }}>
-                              {t.tag}
-                            </ThemedText>
+                            <ThemedText style={{ color: color.primary }}>{t.tag}</ThemedText>
                           </TouchableOpacity>
                         ))}
                       </ScrollView>
@@ -870,7 +1117,9 @@ export default function ProfileScreen() {
             openConfirm({
               title: "Xác nhận cập nhật",
               message: "Bạn có chắc muốn lưu thay đổi?",
-              onConfirm: handleSubmit(onSubmit),
+              onConfirm: () => {
+                handleSubmit(onSubmit)();
+              },
             })
           }
         >
@@ -900,6 +1149,14 @@ export default function ProfileScreen() {
           setConfirmVisible(false);
           confirmAction && confirmAction();
         }}
+      />
+
+      <DirtyLeaveModal
+        visible={leaveModalVisible}
+        saving={leaveSaving}
+        onSave={handleLeaveSave}
+        onStay={handleLeaveStay}
+        onDiscard={handleLeaveDiscard}
       />
     </>
   );
