@@ -5,22 +5,22 @@ import { HapticTab } from "@/components/haptic-tab";
 import { profileTabGuard } from "@/utils/profile-tab-guard";
 import { TabBarIconWithBadge } from "@/components/tab-bar-icon-with-badge";
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import { Colors } from "@/constants/theme";
-import { useColorScheme } from "@/hooks/use-color-scheme";
+import { useAppTheme } from "@/hooks/use-app-theme";
+import { useLanguage } from "@/hooks/use-language";
 import { useNotificationStore } from "@/stores/use-notification-store";
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
+  const { color } = useAppTheme();
+  const { t } = useLanguage();
   const requestUnread = useNotificationStore((s) => s.requestUnreadCount);
   const chatUnreadRooms = useNotificationStore((s) => s.chatUnreadRoomsCount);
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
+        tabBarActiveTintColor: color.tint,
         headerShown: false,
         tabBarButton: HapticTab,
-        // Phụ thuộc badge để layout re-render khi store đổi (một số bản RN/React Navigation không cập nhật icon tab khi chỉ child subscribe).
         tabBarStyle: {
           opacity: 1 + (requestUnread + chatUnreadRooms) * 0,
         },
@@ -39,7 +39,8 @@ export default function TabLayout() {
           },
         })}
         options={{
-          title: "Home",
+          title: t("tabs.home"),
+          tabBarLabel: t("tabs.home"),
           tabBarIcon: ({ color }) => (
             <IconSymbol size={28} name="house.fill" color={color} />
           ),
@@ -48,7 +49,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="room"
         options={{
-          title: "Room",
+          title: t("tabs.room"),
+          tabBarLabel: t("tabs.room"),
           tabBarIcon: ({ color }) => (
             <IconSymbol size={28} name="bed.double.fill" color={color} />
           ),
@@ -80,7 +82,8 @@ export default function TabLayout() {
           },
         })}
         options={{
-          title: "Requests",
+          title: t("tabs.requests"),
+          tabBarLabel: t("tabs.requests"),
           tabBarIcon: ({ color }) => (
             <TabBarIconWithBadge
               name="envelope.fill"
@@ -103,7 +106,8 @@ export default function TabLayout() {
           },
         })}
         options={{
-          title: "Chats",
+          title: t("tabs.chats"),
+          tabBarLabel: t("tabs.chats"),
           tabBarIcon: ({ color }) => (
             <TabBarIconWithBadge
               name="bubble.left.and.bubble.right.fill"
@@ -116,7 +120,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: "Profile",
+          title: t("tabs.profile"),
+          tabBarLabel: t("tabs.profile"),
           tabBarIcon: ({ color }) => (
             <IconSymbol size={28} name="person.fill" color={color} />
           ),

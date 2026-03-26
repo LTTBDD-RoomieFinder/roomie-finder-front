@@ -3,10 +3,12 @@ import { Modal, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { useLanguage } from "@/hooks/use-language";
+import { genderReqLabelKey, roomTypeLabelKey } from "@/lib/i18n-labels";
 import { ThemedText } from "@/components/themed-text";
 import { PostSearchRequest } from "@/data/request";
 import { GenderRequirement, RoomType } from "@/types/enums";
-import { GENDER_REQ_LABELS, ROOM_TYPE_LABELS } from "@/constants/room-constants";
+import { GENDER_REQ_ORDER, ROOM_TYPE_ORDER } from "@/constants/room-constants";
 import Divider from "@/components/ui/divider";
 import Slider from "@react-native-community/slider";
 import { AmenityService } from "@/services/amenity-service";
@@ -27,6 +29,7 @@ interface FilterModalProps {
 export function FilterModal({ visible, onClose, onApply, initialFilters = {} }: FilterModalProps) {
   const insets = useSafeAreaInsets();
   const { color } = useAppTheme();
+  const { t } = useLanguage();
 
   const [filters, setFilters] = useState<Omit<PostSearchRequest, "keyword" | "cursor" | "size">>(initialFilters);
   const [amenitiesList, setAmenitiesList] = useState<Amenity[]>([]);
@@ -95,9 +98,13 @@ export function FilterModal({ visible, onClose, onApply, initialFilters = {} }: 
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
               <Feather name="x" size={24} color={color.text} />
             </TouchableOpacity>
-            <ThemedText type="defaultSemiBold" style={styles.title}>Bộ lọc nâng cao</ThemedText>
+            <ThemedText type="defaultSemiBold" style={styles.title}>
+              {t("search.filter.title")}
+            </ThemedText>
             <TouchableOpacity onPress={handleClear} style={styles.clearBtn}>
-              <ThemedText style={{ color: color.primary, fontWeight: '600' }}>Xóa</ThemedText>
+              <ThemedText style={{ color: color.primary, fontWeight: "600" }}>
+                {t("search.filter.clear")}
+              </ThemedText>
             </TouchableOpacity>
           </View>
 
@@ -105,14 +112,16 @@ export function FilterModal({ visible, onClose, onApply, initialFilters = {} }: 
 
             {/* ROOM TYPE SECTION */}
             <View style={styles.section}>
-              <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>Loại phòng</ThemedText>
+              <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
+                {t("search.filter.roomType")}
+              </ThemedText>
               <View style={styles.chipRow}>
-                {Object.entries(ROOM_TYPE_LABELS).map(([key, label]) => {
-                  const type = key as RoomType;
+                {ROOM_TYPE_ORDER.map((type) => {
+                  const label = t(roomTypeLabelKey(type));
                   const isSelected = filters.roomType === type;
                   return (
                     <TouchableOpacity
-                      key={key}
+                      key={type}
                       onPress={() => toggleRoomType(type)}
                       style={[
                         styles.chip,
@@ -138,14 +147,16 @@ export function FilterModal({ visible, onClose, onApply, initialFilters = {} }: 
 
             {/* GENDER SECTION */}
             <View style={styles.section}>
-              <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>Giới tính</ThemedText>
+              <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
+                {t("search.filter.gender")}
+              </ThemedText>
               <View style={styles.chipRow}>
-                {Object.entries(GENDER_REQ_LABELS).map(([key, label]) => {
-                  const gender = key as GenderRequirement;
+                {GENDER_REQ_ORDER.map((gender) => {
+                  const label = t(genderReqLabelKey(gender));
                   const isSelected = filters.genderRequirement === gender;
                   return (
                     <TouchableOpacity
-                      key={key}
+                      key={gender}
                       onPress={() => toggleGender(gender)}
                       style={[
                         styles.chip,
@@ -171,10 +182,12 @@ export function FilterModal({ visible, onClose, onApply, initialFilters = {} }: 
 
             {/* PRICE SECTION */}
             <View style={styles.section}>
-              <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>Khoảng giá</ThemedText>
+              <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
+                {t("search.filter.priceRange")}
+              </ThemedText>
 
               <View style={styles.sectionHeader}>
-                <ThemedText style={{ opacity: 0.7 }}>Tối thiểu</ThemedText>
+                <ThemedText style={{ opacity: 0.7 }}>{t("search.filter.min")}</ThemedText>
                 <ThemedText style={{ color: color.primary, fontWeight: "600" }}>
                   {formatPrice(minPriceValue)}
                 </ThemedText>
@@ -197,7 +210,7 @@ export function FilterModal({ visible, onClose, onApply, initialFilters = {} }: 
               />
 
               <View style={[styles.sectionHeader, { marginTop: 8 }]}>
-                <ThemedText style={{ opacity: 0.7 }}>Tối đa</ThemedText>
+                <ThemedText style={{ opacity: 0.7 }}>{t("search.filter.max")}</ThemedText>
                 <ThemedText style={{ color: color.primary, fontWeight: "600" }}>
                   {formatPrice(maxPriceValue)}
                 </ThemedText>
@@ -225,7 +238,7 @@ export function FilterModal({ visible, onClose, onApply, initialFilters = {} }: 
             {/* LOCATION SECTION */}
             <View style={styles.section}>
               <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
-                Khu vực tìm kiếm
+                {t("search.filter.searchArea")}
               </ThemedText>
 
 
@@ -245,7 +258,7 @@ export function FilterModal({ visible, onClose, onApply, initialFilters = {} }: 
               />
 
               <View style={[styles.sectionHeader, { marginTop: 12 }]}>
-                <ThemedText style={{ opacity: 0.7 }}>Bán kính (km)</ThemedText>
+                <ThemedText style={{ opacity: 0.7 }}>{t("search.filter.radiusKm")}</ThemedText>
                 <ThemedText style={{ color: color.primary, fontWeight: "600" }}>
                   {(filters.radiusInKm ?? 50).toFixed(0)} km
                 </ThemedText>
@@ -268,11 +281,13 @@ export function FilterModal({ visible, onClose, onApply, initialFilters = {} }: 
 
             {/* AREA SECTION */}
             <View style={styles.section}>
-              <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>Diện tích (m²)</ThemedText>
+              <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
+                {t("search.filter.areaM2")}
+              </ThemedText>
               <View style={styles.inputRow}>
                 <TextInput
                   style={[styles.areaInput, { backgroundColor: color.card, color: color.text, borderColor: color.border }]}
-                  placeholder="Tối thiểu"
+                  placeholder={t("search.filter.min")}
                   placeholderTextColor={color.placeholder}
                   keyboardType="numeric"
                   value={filters.minArea?.toString() || ''}
@@ -281,7 +296,7 @@ export function FilterModal({ visible, onClose, onApply, initialFilters = {} }: 
                 <View style={[styles.dash, { backgroundColor: color.border }]} />
                 <TextInput
                   style={[styles.areaInput, { backgroundColor: color.card, color: color.text, borderColor: color.border }]}
-                  placeholder="Tối đa"
+                  placeholder={t("search.filter.max")}
                   placeholderTextColor={color.placeholder}
                   keyboardType="numeric"
                   value={filters.maxArea?.toString() || ''}
@@ -294,10 +309,12 @@ export function FilterModal({ visible, onClose, onApply, initialFilters = {} }: 
 
             {/* CAPACITY SECTION */}
             <View style={styles.section}>
-              <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>Sức chứa</ThemedText>
+              <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
+                {t("search.filter.capacity")}
+              </ThemedText>
               <TextInput
                 style={[styles.textInput, { backgroundColor: color.card, color: color.text, borderColor: color.border }]}
-                placeholder="Số người (capacity)"
+                placeholder={t("search.filter.capacityPh")}
                 placeholderTextColor={color.placeholder}
                 keyboardType="numeric"
                 value={filters.capacity?.toString() || ""}
@@ -311,7 +328,9 @@ export function FilterModal({ visible, onClose, onApply, initialFilters = {} }: 
 
             {/* AMENITIES SECTION */}
             <View style={styles.section}>
-              <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>Tiện ích</ThemedText>
+              <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
+                {t("search.filter.amenities")}
+              </ThemedText>
               <View style={styles.chipRow}>
                 {amenitiesList.map((amenity) => {
                   const isSelected = filters.amenityIds?.includes(amenity.id);
@@ -349,7 +368,7 @@ export function FilterModal({ visible, onClose, onApply, initialFilters = {} }: 
               onPress={handleApply}
             >
               <ThemedText style={[styles.applyBtnText, { color: color.primaryText }]}>
-                Áp dụng
+                {t("search.filter.apply")}
               </ThemedText>
             </TouchableOpacity>
           </View>

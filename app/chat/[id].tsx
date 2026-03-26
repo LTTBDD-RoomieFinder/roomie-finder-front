@@ -19,6 +19,7 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { useLanguage } from "@/hooks/use-language";
 import { useChatMessages } from "@/hooks/use-chat-messages";
 import { useChatRoomDetails } from "@/hooks/use-chat-room-details";
 import { useChatSocket } from "@/hooks/use-chat-socket";
@@ -37,6 +38,7 @@ export default function ChatRoomScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { color } = useAppTheme();
+  const { t } = useLanguage();
 
   const chatRoomId = Number(id);
 
@@ -103,11 +105,11 @@ export default function ChatRoomScreen() {
         }
 
         Alert.alert(
-          "Phòng chat đã bị xóa",
-          "Chủ phòng đã xóa phòng chat. Bạn sẽ được chuyển về danh sách.",
+          t("chat.roomDeletedTitle"),
+          t("chat.roomDeletedMessage"),
           [
             {
-              text: "OK",
+              text: t("common.ok"),
               onPress: () => router.replace("/(tabs)/chats"),
             },
           ],
@@ -128,11 +130,11 @@ export default function ChatRoomScreen() {
           }
 
           Alert.alert(
-            "Bạn đã bị mời ra khỏi phòng",
-            "Chủ phòng đã mời bạn ra khỏi phòng chat.",
+            t("chat.kickedTitle"),
+            t("chat.kickedMessage"),
             [
               {
-                text: "OK",
+                text: t("common.ok"),
                 onPress: () => router.replace("/(tabs)/chats"),
               },
             ],
@@ -164,11 +166,11 @@ export default function ChatRoomScreen() {
             ) {
               kickedAlertShownRef.current = true;
               Alert.alert(
-                "Bạn không còn trong phòng",
-                "Bạn đã bị rời/đuổi khỏi phòng chat.",
+                t("chat.notMemberTitle"),
+                t("chat.notMemberMessage"),
                 [
                   {
-                    text: "OK",
+                    text: t("common.ok"),
                     onPress: () => router.replace("/(tabs)/chats"),
                   },
                 ],
@@ -177,7 +179,7 @@ export default function ChatRoomScreen() {
           });
       }, 600);
     },
-    [addMessage, myUserId, chatRoomId, router],
+    [addMessage, myUserId, chatRoomId, router, t],
   );
 
   const { isConnected, sendMessage } = useChatSocket(
@@ -217,9 +219,9 @@ export default function ChatRoomScreen() {
     chatService
       .leaveChatRoom(chatRoomId)
       .then(() => {
-        Alert.alert("Rời phòng thành công", "Bạn đã rời khỏi phòng chat.", [
+        Alert.alert(t("chat.leaveSuccessTitle"), t("chat.leaveSuccessMessage"), [
           {
-            text: "OK",
+            text: t("common.ok"),
             onPress: () => {
               setInfoOpen(false);
               router.back();
@@ -229,9 +231,9 @@ export default function ChatRoomScreen() {
       })
       .catch(() => {
         isLeavingOrDeletingRef.current = false;
-        Alert.alert("Không thể rời phòng", "Vui lòng thử lại sau.");
+        Alert.alert(t("chat.leaveErrorTitle"), t("chat.leaveErrorMessage"));
       });
-  }, [chatRoomId, myUserId, router]);
+  }, [chatRoomId, myUserId, router, t]);
 
   const handleKickMember = useCallback(
     (memberUserId: number) => {
@@ -241,26 +243,26 @@ export default function ChatRoomScreen() {
           // Owner kicked someone: refresh member list.
           refetch();
           Alert.alert(
-            "Đã đuổi thành viên",
-            "Người dùng đã rời khỏi phòng chat.",
+            t("chat.kickSuccessTitle"),
+            t("chat.kickSuccessMessage"),
           );
         })
         .catch(() => {
-          Alert.alert("Không thể đuổi thành viên", "Vui lòng thử lại sau.");
+          Alert.alert(t("chat.kickErrorTitle"), t("chat.kickErrorMessage"));
         });
     },
-    [chatRoomId, refetch],
+    [chatRoomId, refetch, t],
   );
 
   const handleDeleteRoom = useCallback(() => {
     if (!chatRoomDetails?.ownerId) return;
     Alert.alert(
-      "Xóa phòng chat",
-      "Bạn có chắc muốn xóa phòng chat này không? Hành động này không thể hoàn tác.",
+      t("chat.deleteTitle"),
+      t("chat.deleteMessage"),
       [
-        { text: "Cancel", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "OK",
+          text: t("common.ok"),
           style: "destructive",
           onPress: () => {
             isLeavingOrDeletingRef.current = true;
@@ -272,13 +274,16 @@ export default function ChatRoomScreen() {
               })
               .catch(() => {
                 isLeavingOrDeletingRef.current = false;
-                Alert.alert("Không thể xóa phòng", "Vui lòng thử lại sau.");
+                Alert.alert(
+                  t("chat.deleteErrorTitle"),
+                  t("chat.deleteErrorMessage"),
+                );
               });
           },
         },
       ],
     );
-  }, [chatRoomDetails?.ownerId, chatRoomId, router]);
+  }, [chatRoomDetails?.ownerId, chatRoomId, router, t]);
 
   // If BE rejects membership after leave/kick => show alert and bounce back.
   useEffect(() => {
@@ -295,11 +300,11 @@ export default function ChatRoomScreen() {
 
     if (isNotFound) {
       Alert.alert(
-        "Phòng chat đã bị xóa",
-        "Chủ phòng đã xóa phòng chat. Bạn sẽ được chuyển về danh sách.",
+        t("chat.roomDeletedTitle"),
+        t("chat.roomDeletedMessage"),
         [
           {
-            text: "OK",
+            text: t("common.ok"),
             onPress: () => router.replace("/(tabs)/chats"),
           },
         ],
@@ -307,13 +312,13 @@ export default function ChatRoomScreen() {
       return;
     }
 
-    Alert.alert("Bạn không còn trong phòng", "Bạn đã bị rời/đuổi khỏi phòng chat.", [
+    Alert.alert(t("chat.notMemberTitle"), t("chat.notMemberMessage"), [
       {
-        text: "OK",
+        text: t("common.ok"),
         onPress: () => router.replace("/(tabs)/chats"),
       },
     ]);
-  }, [detailsError, error, router]);
+  }, [detailsError, error, router, t]);
 
   const renderItem = useCallback(
     ({ item }: { item: ChatMessage }) => {
@@ -366,11 +371,11 @@ export default function ChatRoomScreen() {
             <ThemedText style={styles.headerTitle}>
               {chatRoomDetails?.postTitle?.trim()
                 ? chatRoomDetails.postTitle
-                : `Phòng chat #${chatRoomId}`}
+                : t("chat.roomFallback", { id: chatRoomId })}
             </ThemedText>
 
             <ThemedText style={[styles.headerSub, { color: color.icon }]}>
-              Tin nhắn
+              {t("chat.headerSubtitle")}
             </ThemedText>
           </View>
 
@@ -384,7 +389,7 @@ export default function ChatRoomScreen() {
                 ]}
               />
               <ThemedText style={[styles.statusLabel, { color: color.icon }]}>
-                {isConnected ? "Online" : "Connecting..."}
+                {isConnected ? t("chat.online") : t("chat.connecting")}
               </ThemedText>
             </View>
 
@@ -399,7 +404,7 @@ export default function ChatRoomScreen() {
                     pressed ? color.backgroundSecondary : "transparent",
                 },
               ]}
-              accessibilityLabel="Xem chi tiết phòng chat"
+              accessibilityLabel={t("chat.infoA11y")}
             >
               <Ionicons
                 name="ellipsis-horizontal"
@@ -422,26 +427,30 @@ export default function ChatRoomScreen() {
           >
             <View style={[styles.modalCard, { backgroundColor: color.card }]}>
               <ThemedText style={[styles.modalTitle, { color: color.text }]}>
-                Chi tiết phòng
+                {t("chat.detailTitle")}
               </ThemedText>
 
               {chatRoomDetails ?
                 <>
                   <ThemedText style={[styles.modalRow, { color: color.icon }]}>
-                    Trạng thái: {chatRoomDetails.status ?? "—"}
+                    {t("chat.statusLabel", {
+                      status: chatRoomDetails.status ?? "—",
+                    })}
                   </ThemedText>
                   {chatRoomDetails.createdAt ?
                     <ThemedText
                       style={[styles.modalRow, { color: color.icon }]}
                     >
-                      Tạo lúc: {createdAtLabel}
+                      {t("chat.createdAt", { date: createdAtLabel })}
                     </ThemedText>
                   : null}
 
                   <ThemedText
                     style={[styles.modalSectionTitle, { color: color.text }]}
                   >
-                    Thành viên ({chatRoomDetails.members.length})
+                    {t("chat.members", {
+                      count: chatRoomDetails.members.length,
+                    })}
                   </ThemedText>
 
                   <ScrollView style={styles.modalMembers}>
@@ -508,12 +517,12 @@ export default function ChatRoomScreen() {
                             <Pressable
                               onPress={() =>
                                 Alert.alert(
-                                  "Rời khỏi phòng chat?",
-                                  "Bạn có muốn rời khỏi phòng chat này không?",
+                                  t("chat.leaveConfirmTitle"),
+                                  t("chat.leaveConfirmMessage"),
                                   [
-                                    { text: "Cancel", style: "cancel" },
+                                    { text: t("common.cancel"), style: "cancel" },
                                     {
-                                      text: "OK",
+                                      text: t("common.ok"),
                                       onPress: handleLeaveRoom,
                                     },
                                   ],
@@ -529,7 +538,7 @@ export default function ChatRoomScreen() {
                                 },
                               ]}
                               hitSlop={6}
-                              accessibilityLabel="Rời phòng chat"
+                              accessibilityLabel={t("chat.leaveA11y")}
                             >
                               <Ionicons
                                 name="log-out-outline"
@@ -552,7 +561,7 @@ export default function ChatRoomScreen() {
                                 },
                               ]}
                               hitSlop={6}
-                              accessibilityLabel="Đuổi khỏi phòng chat"
+                              accessibilityLabel={t("chat.kickA11y")}
                             >
                               <Ionicons
                                 name="person-remove-outline"
@@ -569,7 +578,7 @@ export default function ChatRoomScreen() {
               : <View style={styles.modalLoading}>
                   <ActivityIndicator size="small" color={color.tint} />
                   <ThemedText style={{ color: color.icon, marginTop: 8 }}>
-                    Đang tải chi tiết phòng…
+                    {t("chat.loadingDetail")}
                   </ThemedText>
                 </View>
               }
@@ -586,11 +595,11 @@ export default function ChatRoomScreen() {
                     },
                   ]}
                   hitSlop={10}
-                  accessibilityLabel="Xóa phòng chat"
+                  accessibilityLabel={t("chat.deleteA11y")}
                 >
                   <Ionicons name="trash-outline" size={18} color={color.error} />
                   <ThemedText style={[styles.modalDeleteText, { color: color.error }]}>
-                    Xóa phòng
+                    {t("chat.deleteRoom")}
                   </ThemedText>
                 </Pressable>
               ) : null}
@@ -605,7 +614,7 @@ export default function ChatRoomScreen() {
                 <ThemedText
                   style={[styles.modalCloseText, { color: color.tint }]}
                 >
-                  Đóng
+                  {t("chat.close")}
                 </ThemedText>
               </Pressable>
             </View>

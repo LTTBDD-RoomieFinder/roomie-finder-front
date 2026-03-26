@@ -43,4 +43,5 @@ export const ICON_MAPPING = {
   "heart.fill": "monitor-heart",
   "dollarsign.circle.fill": "money",
   "tag.fill": "tag-faces",
+  "gearshape.fill": "settings",
 } as IconMapping;

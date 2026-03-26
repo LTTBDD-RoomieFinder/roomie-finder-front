@@ -4,10 +4,11 @@ import { Platform, Pressable, StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { useLanguage } from "@/hooks/use-language";
+import { genderReqLabelKey, roomTypeLabelKey } from "@/lib/i18n-labels";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { RoomResponse } from "@/data/response";
 import { formatRoomAddress, formatRoomPrice } from "@/utils/format-room";
-import { GENDER_REQ_LABELS, ROOM_TYPE_LABELS } from "@/constants/room-constants";
 import { RoomType, GenderRequirement } from "@/types/enums";
 
 type RoomCardProps = {
@@ -17,6 +18,7 @@ type RoomCardProps = {
 
 export function RoomCard({ room, onPress }: RoomCardProps) {
   const { color } = useAppTheme();
+  const { t, locale } = useLanguage();
 
   const image = room.imageUrls?.[0];
 
@@ -37,14 +39,14 @@ export function RoomCard({ room, onPress }: RoomCardProps) {
         {/* PRICE BADGE */}
         <View style={[styles.priceBadge, { backgroundColor: color.primary }]}>
           <ThemedText style={[styles.priceText, { color: color.primaryText }]}>
-            {formatRoomPrice(room.price)}
+            {formatRoomPrice(room.price, t, locale)}
           </ThemedText>
         </View>
 
         {/* ROOM TYPE */}
         <View style={[styles.typeBadge]}>
           <ThemedText style={styles.typeText}>
-            {ROOM_TYPE_LABELS[room.roomType as RoomType]}
+            {t(roomTypeLabelKey(room.roomType as RoomType))}
           </ThemedText>
         </View>
       </View>
@@ -81,7 +83,7 @@ export function RoomCard({ room, onPress }: RoomCardProps) {
           <View style={[styles.infoPill, { backgroundColor: color.card }]}>
             <MaterialIcons name="person" size={14} color={color.icon} />
             <ThemedText style={styles.pillText}>
-              {GENDER_REQ_LABELS[room.genderRequirement as GenderRequirement]}
+              {t(genderReqLabelKey(room.genderRequirement as GenderRequirement))}
             </ThemedText>
           </View>
         </View>

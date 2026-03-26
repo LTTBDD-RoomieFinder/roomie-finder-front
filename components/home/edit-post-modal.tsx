@@ -20,6 +20,7 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { PostResponse } from "@/data/response";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { useLanguage } from "@/hooks/use-language";
 import { postService } from "@/services/post-service";
 import { STATUS_OPTIONS } from "@/constants/post-constants";
 import { PostStatus } from "@/types/PostStatus";
@@ -33,6 +34,7 @@ type Props = {
 
 export function EditPostModal({ visible, post, onClose, onSuccess }: Props) {
   const { color } = useAppTheme();
+  const { t } = useLanguage();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [status, setStatus] = useState<PostStatus>("PUBLISHED");
@@ -52,7 +54,7 @@ export function EditPostModal({ visible, post, onClose, onSuccess }: Props) {
   const handleSave = async () => {
     if (!post) return;
     if (!title.trim()) {
-      Alert.alert("Thiếu tiêu đề", "Vui lòng nhập tiêu đề bài đăng.");
+      Alert.alert(t("post.alerts.missingTitleTitle"), t("post.alerts.missingTitleMessage"));
       return;
     }
     try {
@@ -65,7 +67,7 @@ export function EditPostModal({ visible, post, onClose, onSuccess }: Props) {
       onSuccess();
       onClose();
     } catch (e: any) {
-      Alert.alert("Lỗi", e?.toString() ?? "Không thể cập nhật bài đăng.");
+      Alert.alert(t("common.error"), e?.toString() ?? t("post.alerts.updateFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -92,7 +94,7 @@ export function EditPostModal({ visible, post, onClose, onSuccess }: Props) {
               <Ionicons name="close" size={24} color={color.text} />
             </Pressable>
             <ThemedText type="subtitle" style={styles.headerTitle}>
-              Chỉnh sửa bài đăng
+              {t("post.editTitle")}
             </ThemedText>
             <Pressable
               onPress={handleSave}
@@ -108,7 +110,9 @@ export function EditPostModal({ visible, post, onClose, onSuccess }: Props) {
               {submitting ? (
                 <ActivityIndicator size="small" color="#fff" />
               ) : (
-                <ThemedText type="defaultSemiBold" style={{ color: color.primaryText, fontSize: 13 }}>Lưu</ThemedText>
+                <ThemedText type="defaultSemiBold" style={{ color: color.primaryText, fontSize: 13 }}>
+                  {t("post.save")}
+                </ThemedText>
               )}
             </Pressable>
           </View>
@@ -143,7 +147,10 @@ export function EditPostModal({ visible, post, onClose, onSuccess }: Props) {
                       color={color.textSecondary} 
                     />
                     <ThemedText style={[styles.statusBadgeText, { color: color.textSecondary }]}>
-                      {STATUS_OPTIONS.find(o => o.value === status)?.label || "Đang hiển thị"}
+                      {t(
+                        STATUS_OPTIONS.find((o) => o.value === status)?.labelKey ??
+                          "post.statusBadgeFallback",
+                      )}
                     </ThemedText>
                     <Ionicons name="caret-down" size={10} color={color.textSecondary} style={{ marginLeft: 2 }}/>
                   </TouchableOpacity>
@@ -153,7 +160,9 @@ export function EditPostModal({ visible, post, onClose, onSuccess }: Props) {
 
             <View style={styles.inputContainer}>
               <View style={styles.labelRow}>
-                <ThemedText style={[styles.label, { color: color.textSecondary }]}>Tiêu đề bài đăng</ThemedText>
+                <ThemedText style={[styles.label, { color: color.textSecondary }]}>
+                  {t("post.labels.postTitle")}
+                </ThemedText>
                 <ThemedText style={[styles.charCount, { color: color.placeholder }]}>
                   {title.length}/100
                 </ThemedText>
@@ -166,7 +175,7 @@ export function EditPostModal({ visible, post, onClose, onSuccess }: Props) {
                     borderBottomColor: color.border
                   }
                 ]}
-                placeholder="Ví dụ: Căn hộ cao cấp tại Cầu Giấy..."
+                placeholder={t("post.placeholders.titleEdit")}
                 placeholderTextColor={color.placeholder}
                 value={title}
                 onChangeText={setTitle}
@@ -174,7 +183,9 @@ export function EditPostModal({ visible, post, onClose, onSuccess }: Props) {
               />
 
               <View style={[styles.labelRow, { marginTop: 24 }]}>
-                <ThemedText style={[styles.label, { color: color.textSecondary }]}>Nội dung chi tiết</ThemedText>
+                <ThemedText style={[styles.label, { color: color.textSecondary }]}>
+                  {t("post.labels.content")}
+                </ThemedText>
                 <ThemedText style={[styles.charCount, { color: color.placeholder }]}>
                   {content.length}/2000
                 </ThemedText>
@@ -184,7 +195,7 @@ export function EditPostModal({ visible, post, onClose, onSuccess }: Props) {
                   styles.contentInput,
                   { color: color.text }
                 ]}
-                placeholder="Chia sẻ thêm thông tin về phòng trọ của bạn..."
+                placeholder={t("post.placeholders.contentEdit")}
                 placeholderTextColor={color.placeholder}
                 multiline
                 value={content}
@@ -195,7 +206,9 @@ export function EditPostModal({ visible, post, onClose, onSuccess }: Props) {
             </View>
 
             <View style={styles.section}>
-              <ThemedText style={[styles.label, { color: color.textSecondary, marginBottom: 12 }]}>Phòng đã đính kèm</ThemedText>
+              <ThemedText style={[styles.label, { color: color.textSecondary, marginBottom: 12 }]}>
+                {t("post.labels.attachedRoomReadonly")}
+              </ThemedText>
               <View style={[styles.roomCard, { backgroundColor: color.card, borderColor: color.border }]}>
                 <Image
                   source={{ uri: post.room.imageUrls[0] }}
@@ -205,7 +218,9 @@ export function EditPostModal({ visible, post, onClose, onSuccess }: Props) {
                 <View style={styles.roomInfo}>
                   <ThemedText type="defaultSemiBold" numberOfLines={1}>{post.room.title}</ThemedText>
                   <ThemedText style={[styles.roomPrice, { color: color.tint }]}>
-                    {post.room.price.toLocaleString("vi-VN")} đ/tháng
+                    {t("post.pricePerMonthShort", {
+                      amount: post.room.price.toLocaleString("vi-VN"),
+                    })}
                   </ThemedText>
                   <View style={styles.roomMeta}>
                     <Ionicons name="location-outline" size={12} color={color.textSecondary} />
@@ -233,7 +248,7 @@ export function EditPostModal({ visible, post, onClose, onSuccess }: Props) {
             onPress={() => setStatusPickerVisible(false)}
           >
             <View style={[styles.pickerContent, { backgroundColor: color.card, borderColor: color.border }]}>
-              <ThemedText style={styles.pickerTitle}>Chọn trạng thái</ThemedText>
+              <ThemedText style={styles.pickerTitle}>{t("post.selectStatus")}</ThemedText>
               {STATUS_OPTIONS.map((opt) => {
                 const isActive = status === opt.value;
                 return (
@@ -246,7 +261,7 @@ export function EditPostModal({ visible, post, onClose, onSuccess }: Props) {
                     }}
                   >
                     <ThemedText style={{ color: isActive ? color.tint : color.text, fontWeight: isActive ? "700" : "400" }}>
-                      {opt.label}
+                      {t(opt.labelKey)}
                     </ThemedText>
                     {isActive && <Ionicons name="checkmark" size={20} color={color.tint} />}
                   </Pressable>

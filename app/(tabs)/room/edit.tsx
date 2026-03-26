@@ -6,6 +6,7 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { RoomResponse } from "@/data/response";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { useLanguage } from "@/hooks/use-language";
 import { roomService } from "@/services/room-service";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 
@@ -16,6 +17,7 @@ import { RoomCreateRequest } from "@/data/request";
 export default function EditRoomScreen() {
   const { id } = useLocalSearchParams();
   const { color } = useAppTheme();
+  const { t } = useLanguage();
 
   const [room, setRoom] = useState<RoomResponse | null>(null);
   const [initialValues, setInitialValues] = useState<RoomFormValues | null>(null);
@@ -50,18 +52,21 @@ export default function EditRoomScreen() {
       setInitialValues(mappedInitialValues);
     } catch (err) {
       console.error(err);
-      Alert.alert("Lỗi", "Không thể lấy thông tin phòng");
+      Alert.alert(
+        t("room.alerts.loadFailedTitle"),
+        t("room.alerts.loadFailedMessage"),
+      );
     }
   };
 
   const handleUpdate = async (data: RoomCreateRequest) => {
     try {
       await roomService.updateRoom(Number(id), data);
-      Alert.alert("Thành công", "Đã cập nhật phòng thành công");
+      Alert.alert(t("room.alerts.updateSuccessTitle"), t("room.alerts.updateSuccessMessage"));
       router.back();
     } catch (err) {
       console.error(err);
-      Alert.alert("Lỗi", "Cập nhật thất bại");
+      Alert.alert(t("room.alerts.updateFailedTitle"), t("room.alerts.updateFailedMessage"));
     }
   };
 
@@ -77,7 +82,7 @@ export default function EditRoomScreen() {
         </Pressable>
 
         <ThemedText type="subtitle" style={styles.headerTitle}>
-          Sửa phòng
+          {t("room.editTitle")}
         </ThemedText>
 
         <View style={styles.iconButtonPlaceholder} />
@@ -86,7 +91,7 @@ export default function EditRoomScreen() {
       {initialValues ? (
         <RoomForm
           initialValues={initialValues}
-          submitLabel="Cập nhật phòng"
+          submitLabel={t("room.submitUpdate")}
           onSubmit={handleUpdate}
         />
       ) : (

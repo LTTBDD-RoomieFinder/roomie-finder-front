@@ -18,10 +18,11 @@ import { ThemedText } from "@/components/themed-text";
 import { SearchBar } from "@/components/ui/search-bar";
 import { FilterModal } from "@/components/room/filter-modal";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { useLanguage } from "@/hooks/use-language";
+import { genderReqLabelKey, roomTypeLabelKey } from "@/lib/i18n-labels";
 import { postSearchService } from "@/services/post-search-service";
 import { PostSearchRequest } from "@/data/request";
 import { PostSearchResultCard, type PostSearchResult } from "@/components/search/post-search-result-card";
-import { GENDER_REQ_LABELS, ROOM_TYPE_LABELS } from "@/constants/room-constants";
 import { GenderRequirement, RoomType } from "@/types/enums";
 
 type PostSearchPage = {
@@ -34,6 +35,7 @@ export default function SearchScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ focus?: string; keyword?: string }>();
   const { color } = useAppTheme();
+  const { t } = useLanguage();
   const insets = useSafeAreaInsets();
 
   const [keyword, setKeyword] = useState("");
@@ -136,7 +138,7 @@ export default function SearchScreen() {
       const value = filters.roomType as RoomType;
       chips.push({
         key: "roomType",
-        label: ROOM_TYPE_LABELS[value] ?? String(value),
+        label: t(roomTypeLabelKey(value)),
         onClear: () => setFilters((p) => ({ ...p, roomType: undefined })),
       });
     }
@@ -144,7 +146,7 @@ export default function SearchScreen() {
       const value = filters.genderRequirement as GenderRequirement;
       chips.push({
         key: "genderRequirement",
-        label: GENDER_REQ_LABELS[value] ?? String(value),
+        label: t(genderReqLabelKey(value)),
         onClear: () => setFilters((p) => ({ ...p, genderRequirement: undefined })),
       });
     }
@@ -153,7 +155,10 @@ export default function SearchScreen() {
       const max = filters.maxPrice ?? 20000000;
       chips.push({
         key: "price",
-        label: `${(min / 1_000_000).toFixed(0)}–${(max / 1_000_000).toFixed(0)}tr`,
+        label: t("search.priceChip", {
+          min: (min / 1_000_000).toFixed(0),
+          max: (max / 1_000_000).toFixed(0),
+        }),
         onClear: () => setFilters((p) => ({ ...p, minPrice: undefined, maxPrice: undefined })),
       });
     }
@@ -180,7 +185,7 @@ export default function SearchScreen() {
     }
 
     return chips;
-  }, [filters]);
+  }, [filters, t]);
 
   useEffect(() => {
     // Re-search when filters change (but not while typing debounce runs)
@@ -213,7 +218,7 @@ export default function SearchScreen() {
               onChangeText={handleSearchChange}
               onFilterPress={() => setFilterModalVisible(true)}
               hasActiveFilters={hasActiveFilters}
-              placeholder="Nhập từ khóa tìm kiếm..."
+              placeholder={t("search.placeholderFull")}
               inputRef={inputRef}
             />
           </View>
@@ -232,7 +237,7 @@ export default function SearchScreen() {
                   },
                 ]}
               >
-                <ThemedText style={{ fontWeight: "700" }}>Xóa tất cả</ThemedText>
+                <ThemedText style={{ fontWeight: "700" }}>{t("search.clearAll")}</ThemedText>
               </Pressable>
 
               {activeFilterChips.map((c) => (
@@ -263,12 +268,14 @@ export default function SearchScreen() {
           renderItem={({ item }) => (
             <PostSearchResultCard
               post={item}
-              onPress={() =>
+              onPress={() => {
+                const roomId = item.room?.id;
+                if (roomId == null) return;
                 router.push({
                   pathname: "/(tabs)/room/[id]",
-                  params: { id: item.room.id },
-                })
-              }
+                  params: { id: roomId },
+                });
+              }}
             />
           )}
           contentContainerStyle={[
@@ -282,16 +289,16 @@ export default function SearchScreen() {
             loading ? (
               <View style={styles.centerContainer}>
                 <ActivityIndicator size="large" color={color.primary} />
-                <ThemedText style={{ marginTop: 12 }}>Đang tìm kiếm...</ThemedText>
+                <ThemedText style={{ marginTop: 12 }}>{t("search.searching")}</ThemedText>
               </View>
             ) : (
               <View style={styles.centerContainer}>
                 <Feather name="search" size={48} color={color.placeholder} />
                 <ThemedText style={{ marginTop: 16, color: color.placeholder, textAlign: "center" }}>
-                  Không tìm thấy kết quả phù hợp.
+                  {t("search.noResults")}
                 </ThemedText>
                 <ThemedText style={{ marginTop: 8, color: color.textSecondary, textAlign: "center" }}>
-                  Thử đổi từ khóa hoặc mở bộ lọc để tìm chính xác hơn.
+                  {t("search.noResultsHint")}
                 </ThemedText>
               </View>
             )

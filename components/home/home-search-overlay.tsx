@@ -22,10 +22,11 @@ import { ThemedText } from "@/components/themed-text";
 import { SearchBar } from "@/components/ui/search-bar";
 import { FilterModal } from "@/components/room/filter-modal";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { useLanguage } from "@/hooks/use-language";
+import { genderReqLabelKey, roomTypeLabelKey } from "@/lib/i18n-labels";
 import { postSearchService } from "@/services/post-search-service";
 import { PostSearchRequest } from "@/data/request";
 import { PostSearchResultCard, type PostSearchResult } from "@/components/search/post-search-result-card";
-import { GENDER_REQ_LABELS, ROOM_TYPE_LABELS } from "@/constants/room-constants";
 import { GenderRequirement, RoomType } from "@/types/enums";
 
 type PostSearchPage = {
@@ -43,6 +44,7 @@ export function HomeSearchOverlay({ visible, onClose }: Props) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { color } = useAppTheme();
+  const { t } = useLanguage();
 
   const [keyword, setKeyword] = useState("");
   const [filters, setFilters] = useState<Omit<PostSearchRequest, "keyword" | "cursor" | "size">>({});
@@ -184,7 +186,7 @@ export function HomeSearchOverlay({ visible, onClose }: Props) {
       const value = filters.roomType as RoomType;
       chips.push({
         key: "roomType",
-        label: ROOM_TYPE_LABELS[value] ?? String(value),
+        label: t(roomTypeLabelKey(value)),
         onClear: () => setFilters((p) => ({ ...p, roomType: undefined })),
       });
     }
@@ -192,14 +194,16 @@ export function HomeSearchOverlay({ visible, onClose }: Props) {
       const value = filters.genderRequirement as GenderRequirement;
       chips.push({
         key: "genderRequirement",
-        label: GENDER_REQ_LABELS[value] ?? String(value),
+        label: t(genderReqLabelKey(value)),
         onClear: () => setFilters((p) => ({ ...p, genderRequirement: undefined })),
       });
     }
     if ((filters.amenityIds?.length ?? 0) > 0) {
       chips.push({
         key: "amenityIds",
-        label: `Tiện ích (${filters.amenityIds?.length ?? 0})`,
+        label: t("search.amenityChip", {
+          count: filters.amenityIds?.length ?? 0,
+        }),
         onClear: () => setFilters((p) => ({ ...p, amenityIds: undefined })),
       });
     }
@@ -212,7 +216,7 @@ export function HomeSearchOverlay({ visible, onClose }: Props) {
     }
 
     return chips;
-  }, [filters]);
+  }, [filters, t]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -259,7 +263,7 @@ export function HomeSearchOverlay({ visible, onClose }: Props) {
           </TouchableOpacity>
 
           <ThemedText type="defaultSemiBold" style={{ fontSize: 16 }}>
-            Tìm kiếm
+            {t("search.title")}
           </ThemedText>
 
           <TouchableOpacity onPress={openFullSearch} style={styles.iconHit}>
@@ -273,7 +277,7 @@ export function HomeSearchOverlay({ visible, onClose }: Props) {
             onChangeText={handleSearchChange}
             onFilterPress={() => setFilterModalVisible(true)}
             hasActiveFilters={hasActiveFilters}
-            placeholder="Tìm phòng, khu vực, tiện ích..."
+            placeholder={t("search.placeholder")}
             inputRef={inputRef}
             autoFocus
           />
@@ -289,7 +293,7 @@ export function HomeSearchOverlay({ visible, onClose }: Props) {
                   { backgroundColor: pressed ? color.border : color.card, borderColor: color.border },
                 ]}
               >
-                <ThemedText style={{ fontWeight: "700" }}>Xóa lọc</ThemedText>
+                <ThemedText style={{ fontWeight: "700" }}>{t("search.clearFilters")}</ThemedText>
               </Pressable>
               {activeFilterChips.map((c) => (
                 <Pressable
@@ -325,13 +329,13 @@ export function HomeSearchOverlay({ visible, onClose }: Props) {
           {loading ? (
             <View style={styles.center}>
               <ActivityIndicator size="large" color={color.primary} />
-              <ThemedText style={{ marginTop: 12 }}>Đang tìm kiếm...</ThemedText>
+              <ThemedText style={{ marginTop: 12 }}>{t("search.searching")}</ThemedText>
             </View>
           ) : posts.length === 0 ? (
             <View style={styles.center}>
               <Feather name="search" size={44} color={color.placeholder} />
               <ThemedText style={{ marginTop: 12, color: color.textSecondary, textAlign: "center" }}>
-                Nhập từ khóa hoặc mở bộ lọc để tìm nhanh hơn.
+                {t("search.emptyHint")}
               </ThemedText>
             </View>
           ) : (
@@ -341,10 +345,12 @@ export function HomeSearchOverlay({ visible, onClose }: Props) {
                   key={p.id}
                   post={p}
                   onPress={() => {
+                    const roomId = p.room?.id;
+                    if (roomId == null) return;
                     closeAnimated();
                     router.push({
                       pathname: "/(tabs)/room/[id]",
-                      params: { id: p.room.id },
+                      params: { id: roomId },
                     });
                   }}
                 />
@@ -362,7 +368,7 @@ export function HomeSearchOverlay({ visible, onClose }: Props) {
                     { backgroundColor: pressed ? color.border : color.card, borderColor: color.border },
                   ]}
                 >
-                  <ThemedText style={{ fontWeight: "700" }}>Tải thêm</ThemedText>
+                  <ThemedText style={{ fontWeight: "700" }}>{t("search.loadMore")}</ThemedText>
                 </Pressable>
               )}
             </>
@@ -377,7 +383,9 @@ export function HomeSearchOverlay({ visible, onClose }: Props) {
               { backgroundColor: pressed ? color.border : color.primary },
             ]}
           >
-            <ThemedText style={{ color: color.primaryText, fontWeight: "800" }}>Xem tất cả kết quả</ThemedText>
+            <ThemedText style={{ color: color.primaryText, fontWeight: "800" }}>
+              {t("search.seeAll")}
+            </ThemedText>
           </Pressable>
         </View>
 

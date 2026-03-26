@@ -9,13 +9,12 @@ import {
     StyleSheet,
     View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-
 import { RequestCard } from "@/components/request";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { useLanguage } from "@/hooks/use-language";
 import { useRequests } from "@/hooks/use-requests";
 import { useUpdateRequestStatus } from "@/hooks/use-update-request-status";
 import { notificationService } from "@/services/notification-service";
@@ -26,7 +25,6 @@ import { syncTabBadgesToStore } from "@/services/tab-badge-service";
 import type { NotificationItem } from "@/types/notification";
 import type { RequestResponse } from "@/types/request";
 
-const HEADER_HEIGHT = 148;
 const TAB_BAR_RADIUS = 14;
 
 type TabType = "incoming" | "outgoing";
@@ -52,6 +50,7 @@ function unreadRequestReferenceIdsFromNotifications(
 export default function RequestsScreen() {
   const params = useLocalSearchParams<{ tab?: string }>();
   const { color } = useAppTheme();
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<TabType>(() =>
     params.tab === "outgoing" ? "outgoing" : "incoming",
   );
@@ -216,21 +215,21 @@ export default function RequestsScreen() {
       </View>
       <ThemedText style={[styles.emptyTitle, { color: color.text }]}>
         {activeTab === "incoming"
-          ? "Chưa có lời mời nào"
-          : "Bạn chưa gửi lời mời nào"}
+          ? t("request.emptyIncomingTitle")
+          : t("request.emptyOutgoingTitle")}
       </ThemedText>
       <ThemedText
         style={[styles.emptySubtitle, { color: color.text, opacity: 0.65 }]}
       >
         {activeTab === "incoming"
-          ? "Khi ai đó gửi lời mời kết bạn phòng cho bạn, chúng sẽ xuất hiện tại đây."
-          : "Các lời mời bạn đã gửi sẽ hiển thị ở đây."}
+          ? t("request.emptyIncomingSub")
+          : t("request.emptyOutgoingSub")}
       </ThemedText>
     </ThemedView>
   );
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+    <View style={styles.safeArea}>
       <View style={[styles.header, { backgroundColor: color.primary }]}>
         <View style={styles.headerContent}>
           <View
@@ -249,7 +248,7 @@ export default function RequestsScreen() {
             <ThemedText
               style={[styles.headerTitle, { color: color.primaryText }]}
             >
-              Lời mời kết bạn phòng
+              {t("request.headerTitle")}
             </ThemedText>
             <ThemedText
               style={[
@@ -257,7 +256,7 @@ export default function RequestsScreen() {
                 { color: color.primaryText, opacity: 0.92 },
               ]}
             >
-              Chấp nhận để tạo phòng chat riêng, thảo luận giá cả & nội quy
+              {t("request.headerSubtitle")}
             </ThemedText>
           </View>
         </View>
@@ -303,7 +302,7 @@ export default function RequestsScreen() {
                 },
               ]}
             >
-              Nhận được ({incoming.length})
+              {t("request.incomingTab", { count: incoming.length })}
             </ThemedText>
           </Pressable>
           <Pressable
@@ -334,7 +333,7 @@ export default function RequestsScreen() {
                 },
               ]}
             >
-              Đã gửi ({outgoing.length})
+              {t("request.outgoingTab", { count: outgoing.length })}
             </ThemedText>
           </Pressable>
         </View>
@@ -373,17 +372,19 @@ export default function RequestsScreen() {
           />
         )}
       </ThemedView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1 },
+  /** Cùng tỉ lệ header với Profile: marginTop + height + padding */
   header: {
-    height: HEADER_HEIGHT,
+    height: 100,
+    marginTop: 40,
     justifyContent: "flex-end",
     paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingVertical: 20,
   },
   headerContent: {
     flexDirection: "row",
@@ -399,14 +400,14 @@ const styles = StyleSheet.create({
   },
   headerTextWrap: { flex: 1 },
   headerTitle: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: "700",
     letterSpacing: 0.3,
   },
   headerSubtitle: {
-    fontSize: 13,
+    fontSize: 14,
     marginTop: 4,
-    lineHeight: 19,
+    lineHeight: 20,
   },
   content: {
     flex: 1,

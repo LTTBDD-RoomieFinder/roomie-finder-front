@@ -1,11 +1,12 @@
 import { useRouter } from "expo-router";
 import React from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { Alert, Pressable, StyleSheet, View } from "react-native";
 
 import { RoomForm } from "@/components/room/room-form";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { useLanguage } from "@/hooks/use-language";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { EMPTY_ROOM_FORM } from "@/constants/room-constants";
 import { roomService } from "@/services/room-service";
@@ -14,10 +15,11 @@ import { RoomCreateRequest } from "@/data/request";
 export default function NewRoomScreen() {
   const router = useRouter();
   const { color } = useAppTheme();
+  const { t } = useLanguage();
 
   const handleSubmit = async (data: RoomCreateRequest) => {
     await roomService.createRoom(data);
-    alert("Tạo phòng thành công!");
+    Alert.alert(t("common.success"), t("room.createSuccess"));
     router.replace("/(tabs)/room");
   };
 
@@ -37,7 +39,11 @@ export default function NewRoomScreen() {
         <View style={styles.iconButtonPlaceholder} />
       </View>
 
-      <RoomForm initialValues={EMPTY_ROOM_FORM} submitLabel="Đăng phòng" onSubmit={handleSubmit} />
+      <RoomForm
+        initialValues={EMPTY_ROOM_FORM}
+        submitLabel={t("room.submitCreate")}
+        onSubmit={handleSubmit}
+      />
     </ThemedView>
   );
 }

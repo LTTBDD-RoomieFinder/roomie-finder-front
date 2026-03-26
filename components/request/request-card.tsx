@@ -6,9 +6,10 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import {
   REQUEST_REJECT_COOLDOWN_DAYS,
   REQUEST_STATUS_COLOR,
-  REQUEST_STATUS_LABEL,
+  REQUEST_STATUS_LABEL_KEY,
 } from "@/constants/request";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { useLanguage } from "@/hooks/use-language";
 import type { RequestResponse, RequestStatus } from "@/types/request";
 import { formatDate } from "@/utils/format-post";
 
@@ -35,10 +36,11 @@ export function RequestCard({
   emphasizeNew = false,
 }: RequestCardProps) {
   const { color } = useAppTheme();
+  const { t } = useLanguage();
   const statusColor = REQUEST_STATUS_COLOR[request.status];
 
   const otherUser = variant === "incoming" ? request.sender : request.receiver;
-  const displayName = otherUser?.fullName || otherUser?.username || "Người dùng";
+  const displayName = otherUser?.fullName || otherUser?.username || t("request.card.fallbackName");
 
   const canRespond =
     variant === "incoming" &&
@@ -80,7 +82,7 @@ export function RequestCard({
               >
                 <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
                 <ThemedText style={[styles.statusText, { color: statusColor }]}>
-                  {REQUEST_STATUS_LABEL[request.status]}
+                  {t(REQUEST_STATUS_LABEL_KEY[request.status])}
                 </ThemedText>
               </View>
               <ThemedText
@@ -106,7 +108,7 @@ export function RequestCard({
           <View style={[styles.hintRow, { backgroundColor: "#d9770612" }]}>
             <IconSymbol name="clock.fill" size={13} color="#d97706" />
             <ThemedText style={styles.hint}>
-              Có thể gửi lại sau {REQUEST_REJECT_COOLDOWN_DAYS} ngày
+              {t("request.card.cooldownHint", { days: REQUEST_REJECT_COOLDOWN_DAYS })}
             </ThemedText>
           </View>
         )}
@@ -116,7 +118,7 @@ export function RequestCard({
             <View style={styles.successRow}>
               <IconSymbol name="checkmark.seal.fill" size={14} color="#16a34a" />
               <ThemedText style={styles.successHint}>
-                Phòng chat đã được tạo — nhắn tin để thảo luận.
+                {t("request.card.acceptedHint")}
               </ThemedText>
             </View>
             {onOpenChat && (
@@ -135,7 +137,7 @@ export function RequestCard({
                 <ThemedText
                   style={[styles.openChatLabel, { color: color.primaryText }]}
                 >
-                  Mở chat
+                  {t("request.card.openChat")}
                 </ThemedText>
               </Pressable>
             )}
@@ -161,7 +163,7 @@ export function RequestCard({
             <ThemedText
               style={[styles.buttonLabel, { color: color.primaryText }]}
             >
-              Chấp nhận
+              {t("request.card.accept")}
             </ThemedText>
           </Pressable>
           <Pressable
@@ -174,7 +176,7 @@ export function RequestCard({
           >
             <IconSymbol name="xmark.circle.fill" size={18} color={color.error} />
             <ThemedText style={[styles.buttonLabel, { color: color.error }]}>
-              Từ chối
+              {t("request.card.reject")}
             </ThemedText>
           </Pressable>
         </View>

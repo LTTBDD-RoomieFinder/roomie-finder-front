@@ -31,6 +31,7 @@ import LocationPicker from "@/components/ui/location-picker";
 import { locationService } from "@/services/location-service";
 import { City, District, Ward } from "@/types/Address";
 
+import { SettingsModal } from "@/components/settings/settings-modal";
 import ConfirmModal from "@/components/ui/confirm-modal";
 import DirtyLeaveModal from "@/components/ui/dirty-leave-modal";
 import { Tag } from "@/types/Tag";
@@ -38,6 +39,7 @@ import { useNavigation } from "@react-navigation/native";
 
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { useLanguage } from "@/hooks/use-language";
 import { profileTabGuard } from "@/utils/profile-tab-guard";
 
 type FormValues = {
@@ -96,7 +98,8 @@ function buildProfilePayload(
 
 export default function ProfileScreen() {
   const navigation = useNavigation();
-  const { color, scheme } = useAppTheme();
+  const { color, scheme, radius } = useAppTheme();
+  const { t } = useLanguage();
 
   const [loading, setLoading] = useState(true);
   const [isCreated, setIsCreated] = useState(true);
@@ -110,6 +113,7 @@ export default function ProfileScreen() {
 
   const [leaveModalVisible, setLeaveModalVisible] = useState(false);
   const [leaveSaving, setLeaveSaving] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const pendingNavRef = useRef<"home" | "room" | "requests" | "chats" | null>(null);
 
   const {
@@ -184,10 +188,22 @@ export default function ProfileScreen() {
       paddingHorizontal: 20,
       paddingVertical: 20,
     },
+    headerRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 8,
+    },
     headerContent: {
+      flex: 1,
       flexDirection: "row",
       alignItems: "center",
       gap: 14,
+      minWidth: 0,
+    },
+    headerSettingsBtn: {
+      padding: 10,
+      borderRadius: 22,
     },
     headerIconWrap: {
       width: 56,
@@ -213,7 +229,7 @@ export default function ProfileScreen() {
     card: {
       backgroundColor: color.backgroundSecondary,
       padding: 20,
-      borderRadius: 16,
+      borderRadius: radius.lg,
       marginBottom: 20,
       marginTop: 10,
       shadowColor: "#000",
@@ -582,12 +598,12 @@ export default function ProfileScreen() {
       else await profileApi.createProfile(payload);
 
       if (options?.showSuccessAlert !== false) {
-        Alert.alert("Lưu thay đổi thành công!");
+        Alert.alert(t("profile.savedSuccess"));
       }
 
       reset(merged);
     },
-    [images, isCreated, reset]
+    [images, isCreated, reset, t]
   );
 
   const onSubmit = async (data: FormValues) => {
@@ -651,16 +667,31 @@ export default function ProfileScreen() {
   return (
     <>
       <View style={[styles.header, { backgroundColor: color.primary }]}>
-        <View style={styles.headerContent}>
-          <View style={[styles.headerIconWrap, { backgroundColor: "rgba(255,255,255,0.25)" }]}>
-            <IconSymbol name="person.fill" size={30} color={onPrimary} />
+        <View style={styles.headerRow}>
+          <View style={styles.headerContent}>
+            <View style={[styles.headerIconWrap, { backgroundColor: "rgba(255,255,255,0.25)" }]}>
+              <IconSymbol name="person.fill" size={30} color={onPrimary} />
+            </View>
+            <View style={styles.headerTextWrap}>
+              <ThemedText style={[styles.headerTitle, { color: onPrimary }]}>
+                {t("profile.headerTitle")}
+              </ThemedText>
+              <ThemedText style={[styles.headerSubtitle, { color: onPrimary, opacity: 0.9 }]}>
+                {t("profile.headerSubtitle")}
+              </ThemedText>
+            </View>
           </View>
-          <View style={styles.headerTextWrap}>
-            <ThemedText style={[styles.headerTitle, { color: onPrimary }]}>Hồ sơ</ThemedText>
-            <ThemedText style={[styles.headerSubtitle, { color: onPrimary, opacity: 0.9 }]}>
-              Thông tin cá nhân của bạn
-            </ThemedText>
-          </View>
+          <Pressable
+            onPress={() => setSettingsOpen(true)}
+            style={({ pressed }) => [
+              styles.headerSettingsBtn,
+              { backgroundColor: pressed ? "rgba(255,255,255,0.2)" : "transparent" },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={t("settings.title")}
+          >
+            <IconSymbol name="gearshape.fill" size={26} color={onPrimary} />
+          </Pressable>
         </View>
       </View>
       <ScrollView contentContainerStyle={styles.container}>
@@ -669,7 +700,7 @@ export default function ProfileScreen() {
             <View style={styles.sectionIcon}>
               <IconSymbol name="camera.fill" size={18} color={color.primary} />
             </View>
-            <ThemedText style={styles.sectionTitle}>Ảnh đại diện</ThemedText>
+            <ThemedText style={styles.sectionTitle}>{t("profile.sections.avatar")}</ThemedText>
           </View>
           <ImageUploadSection data={images} onChange={setImages} isProfile />
         </View>
@@ -679,18 +710,18 @@ export default function ProfileScreen() {
             <View style={styles.sectionIcon}>
               <IconSymbol name="person.fill" size={18} color={color.primary} />
             </View>
-            <ThemedText style={styles.sectionTitle}>Thông tin cơ bản</ThemedText>
+            <ThemedText style={styles.sectionTitle}>{t("profile.sections.basic")}</ThemedText>
           </View>
 
-          <ThemedText style={styles.label}>Họ tên</ThemedText>
+          <ThemedText style={styles.label}>{t("profile.labels.fullName")}</ThemedText>
           <Controller
             control={control}
             name="fullName"
-            rules={{ required: "Vui lòng nhập họ tên" }}
+            rules={{ required: t("profile.validation.fullName") }}
             render={({ field }) => (
               <TextInput
                 style={[styles.input, errors.fullName && styles.inputError]}
-                placeholder="Họ tên"
+                placeholder={t("profile.placeholders.fullName")}
                 placeholderTextColor={color.placeholder}
                 value={field.value}
                 onChangeText={field.onChange}
@@ -701,17 +732,17 @@ export default function ProfileScreen() {
             <ThemedText style={styles.errorText}>{String(errors.fullName.message)}</ThemedText>
           ) : null}
 
-          <ThemedText style={styles.label}>Giới tính</ThemedText>
+          <ThemedText style={styles.label}>{t("profile.labels.gender")}</ThemedText>
           <Controller
             control={control}
             name="gender"
-            rules={{ required: "Vui lòng chọn giới tính" }}
+            rules={{ required: t("profile.validation.gender") }}
             render={({ field }) => (
               <View style={styles.genderRow}>
                 {[
-                  { label: "Nam", value: "MALE" },
-                  { label: "Nữ", value: "FEMALE" },
-                  { label: "Khác", value: "OTHER" },
+                  { label: t("profile.gender.male"), value: "MALE" },
+                  { label: t("profile.gender.female"), value: "FEMALE" },
+                  { label: t("profile.gender.other"), value: "OTHER" },
                 ].map((opt) => (
                   <TouchableOpacity
                     key={opt.value}
@@ -739,15 +770,15 @@ export default function ProfileScreen() {
             <ThemedText style={styles.errorText}>{String(errors.gender.message)}</ThemedText>
           ) : null}
 
-          <ThemedText style={styles.label}>Quê quán</ThemedText>
+          <ThemedText style={styles.label}>{t("profile.labels.hometown")}</ThemedText>
           <Controller
             control={control}
             name="hometown"
-            rules={{ required: "Vui lòng nhập quê quán" }}
+            rules={{ required: t("profile.validation.hometown") }}
             render={({ field }) => (
               <TextInput
                 style={[styles.input, errors.hometown && styles.inputError]}
-                placeholder="Quê quán"
+                placeholder={t("profile.placeholders.hometown")}
                 placeholderTextColor={color.placeholder}
                 value={field.value}
                 onChangeText={field.onChange}
@@ -758,14 +789,14 @@ export default function ProfileScreen() {
             <ThemedText style={styles.errorText}>{String(errors.hometown.message)}</ThemedText>
           ) : null}
 
-          <ThemedText style={styles.label}>Nơi làm việc</ThemedText>
+          <ThemedText style={styles.label}>{t("profile.labels.workplace")}</ThemedText>
           <Controller
             control={control}
             name="workplace"
             render={({ field }) => (
               <TextInput
                 style={[styles.input, { marginBottom: 0 }]}
-                placeholder="Nơi làm việc"
+                placeholder={t("profile.placeholders.workplace")}
                 placeholderTextColor={color.placeholder}
                 value={field.value}
                 onChangeText={field.onChange}
@@ -779,17 +810,17 @@ export default function ProfileScreen() {
             <View style={styles.sectionIcon}>
               <IconSymbol name="heart.fill" size={18} color={color.primary} />
             </View>
-            <ThemedText style={styles.sectionTitle}>Lối sống</ThemedText>
+            <ThemedText style={styles.sectionTitle}>{t("profile.sections.lifestyle")}</ThemedText>
           </View>
 
-          <ThemedText style={styles.label}>Giờ ngủ</ThemedText>
+          <ThemedText style={styles.label}>{t("profile.labels.sleepSchedule")}</ThemedText>
           <Controller
             control={control}
             name="sleepSchedule"
             render={({ field }) => (
               <TextInput
                 style={styles.input}
-                placeholder="vd: 23:00 - 07:00"
+                placeholder={t("profile.placeholders.sleepExample")}
                 placeholderTextColor={color.placeholder}
                 value={field.value}
                 onChangeText={field.onChange}
@@ -797,7 +828,7 @@ export default function ProfileScreen() {
             )}
           />
 
-          <ThemedText style={styles.label}>Độ sạch sẽ (1–5)</ThemedText>
+          <ThemedText style={styles.label}>{t("profile.labels.cleanliness")}</ThemedText>
           <Controller
             control={control}
             name="cleanliness"
@@ -805,7 +836,7 @@ export default function ProfileScreen() {
               <TextInput
                 style={styles.input}
                 keyboardType="numeric"
-                placeholder="1–5 (để trống nếu không áp dụng)"
+                placeholder={t("profile.placeholders.cleanlinessHint")}
                 placeholderTextColor={color.placeholder}
                 value={field.value === undefined || field.value === null ? "" : String(field.value)}
                 onChangeText={(v) => {
@@ -819,7 +850,7 @@ export default function ProfileScreen() {
             )}
           />
 
-          <ThemedText style={styles.label}>Hút thuốc</ThemedText>
+          <ThemedText style={styles.label}>{t("profile.labels.smoking")}</ThemedText>
           <Controller
             control={control}
             name="isSmoker"
@@ -827,9 +858,9 @@ export default function ProfileScreen() {
               <View style={styles.triRow}>
                 {(
                   [
-                    { label: "Chưa chọn", value: null as boolean | null },
-                    { label: "Có", value: true },
-                    { label: "Không", value: false },
+                    { label: t("common.notSet"), value: null as boolean | null },
+                    { label: t("common.yes"), value: true },
+                    { label: t("common.no"), value: false },
                   ] as const
                 ).map((opt) => (
                   <TouchableOpacity
@@ -854,7 +885,7 @@ export default function ProfileScreen() {
             )}
           />
 
-          <ThemedText style={styles.label}>Có thú cưng</ThemedText>
+          <ThemedText style={styles.label}>{t("profile.labels.pets")}</ThemedText>
           <Controller
             control={control}
             name="hasPet"
@@ -862,9 +893,9 @@ export default function ProfileScreen() {
               <View style={styles.triRow}>
                 {(
                   [
-                    { label: "Chưa chọn", value: null as boolean | null },
-                    { label: "Có", value: true },
-                    { label: "Không", value: false },
+                    { label: t("common.notSet"), value: null as boolean | null },
+                    { label: t("common.yes"), value: true },
+                    { label: t("common.no"), value: false },
                   ] as const
                 ).map((opt) => (
                   <TouchableOpacity
@@ -895,24 +926,27 @@ export default function ProfileScreen() {
             <View style={styles.sectionIcon}>
               <IconSymbol name="dollarsign.circle.fill" size={18} color={color.primary} />
             </View>
-            <ThemedText style={styles.sectionTitle}>Ngân sách (VNĐ/tháng)</ThemedText>
+            <ThemedText style={styles.sectionTitle}>
+              {t("profile.sections.budgetMonthly")}
+            </ThemedText>
           </View>
           <View style={styles.row}>
             <View style={{ flex: 1 }}>
-              <ThemedText style={styles.label}>Tối thiểu</ThemedText>
+              <ThemedText style={styles.label}>{t("profile.labels.budgetMin")}</ThemedText>
               <Controller
                 control={control}
                 name="budgetMin"
                 rules={{
-                  required: "Bắt buộc",
+                  required: t("profile.validation.budgetRequired"),
                   validate: (v) =>
-                    (typeof v === "number" && !Number.isNaN(v) && v >= 0) || "Nhập số hợp lệ",
+                    (typeof v === "number" && !Number.isNaN(v) && v >= 0) ||
+                    t("profile.validation.budgetNumber"),
                 }}
                 render={({ field }) => (
                   <TextInput
                     style={[styles.inputHalf, errors.budgetMin && styles.inputError]}
                     keyboardType="numeric"
-                    placeholder="Min"
+                    placeholder={t("profile.placeholders.min")}
                     placeholderTextColor={color.placeholder}
                     value={field.value?.toString() ?? ""}
                     onChangeText={(v) => field.onChange(v === "" ? 0 : Number(v))}
@@ -924,15 +958,17 @@ export default function ProfileScreen() {
               ) : null}
             </View>
             <View style={{ flex: 1 }}>
-              <ThemedText style={styles.label}>Tối đa</ThemedText>
+              <ThemedText style={styles.label}>{t("profile.labels.budgetMax")}</ThemedText>
               <Controller
                 control={control}
                 name="budgetMax"
                 rules={{
-                  required: "Bắt buộc",
+                  required: t("profile.validation.budgetRequired"),
                   validate: (v, form) => {
-                    if (typeof v !== "number" || Number.isNaN(v) || v < 0) return "Nhập số hợp lệ";
-                    if (v < (form.budgetMin ?? 0)) return "Tối đa phải ≥ tối thiểu";
+                    if (typeof v !== "number" || Number.isNaN(v) || v < 0)
+                      return t("profile.validation.budgetNumber");
+                    if (v < (form.budgetMin ?? 0))
+                      return t("profile.validation.budgetMaxGteMin");
                     return true;
                   },
                 }}
@@ -940,7 +976,7 @@ export default function ProfileScreen() {
                   <TextInput
                     style={[styles.inputHalf, errors.budgetMax && styles.inputError]}
                     keyboardType="numeric"
-                    placeholder="Max"
+                    placeholder={t("profile.placeholders.max")}
                     placeholderTextColor={color.placeholder}
                     value={field.value?.toString() ?? ""}
                     onChangeText={(v) => field.onChange(v === "" ? 0 : Number(v))}
@@ -959,18 +995,18 @@ export default function ProfileScreen() {
             <View style={styles.sectionIcon}>
               <IconSymbol name="location.fill" size={18} color={color.primary} />
             </View>
-            <ThemedText style={styles.sectionTitle}>Địa chỉ</ThemedText>
+            <ThemedText style={styles.sectionTitle}>{t("profile.sections.address")}</ThemedText>
           </View>
 
-          <ThemedText style={styles.label}>Số nhà, tên đường</ThemedText>
+          <ThemedText style={styles.label}>{t("profile.labels.street")}</ThemedText>
           <Controller
             control={control}
             name="streetAddress"
-            rules={{ required: "Vui lòng nhập địa chỉ" }}
+            rules={{ required: t("profile.validation.street") }}
             render={({ field }) => (
               <TextInput
                 style={[styles.input, errors.streetAddress && styles.inputError]}
-                placeholder="Số nhà, tên đường"
+                placeholder={t("profile.placeholders.street")}
                 placeholderTextColor={color.placeholder}
                 value={field.value}
                 onChangeText={field.onChange}
@@ -981,16 +1017,17 @@ export default function ProfileScreen() {
             <ThemedText style={styles.errorText}>{String(errors.streetAddress.message)}</ThemedText>
           ) : null}
 
-          <ThemedText style={styles.label}>Thành phố</ThemedText>
+          <ThemedText style={styles.label}>{t("profile.labels.city")}</ThemedText>
           <Controller
             control={control}
             name="cityId"
             rules={{
-              validate: (v) => (v !== undefined && v !== null) || "Chọn thành phố",
+              validate: (v) =>
+                (v !== undefined && v !== null) || t("profile.validation.city"),
             }}
             render={({ field }) => (
               <LocationPicker
-                label="Thành phố"
+                label={t("profile.labels.city")}
                 data={cities}
                 selectedValue={field.value}
                 onValueChange={field.onChange}
@@ -1001,16 +1038,17 @@ export default function ProfileScreen() {
             <ThemedText style={styles.errorText}>{String(errors.cityId.message)}</ThemedText>
           ) : null}
 
-          <ThemedText style={styles.label}>Quận / Huyện</ThemedText>
+          <ThemedText style={styles.label}>{t("profile.labels.district")}</ThemedText>
           <Controller
             control={control}
             name="districtId"
             rules={{
-              validate: (v) => (v !== undefined && v !== null) || "Chọn quận/huyện",
+              validate: (v) =>
+                (v !== undefined && v !== null) || t("profile.validation.district"),
             }}
             render={({ field }) => (
               <LocationPicker
-                label="Quận / Huyện"
+                label={t("profile.labels.district")}
                 data={districts}
                 selectedValue={field.value}
                 onValueChange={field.onChange}
@@ -1021,16 +1059,17 @@ export default function ProfileScreen() {
             <ThemedText style={styles.errorText}>{String(errors.districtId.message)}</ThemedText>
           ) : null}
 
-          <ThemedText style={styles.label}>Phường / Xã</ThemedText>
+          <ThemedText style={styles.label}>{t("profile.labels.ward")}</ThemedText>
           <Controller
             control={control}
             name="wardId"
             rules={{
-              validate: (v) => (v !== undefined && v !== null) || "Chọn phường/xã",
+              validate: (v) =>
+                (v !== undefined && v !== null) || t("profile.validation.ward"),
             }}
             render={({ field }) => (
               <LocationPicker
-                label="Phường / Xã"
+                label={t("profile.labels.ward")}
                 data={wards}
                 selectedValue={field.value}
                 onValueChange={field.onChange}
@@ -1059,7 +1098,7 @@ export default function ProfileScreen() {
             <View style={styles.sectionIcon}>
               <IconSymbol name="tag.fill" size={18} color={color.primary} />
             </View>
-            <ThemedText style={styles.sectionTitle}>Tags</ThemedText>
+            <ThemedText style={styles.sectionTitle}>{t("profile.sections.tags")}</ThemedText>
           </View>
 
           <Controller
@@ -1090,7 +1129,7 @@ export default function ProfileScreen() {
                   {availableTags.length > 0 && (
                     <View style={{ marginTop: 10 }}>
                       <ThemedText style={{ marginBottom: 6, color: color.textSecondary }}>
-                        Thêm tag
+                        {t("profile.tagsAdd")}
                       </ThemedText>
                       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                         {availableTags.map((t) => (
@@ -1115,28 +1154,28 @@ export default function ProfileScreen() {
           style={styles.saveBtn}
           onPress={() =>
             openConfirm({
-              title: "Xác nhận cập nhật",
-              message: "Bạn có chắc muốn lưu thay đổi?",
+              title: t("profile.confirmUpdateTitle"),
+              message: t("profile.confirmUpdateMessage"),
               onConfirm: () => {
                 handleSubmit(onSubmit)();
               },
             })
           }
         >
-          <ThemedText style={styles.saveText}>Cập nhật</ThemedText>
+          <ThemedText style={styles.saveText}>{t("profile.update")}</ThemedText>
         </TouchableOpacity>
 
         <Pressable
           style={styles.logoutBtn}
           onPress={() =>
             openConfirm({
-              title: "Đăng xuất",
-              message: "Bạn có chắc muốn đăng xuất?",
+              title: t("profile.confirmLogoutTitle"),
+              message: t("profile.confirmLogoutMessage"),
               onConfirm: authService.logout,
             })
           }
         >
-          <ThemedText style={styles.logoutText}>Đăng xuất</ThemedText>
+          <ThemedText style={styles.logoutText}>{t("profile.logout")}</ThemedText>
         </Pressable>
       </ScrollView>
 
@@ -1158,6 +1197,8 @@ export default function ProfileScreen() {
         onStay={handleLeaveStay}
         onDiscard={handleLeaveDiscard}
       />
+
+      <SettingsModal visible={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </>
   );
 }

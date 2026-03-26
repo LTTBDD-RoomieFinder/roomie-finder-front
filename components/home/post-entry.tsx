@@ -1,6 +1,7 @@
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { useLanguage } from "@/hooks/use-language";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
@@ -13,7 +14,9 @@ type Props = {
 
 export function PostEntry({ onPress }: Props) {
   const { color } = useAppTheme();
+  const { t } = useLanguage();
   const user = useAuthStore((state) => state.user);
+  const firstName = user?.fullName?.split(" ")[0] || t("home.postEntryYou");
 
   return (
     <ThemedView style={styles.container}>
@@ -31,7 +34,7 @@ export function PostEntry({ onPress }: Props) {
           onPress={onPress}
         >
           <ThemedText style={{ color: color.textSecondary, fontSize: 15 }}>
-            Bạn đang nghĩ gì, {user?.fullName?.split(" ")[0] || "User"}?
+            {t("home.postEntryPrompt", { name: firstName })}
           </ThemedText>
 
           <Pressable style={styles.actionButton} onPress={onPress}>

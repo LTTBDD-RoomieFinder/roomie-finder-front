@@ -1,5 +1,5 @@
 import { Image } from "expo-image";
-import { Link, useRouter } from "expo-router";
+import { Link, useRouter, type Href } from "expo-router";
 import React, { useState } from "react";
 import {
   KeyboardAvoidingView,
@@ -16,13 +16,14 @@ import { ThemedView } from "@/components/themed-view";
 import Divider from "@/components/ui/divider";
 import FormError from "@/components/ui/form-error";
 import { PasswordInput } from "@/components/ui/password-input";
-import { AUTH_TEXT } from "@/constants/auth-text";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { useLanguage } from "@/hooks/use-language";
 import { authService } from "@/services/auth";
 
 export default function Login() {
   const router = useRouter();
   const { logo, color } = useAppTheme();
+  const { t } = useLanguage();
 
   const [userName, setUserName] = useState("");
   const [password, setPassword] = useState("");
@@ -33,7 +34,7 @@ export default function Login() {
     if (loading) return;
 
     if (!userName || !password) {
-      setError(AUTH_TEXT.ERRORS.EMPTY_FIELDS);
+      setError(t("auth.errors.emptyFields"));
       return;
     }
 
@@ -41,7 +42,7 @@ export default function Login() {
       setLoading(true);
       setError(null);
       await authService.login({ username: userName, password });
-      alert(AUTH_TEXT.SUCCESS.LOGIN_SUCCESS);
+      alert(t("auth.loginSuccess"));
       router.replace("/(tabs)/home");
     } catch (error: any) {
       setError(error);
@@ -63,18 +64,18 @@ export default function Login() {
         >
           <View style={styles.header}>
             <Image source={logo} style={styles.logo} contentFit="contain" />
-            <ThemedText type="title">Sign In</ThemedText>
+            <ThemedText type="title">{t("auth.signIn")}</ThemedText>
           </View>
 
           <View style={styles.form}>
             <View style={styles.field}>
-              <ThemedText type="defaultSemiBold">Username</ThemedText>
+              <ThemedText type="defaultSemiBold">{t("auth.username")}</ThemedText>
               <TextInput
                 value={userName}
                 onChangeText={setUserName}
                 autoCapitalize="none"
                 autoCorrect={false}
-                placeholder="user"
+                placeholder={t("auth.userPlaceholder")}
                 placeholderTextColor={color.placeholder}
                 style={[
                   styles.input,
@@ -88,16 +89,16 @@ export default function Login() {
             </View>
 
             <PasswordInput
-              label="Password"
+              label={t("auth.password")}
               value={password}
               onChangeText={setPassword}
             />
 
             <FormError message={error} />
 
-            <Link href="/(auth)/forgot-password" asChild>
+            <Link href={"/(auth)/forgot-password" as Href} asChild>
               <Pressable style={styles.linkRow}>
-                <ThemedText type="link">Forgot password?</ThemedText>
+                <ThemedText type="link">{t("auth.forgotPassword")}</ThemedText>
               </Pressable>
             </Link>
 
@@ -115,12 +116,12 @@ export default function Login() {
                 type="defaultSemiBold"
                 style={{ color: color.primaryText }}
               >
-                Login
+                {t("auth.loginButton")}
               </ThemedText>
             </Pressable>
 
             <Divider
-              text="Or continue with"
+              text={t("auth.divider")}
               textStyle={{ color: color.text, opacity: 0.6 }}
             />
 
@@ -138,16 +139,16 @@ export default function Login() {
                 style={{ width: 20, height: 20, marginRight: 8 }}
               />
               <ThemedText type="defaultSemiBold">
-                Continue with Google
+                {t("auth.continueGoogle")}
               </ThemedText>
             </Pressable>
           </View>
 
           <View style={styles.footer}>
-            <ThemedText>Don&apos;t have an account?</ThemedText>
+            <ThemedText>{t("auth.noAccount")}</ThemedText>
             <Link href="/(auth)/register" asChild>
               <Pressable>
-                <ThemedText type="link">Sign Up</ThemedText>
+                <ThemedText type="link">{t("auth.signUp")}</ThemedText>
               </Pressable>
             </Link>
           </View>
@@ -183,7 +184,7 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 16,

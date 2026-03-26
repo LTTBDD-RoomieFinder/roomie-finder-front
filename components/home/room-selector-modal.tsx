@@ -7,6 +7,7 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { RoomResponse } from "@/data/response";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { useLanguage } from "@/hooks/use-language";
 import { roomService } from "@/services/room-service";
 
 type Props = {
@@ -17,6 +18,7 @@ type Props = {
 
 export function RoomSelectorModal({ visible, onClose, onSelectRoom }: Props) {
   const { color } = useAppTheme();
+  const { t, locale } = useLanguage();
   const [rooms, setRooms] = useState<RoomResponse[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -63,7 +65,10 @@ export function RoomSelectorModal({ visible, onClose, onSelectRoom }: Props) {
             {item.title}
           </ThemedText>
           <ThemedText style={{ color: color.textSecondary, marginTop: 4 }}>
-            {item.price.toLocaleString("vi-VN")} VND/mo • {item.area}m²
+            {t("room.metaVndMo", {
+              price: item.price.toLocaleString(locale === "vi" ? "vi-VN" : "en-US"),
+              area: item.area,
+            })}
           </ThemedText>
         </View>
         <Ionicons name="chevron-forward" size={20} color={color.textSecondary} />
@@ -79,7 +84,7 @@ export function RoomSelectorModal({ visible, onClose, onSelectRoom }: Props) {
             <Ionicons name="close" size={24} color={color.text} />
           </Pressable>
           <ThemedText type="subtitle" style={styles.headerTitle}>
-            Chọn phòng muốn đăng
+            {t("room.selectorTitle")}
           </ThemedText>
           <View style={{ width: 40 }} />
         </View>
@@ -92,7 +97,7 @@ export function RoomSelectorModal({ visible, onClose, onSelectRoom }: Props) {
           <View style={styles.centerContainer}>
             <Ionicons name="home-outline" size={48} color={color.textSecondary} />
             <ThemedText style={{ color: color.textSecondary, marginTop: 16 }}>
-              Bạn chưa có phòng nào để đăng bài.
+              {t("room.selectorEmpty")}
             </ThemedText>
           </View>
         ) : (

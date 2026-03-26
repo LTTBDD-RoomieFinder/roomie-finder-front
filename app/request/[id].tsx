@@ -16,9 +16,10 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import {
   REQUEST_REJECT_COOLDOWN_DAYS,
   REQUEST_STATUS_COLOR,
-  REQUEST_STATUS_LABEL,
+  REQUEST_STATUS_LABEL_KEY,
 } from "@/constants/request";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { useLanguage } from "@/hooks/use-language";
 import { requestService } from "@/services/request-service";
 import { useUpdateRequestStatus } from "@/hooks/use-update-request-status";
 import { useAuthStore } from "@/stores/useAuthStore";
@@ -32,13 +33,20 @@ export default function RequestDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { color } = useAppTheme();
+  const { t } = useLanguage();
   const { request, variant: storedVariant, setRequest } = useRequestDetailStore();
   const { updateStatus, isLoading: isUpdating, error: updateError } = useUpdateRequestStatus();
   const accessToken = useAuthStore((s) => s.accessToken);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
 
   const requestId = id ? Number(id) : NaN;
-  const currentUserId = decodeJwtPayload(accessToken ?? "")?.userId ?? null;
+  const rawUserId = decodeJwtPayload(accessToken ?? "")?.userId;
+  const currentUserId =
+    rawUserId == null || rawUserId === ""
+      ? null
+      : Number.isFinite(Number(rawUserId))
+        ? Number(rawUserId)
+        : null;
 
   useEffect(() => {
     return () => {
@@ -108,7 +116,7 @@ export default function RequestDetailScreen() {
             <Pressable onPress={handleBack} style={styles.backButton} hitSlop={12}>
               <IconSymbol name="chevron.left" size={24} color={color.primary} />
             </Pressable>
-            <ThemedText style={styles.headerTitle}>Lời mời</ThemedText>
+            <ThemedText style={styles.headerTitle}>{t("request.listTitle")}</ThemedText>
           </View>
           <View style={styles.centered}>
             <ActivityIndicator size="large" color={color.primary} />
@@ -126,17 +134,17 @@ export default function RequestDetailScreen() {
             <Pressable onPress={handleBack} style={styles.backButton} hitSlop={12}>
               <IconSymbol name="chevron.left" size={24} color={color.primary} />
             </Pressable>
-            <ThemedText style={styles.headerTitle}>Lời mời</ThemedText>
+            <ThemedText style={styles.headerTitle}>{t("request.listTitle")}</ThemedText>
           </View>
           <View style={styles.centered}>
             <View style={[styles.notFoundIcon, { backgroundColor: color.primary + "15" }]}>
               <IconSymbol name="questionmark.circle" size={40} color={color.primary} />
             </View>
             <ThemedText style={[styles.notFoundTitle, { color: color.text }]}>
-              Không tìm thấy lời mời
+              {t("request.notFoundTitle")}
             </ThemedText>
             <ThemedText style={[styles.notFoundSub, { color: color.text, opacity: 0.6 }]}>
-              Vui lòng mở lại từ danh sách lời mời.
+              {t("request.notFoundSub")}
             </ThemedText>
           </View>
         </ThemedView>
@@ -146,7 +154,7 @@ export default function RequestDetailScreen() {
 
   const variant: "incoming" | "outgoing" = storedVariant ?? "outgoing";
   const otherUser = variant === "incoming" ? request.sender : request.receiver;
-  const displayName = otherUser?.fullName || otherUser?.username || "Người dùng";
+  const displayName = otherUser?.fullName || otherUser?.username || t("request.card.fallbackName");
   const statusColor = REQUEST_STATUS_COLOR[request.status];
   const canRespond =
     variant === "incoming" &&
@@ -161,7 +169,7 @@ export default function RequestDetailScreen() {
           <Pressable onPress={handleBack} style={styles.backButton} hitSlop={12}>
             <IconSymbol name="chevron.left" size={24} color={color.primary} />
           </Pressable>
-          <ThemedText style={styles.headerTitle}>Chi tiết lời mời</ThemedText>
+          <ThemedText style={styles.headerTitle}>{t("request.detailTitle")}</ThemedText>
         </View>
 
         <ScrollView
@@ -188,9 +196,7 @@ export default function RequestDetailScreen() {
             targetUserId={otherUser?.id}
             currentUserId={currentUserId ?? undefined}
             hint={
-              variant === "incoming"
-                ? "So khớp hồ sơ của bạn với người gửi lời mời"
-                : "So khớp hồ sơ của bạn với người nhận lời mời"
+              variant === "incoming" ? t("matching.hintIncoming") : t("matching.hintOutgoing")
             }
           />
 
@@ -212,7 +218,7 @@ export default function RequestDetailScreen() {
               <View style={[styles.statusBadge, { backgroundColor: statusColor + "1a" }]}>
                 <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
                 <ThemedText style={[styles.statusText, { color: statusColor }]}>
-                  {REQUEST_STATUS_LABEL[request.status]}
+                  {t(REQUEST_STATUS_LABEL_KEY[request.status])}
                 </ThemedText>
               </View>
               <ThemedText style={[styles.date, { color: color.text, opacity: 0.6 }]}>
@@ -228,7 +234,9 @@ export default function RequestDetailScreen() {
                 color={color.text}
               />
               <ThemedText style={[styles.typeLabel, { color: color.text, opacity: 0.7 }]}>
-                {variant === "incoming" ? "Lời mời nhận được" : "Lời mời đã gửi"}
+                {variant === "incoming"
+                  ? t("request.detail.typeIncoming")
+                  : t("request.detail.typeOutgoing")}
               </ThemedText>
             </View>
 
@@ -236,7 +244,7 @@ export default function RequestDetailScreen() {
             {request.message ? (
               <View style={[styles.messageBlock, { borderTopColor: color.border + "40" }]}>
                 <ThemedText style={[styles.messageLabel, { color: color.text, opacity: 0.5 }]}>
-                  LỜI NHẮN
+                  {t("request.detail.messageSection")}
                 </ThemedText>
                 <ThemedText style={[styles.message, { color: color.text }]}>
                   {request.message}
@@ -249,7 +257,7 @@ export default function RequestDetailScreen() {
               <View style={[styles.hintBlock, { backgroundColor: "#d9770615", borderTopColor: color.border + "40" }]}>
                 <IconSymbol name="clock.fill" size={15} color="#d97706" />
                 <ThemedText style={styles.hint}>
-                  Bạn có thể gửi lại sau {REQUEST_REJECT_COOLDOWN_DAYS} ngày
+                  {t("request.card.cooldownHint", { days: REQUEST_REJECT_COOLDOWN_DAYS })}
                 </ThemedText>
               </View>
             )}
@@ -260,7 +268,7 @@ export default function RequestDetailScreen() {
                 <View style={styles.successRow}>
                   <IconSymbol name="checkmark.seal.fill" size={18} color="#16a34a" />
                   <ThemedText style={styles.successHint}>
-                    Phòng chat đã được tạo — nhắn tin để thảo luận giá cả và nội quy nhà.
+                    {t("request.card.acceptedHint")}
                   </ThemedText>
                 </View>
                 <Pressable
@@ -273,7 +281,7 @@ export default function RequestDetailScreen() {
                     color={color.primaryText}
                   />
                   <ThemedText style={[styles.openChatLabel, { color: color.primaryText }]}>
-                    Mở chat
+                    {t("request.card.openChat")}
                   </ThemedText>
                 </Pressable>
               </View>
@@ -299,7 +307,7 @@ export default function RequestDetailScreen() {
                   <>
                     <IconSymbol name="checkmark.circle.fill" size={20} color={color.primaryText} />
                     <ThemedText style={[styles.actionLabel, { color: color.primaryText }]}>
-                      Chấp nhận
+                      {t("request.card.accept")}
                     </ThemedText>
                   </>
                 )}
@@ -310,7 +318,9 @@ export default function RequestDetailScreen() {
                 disabled={isUpdating}
               >
                 <IconSymbol name="xmark.circle.fill" size={20} color={color.error} />
-                <ThemedText style={[styles.actionLabel, { color: color.error }]}>Từ chối</ThemedText>
+                <ThemedText style={[styles.actionLabel, { color: color.error }]}>
+                  {t("request.card.reject")}
+                </ThemedText>
               </Pressable>
             </View>
           )}

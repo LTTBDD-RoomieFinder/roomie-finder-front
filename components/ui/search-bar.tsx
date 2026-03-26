@@ -17,7 +17,7 @@ export function SearchBar({
   value,
   onChangeText,
   onFilterPress,
-  placeholder = "Tìm kiếm phòng...",
+  placeholder = "",
   hasActiveFilters = false,
   autoFocus = false,
   inputRef,

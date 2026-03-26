@@ -5,6 +5,7 @@ import { Feather, Ionicons } from "@expo/vector-icons";
 
 import { ThemedText } from "@/components/themed-text";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { useLanguage } from "@/hooks/use-language";
 import { RoomResponse } from "@/data/response";
 import { formatDate } from "@/utils/format-post";
 
@@ -30,17 +31,19 @@ type Props = {
 
 export function PostSearchResultCard({ post, onPress }: Props) {
   const { color } = useAppTheme();
+  const { t, locale } = useLanguage();
 
   if (!post) return null;
 
   const { title, content, createdAt, room, author } = post;
   
-  const authorName = author?.fullName || "Người dùng ẩn danh";
+  const authorName = author?.fullName || t("postSearch.anonymous");
   const avatarLetter = authorName.trim().charAt(0).toUpperCase();
   const thumb = room?.imageUrls?.[0];
-  const priceDisplay = room?.price ? `${room.price.toLocaleString("vi-VN")}đ` : "Thỏa thuận";
-
-  console.log("Dữ liệu Tác giả từ API:", post.author);
+  const loc = locale === "vi" ? "vi-VN" : "en-US";
+  const priceDisplay = room?.price
+    ? `${room.price.toLocaleString(loc)}đ`
+    : t("postSearch.negotiable");
 
   return (
     <Pressable
@@ -67,24 +70,24 @@ export function PostSearchResultCard({ post, onPress }: Props) {
             {authorName}
           </ThemedText>
           <ThemedText style={{ color: color.textSecondary, fontSize: 12, marginTop: 2 }}>
-            {createdAt ? formatDate(createdAt) : "Vừa xong"}
+            {createdAt ? formatDate(createdAt) : t("postSearch.justNow")}
           </ThemedText>
         </View>
 
         <View style={[styles.badge, { backgroundColor: color.backgroundSecondary }]}>
           <Feather name="home" size={12} color={color.primary} />
           <ThemedText style={{ fontSize: 11, color: color.primary, fontWeight: "600" }}>
-            Cho thuê
+            {t("postSearch.forRent")}
           </ThemedText>
         </View>
       </View>
 
       <View style={styles.bodySection}>
         <ThemedText type="defaultSemiBold" style={styles.title} numberOfLines={2}>
-          {title || "Không có tiêu đề"}
+          {title || t("postSearch.noTitle")}
         </ThemedText>
         <ThemedText style={{ color: color.textSecondary, fontSize: 14, lineHeight: 20 }} numberOfLines={2}>
-          {content || "Không có nội dung mô tả."}
+          {content || t("postSearch.noDescription")}
         </ThemedText>
       </View>
 
@@ -99,13 +102,19 @@ export function PostSearchResultCard({ post, onPress }: Props) {
           
           <View style={styles.roomDetails}>
             <ThemedText type="defaultSemiBold" numberOfLines={1} style={{ fontSize: 14 }}>
-              {room.title || "Phòng trọ"}
+              {room.title || t("postSearch.defaultRoomTitle")}
             </ThemedText>
             
             <View style={styles.metaRow}>
               <ThemedText style={{ color: color.primary, fontWeight: "800", fontSize: 14 }}>
                 {priceDisplay}
-                {room.price ? <ThemedText style={{ fontSize: 12, color: color.textSecondary, fontWeight: '400' }}>/tháng</ThemedText> : null}
+                {room.price ? (
+                  <ThemedText
+                    style={{ fontSize: 12, color: color.textSecondary, fontWeight: "400" }}
+                  >
+                    {t("postCard.perMonth")}
+                  </ThemedText>
+                ) : null}
               </ThemedText>
               
               {room.area && (
@@ -121,7 +130,8 @@ export function PostSearchResultCard({ post, onPress }: Props) {
             <View style={styles.locationRow}>
               <Ionicons name="location-outline" size={14} color={color.textSecondary} />
               <ThemedText style={{ color: color.textSecondary, fontSize: 12, flex: 1 }} numberOfLines={1}>
-                {[room.address?.district, room.address?.city].filter(Boolean).join(", ") || "Chưa cập nhật địa chỉ"}
+                {[room.address?.district, room.address?.city].filter(Boolean).join(", ") ||
+                  t("postSearch.addressPending")}
               </ThemedText>
             </View>
           </View>

@@ -16,8 +16,10 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { PostResponse } from "@/data/response";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { useLanguage } from "@/hooks/use-language";
+import { postStatusLabelKey } from "@/lib/i18n-labels";
 import { postService } from "@/services/post-service";
-import { STATUS_COLORS, STATUS_LABELS } from "@/constants/post-constants";
+import { STATUS_COLORS } from "@/constants/post-constants";
 
 type Props = {
   visible: boolean;
@@ -28,6 +30,7 @@ type Props = {
 
 export function MyPostsSheet({ visible, onClose, onEdit, onDeleted }: Props) {
   const { color } = useAppTheme();
+  const { t } = useLanguage();
   const [posts, setPosts] = useState<PostResponse[]>([]);
   const [loading, setLoading] = useState(false);
   const insets = useSafeAreaInsets();
@@ -50,12 +53,12 @@ export function MyPostsSheet({ visible, onClose, onEdit, onDeleted }: Props) {
 
   const handleDelete = (post: PostResponse) => {
     Alert.alert(
-      "Xoá bài đăng",
-      `Bạn có chắc muốn xoá "${post.title}" không?`,
+      t("post.deleteConfirmTitle"),
+      t("post.deleteConfirmMessage", { title: post.title }),
       [
-        { text: "Huỷ", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Xoá",
+          text: t("common.delete"),
           style: "destructive",
           onPress: async () => {
             try {
@@ -63,7 +66,10 @@ export function MyPostsSheet({ visible, onClose, onEdit, onDeleted }: Props) {
               setPosts((prev) => prev.filter((p) => p.id !== post.id));
               onDeleted();
             } catch (e: any) {
-              Alert.alert("Lỗi", e?.toString() ?? "Không thể xoá bài đăng.");
+              Alert.alert(
+                t("common.error"),
+                e?.toString() ?? t("post.deleteError"),
+              );
             }
           },
         },
@@ -85,10 +91,10 @@ export function MyPostsSheet({ visible, onClose, onEdit, onDeleted }: Props) {
             ]}
           />
           <ThemedText style={{ color: color.textSecondary, fontSize: 12 }}>
-            {STATUS_LABELS[item.status]}
+            {t(postStatusLabelKey(item.status))}
           </ThemedText>
           <ThemedText style={{ color: color.textSecondary, fontSize: 12, marginLeft: 8 }}>
-            · {item.viewCount} lượt xem
+            · {t("post.views", { count: item.viewCount })}
           </ThemedText>
         </View>
       </View>
@@ -124,7 +130,7 @@ export function MyPostsSheet({ visible, onClose, onEdit, onDeleted }: Props) {
         {/* Header */}
         <View style={[styles.header, { borderBottomColor: color.border, paddingTop: Platform.OS === 'android' ? Math.max(insets.top, 14) : 14 }]}>
           <ThemedText type="subtitle" style={{ flex: 1 }}>
-            Bài đăng của tôi
+            {t("post.myPostsTitle")}
           </ThemedText>
           <Pressable onPress={onClose} style={styles.closeBtn}>
             <Ionicons name="close" size={24} color={color.text} />
@@ -139,7 +145,7 @@ export function MyPostsSheet({ visible, onClose, onEdit, onDeleted }: Props) {
           <View style={styles.center}>
             <Ionicons name="document-text-outline" size={52} color={color.textSecondary} />
             <ThemedText style={{ color: color.textSecondary, marginTop: 16, textAlign: "center" }}>
-              Bạn chưa có bài đăng nào.
+              {t("post.myPostsEmpty")}
             </ThemedText>
           </View>
         ) : (

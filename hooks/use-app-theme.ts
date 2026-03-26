@@ -1,12 +1,27 @@
-import { Colors, Fonts } from "@/constants/theme";
-import { useColorScheme } from "react-native";
+import { Fonts } from "@/constants/theme";
+import {
+  getIconPack,
+  getRadiusScale,
+  getThemePalette,
+} from "@/constants/theme-presets";
+import { useAppThemeContext } from "@/contexts/app-theme-context";
 
 export function useAppTheme() {
-  const scheme = useColorScheme() ?? "light";
-  const colors = Colors[scheme];
+  const ctx = useAppThemeContext();
+  const scheme = ctx.effectiveScheme;
+  const aesthetic = ctx.aesthetic;
+  const palette = getThemePalette(aesthetic, scheme);
+  const iconPack = getIconPack(aesthetic);
+  const radius = getRadiusScale(aesthetic);
+
+  const colors = palette;
 
   return {
     scheme,
+    aesthetic,
+    iconPack,
+    radius,
+    hydrated: ctx.hydrated,
     logo:
       scheme === "dark"
         ? require("@/assets/images/logo-dark.png")
@@ -16,10 +31,10 @@ export function useAppTheme() {
       background: colors.background,
       card: colors.card,
 
-      primary: colors.tint,
-      primaryText: scheme === "dark" ? colors.background : colors.background,
+      primary: colors.primary,
+      primaryText: colors.onPrimary,
 
-      border: colors.icon,
+      border: colors.border,
       placeholder: colors.icon,
 
       icon: colors.icon,
@@ -36,6 +51,9 @@ export function useAppTheme() {
       },
     },
 
+    /** Raw palette for navigation / StatusBar */
+    palette: colors,
+
     font: {
       sans: Fonts?.sans,
       serif: Fonts?.serif,
@@ -44,3 +62,5 @@ export function useAppTheme() {
     },
   };
 }
+
+export type AppTheme = ReturnType<typeof useAppTheme>;

@@ -14,12 +14,14 @@ import { PostEntry } from "@/components/home/post-entry";
 import { PostList } from "@/components/home/post-list";
 import { PostResponse } from "@/data/response";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { useLanguage } from "@/hooks/use-language";
 import { postService } from "@/services/post-service";
 import { syncTabBadgesToStore } from "@/services/tab-badge-service";
 import { useAuthStore } from "@/stores/useAuthStore";
 
 export default function HomeScreen() {
-  const { color } = useAppTheme();
+  const { color, radius } = useAppTheme();
+  const { t } = useLanguage();
   const user = useAuthStore((state) => state.user);
   const insets = useSafeAreaInsets(); // Lấy thông số vùng an toàn của màn hình
 
@@ -64,19 +66,19 @@ export default function HomeScreen() {
 
   const handleDeleteFromFeed = (post: PostResponse) => {
     Alert.alert(
-      "Xoá bài đăng",
-      `Bạn có chắc muốn xoá "${post.title}" không?`,
+      t("home.deletePostTitle"),
+      t("home.deletePostMessage", { title: post.title }),
       [
-        { text: "Huỷ", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Xoá",
+          text: t("common.delete"),
           style: "destructive",
           onPress: async () => {
             try {
               await postService.deletePost(post.id);
               setPosts((prev) => prev.filter((p) => p.id !== post.id));
             } catch (e: any) {
-              Alert.alert("Lỗi", e?.toString() ?? "Không thể xoá bài đăng.");
+              Alert.alert(t("common.error"), e?.toString() ?? t("home.deleteFailed"));
             }
           },
         },
@@ -98,16 +100,19 @@ export default function HomeScreen() {
             onPress={() => setSearchVisible(true)}
             style={({ pressed }) => [
               styles.iconButton,
-              { backgroundColor: pressed ? color.border : color.backgroundSecondary },
+              {
+                backgroundColor: pressed ? color.border : color.backgroundSecondary,
+                borderRadius: radius.md,
+              },
             ]}
             accessibilityRole="button"
-            accessibilityLabel="Tìm kiếm"
+            accessibilityLabel={t("home.searchA11y")}
           >
             <Ionicons name="search" size={22} color={color.text} />
           </Pressable>
 
           <ThemedText type="title" style={[styles.headerTitle, { color: color.primary }]}>
-            Roomie Finder
+            {t("home.title")}
           </ThemedText>
 
           <View style={styles.headerRight}>
@@ -115,10 +120,13 @@ export default function HomeScreen() {
               onPress={() => setMyPostsVisible(true)}
               style={({ pressed }) => [
                 styles.iconButton,
-                { backgroundColor: pressed ? color.border : color.backgroundSecondary },
+                {
+                  backgroundColor: pressed ? color.border : color.backgroundSecondary,
+                  borderRadius: radius.md,
+                },
               ]}
               accessibilityRole="button"
-              accessibilityLabel="Bài đăng của tôi"
+              accessibilityLabel={t("home.myPostsA11y")}
             >
               <Ionicons name="list" size={22} color={color.text} />
             </Pressable>
@@ -193,9 +201,8 @@ const styles = StyleSheet.create({
     gap: 12, // Khoảng cách đều giữa các nút
   },
   iconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20, // Bo tròn tuyệt đối thành hình tròn
+    width: 44,
+    height: 44,
     alignItems: "center",
     justifyContent: "center",
   },
