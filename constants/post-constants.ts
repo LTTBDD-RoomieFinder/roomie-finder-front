@@ -1,17 +1,10 @@
 import { PostStatus } from "@/types/PostStatus";
 
-export const STATUS_OPTIONS: { value: PostStatus; label: string }[] = [
-  { value: "PUBLISHED", label: "Công khai" },
-  { value: "HIDDEN", label: "Riêng tư" },
-  { value: "DRAFT", label: "Bản nháp" },
+export const STATUS_OPTIONS: { value: PostStatus; labelKey: string }[] = [
+  { value: "PUBLISHED", labelKey: "post.statusOption.published" },
+  { value: "HIDDEN", labelKey: "post.statusOption.hidden" },
+  { value: "DRAFT", labelKey: "post.statusOption.draft" },
 ];
-
-export const STATUS_LABELS: Record<PostStatus, string> = {
-  PUBLISHED: "Công khai",
-  DRAFT: "Bản nháp",
-  HIDDEN: "Riêng tư",
-  EXPIRED: "Hết hạn",
-};
 
 export const STATUS_COLORS: Record<PostStatus, string> = {
   PUBLISHED: "#4ade80",

@@ -8,8 +8,10 @@ import { PostRequestChatIcon } from "@/components/post/post-request-chat-icon";
 import { ThemedText } from "@/components/themed-text";
 import { PostResponse } from "@/data/response";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { useLanguage } from "@/hooks/use-language";
 import { usePostsJoinEligibility } from "@/hooks/use-posts-join-eligibility";
 import { formatDate } from "@/utils/format-post";
+import { formatRoomPrice } from "@/utils/format-room";
 
 type Props = {
   post: PostResponse;
@@ -20,6 +22,7 @@ type Props = {
 
 export function PostCard({ post, currentUserId, onEdit, onDelete }: Props) {
   const { color } = useAppTheme();
+  const { t, locale } = useLanguage();
   const { width } = useWindowDimensions();
   const isOwner = currentUserId !== undefined && String(post.user.id) === String(currentUserId);
   const myUserIdNumber =
@@ -122,7 +125,7 @@ export function PostCard({ post, currentUserId, onEdit, onDelete }: Props) {
 
             <View style={styles.roomMetaRow}>
               <ThemedText style={[styles.roomPrice, { color: color.tint }]}>
-                {post.room.price.toLocaleString("vi-VN")} đ/tháng
+                {formatRoomPrice(post.room.price, t, locale)}
               </ThemedText>
               <ThemedText style={{ color: color.textSecondary, fontSize: 13, marginHorizontal: 6 }}>•</ThemedText>
               <ThemedText style={{ color: color.textSecondary, fontSize: 13 }}>
@@ -130,7 +133,7 @@ export function PostCard({ post, currentUserId, onEdit, onDelete }: Props) {
               </ThemedText>
               <ThemedText style={{ color: color.textSecondary, fontSize: 13, marginHorizontal: 6 }}>•</ThemedText>
               <ThemedText style={{ color: color.textSecondary, fontSize: 13 }}>
-                Tối đa {post.room.capacity} người
+                {t("postCard.maxPeople", { count: post.room.capacity })}
               </ThemedText>
             </View>
 
@@ -164,7 +167,7 @@ export function PostCard({ post, currentUserId, onEdit, onDelete }: Props) {
                   <ThemedText
                     style={[styles.viewMoreText, { color: color.tint }]}
                   >
-                    Xem chi tiết phòng
+                    {t("postCard.viewRoom")}
                   </ThemedText>
                 </Pressable>
 
@@ -199,7 +202,7 @@ export function PostCard({ post, currentUserId, onEdit, onDelete }: Props) {
                 <ThemedText
                   style={[styles.viewMoreText, { color: color.tint }]}
                 >
-                  Xem chi tiết phòng
+                  {t("postCard.viewRoom")}
                 </ThemedText>
               </Pressable>
             )}
@@ -212,15 +215,17 @@ export function PostCard({ post, currentUserId, onEdit, onDelete }: Props) {
         <View style={styles.stat}>
           <Ionicons name="eye-outline" size={16} color={color.textSecondary} />
           <ThemedText style={[styles.statText, { color: color.textSecondary }]}>
-            {post.viewCount.toLocaleString("vi-VN")} lượt xem
+            {t("postCard.views", { count: post.viewCount.toLocaleString(locale === "vi" ? "vi-VN" : "en-US") })}
           </ThemedText>
         </View>
         {post.expirationDate && (
           <View style={styles.stat}>
             <Ionicons name="time-outline" size={16} color={color.textSecondary} />
             <ThemedText style={[styles.statText, { color: color.textSecondary }]}>
-              HH:{" "}
-              {new Date(post.expirationDate).toLocaleDateString("vi-VN")}
+              {t("postCard.expires")}{" "}
+              {new Date(post.expirationDate).toLocaleDateString(
+                locale === "vi" ? "vi-VN" : "en-US",
+              )}
             </ThemedText>
           </View>
         )}

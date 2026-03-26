@@ -1,4 +1,5 @@
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { useLanguage } from "@/hooks/use-language";
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 type Props = {
@@ -13,14 +14,20 @@ type Props = {
 
 export default function ConfirmModal({
   visible,
-  title = "Xác nhận",
-  message = "Bạn có chắc chắn không?",
+  title,
+  message,
   onConfirm,
   onCancel,
-  confirmText = "OK",
-  cancelText = "Hủy",
+  confirmText,
+  cancelText,
 }: Props) {
-  const { color } = useAppTheme() || {};
+  const { color, palette } = useAppTheme();
+  const { t } = useLanguage();
+  const resolvedTitle = title ?? t("confirm.title");
+  const resolvedMessage = message ?? t("confirm.message");
+  const resolvedConfirm = confirmText ?? t("confirm.confirm");
+  const resolvedCancel = cancelText ?? t("confirm.cancel");
+
   const styles = StyleSheet.create({
     overlay: {
       flex: 1,
@@ -30,19 +37,24 @@ export default function ConfirmModal({
     },
     container: {
       width: "80%",
-      backgroundColor: "#fff",
-      borderRadius: 12,
-      padding: 16,
+      maxWidth: 400,
+      backgroundColor: palette.background,
+      borderRadius: 14,
+      padding: 20,
+      borderWidth: 1,
+      borderColor: palette.border,
     },
     title: {
       fontSize: 18,
       fontWeight: "bold",
       marginBottom: 10,
+      color: palette.text,
     },
     message: {
       fontSize: 14,
-      color: "#555",
+      color: palette.textSecondary,
       marginBottom: 20,
+      lineHeight: 20,
     },
     actions: {
       flexDirection: "row",
@@ -58,7 +70,7 @@ export default function ConfirmModal({
       borderRadius: 8,
     },
     cancelText: {
-      color: "#333",
+      color: palette.text,
     },
     confirmText: {
       color: "#fff",
@@ -70,16 +82,16 @@ export default function ConfirmModal({
     <Modal transparent visible={visible} animationType="fade">
       <View style={styles.overlay}>
         <View style={styles.container}>
-          <Text style={styles.title}>{title}</Text>
-          <Text style={styles.message}>{message}</Text>
+          <Text style={styles.title}>{resolvedTitle}</Text>
+          <Text style={styles.message}>{resolvedMessage}</Text>
 
           <View style={styles.actions}>
             <TouchableOpacity style={styles.cancelBtn} onPress={onCancel}>
-              <Text style={styles.cancelText}>{cancelText}</Text>
+              <Text style={styles.cancelText}>{resolvedCancel}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.confirmBtn} onPress={onConfirm}>
-              <Text style={styles.confirmText}>{confirmText}</Text>
+              <Text style={styles.confirmText}>{resolvedConfirm}</Text>
             </TouchableOpacity>
           </View>
         </View>

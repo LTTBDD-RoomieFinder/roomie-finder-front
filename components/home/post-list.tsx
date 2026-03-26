@@ -10,6 +10,7 @@ import {
 import { ThemedText } from "@/components/themed-text";
 import { PostResponse } from "@/data/response";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { useLanguage } from "@/hooks/use-language";
 import { PostCard } from "./post-card";
 
 type Props = {
@@ -32,6 +33,7 @@ export function PostList({
   onDelete,
 }: Props) {
   const { color } = useAppTheme();
+  const { t } = useLanguage();
 
   if (loading && posts.length === 0) {
     return (
@@ -75,7 +77,7 @@ export function PostList({
         >
           <Ionicons name="newspaper-outline" size={52} color={color.textSecondary} />
           <ThemedText style={{ color: color.textSecondary, textAlign: "center" }}>
-            Chưa có bài đăng nào.{"\n"}Hãy là người đầu tiên chia sẻ!
+            {t("post.feedEmpty")}
           </ThemedText>
         </View>
       }

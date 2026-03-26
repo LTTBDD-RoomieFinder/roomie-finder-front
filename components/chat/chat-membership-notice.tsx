@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from "react-native";
 
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { useLanguage } from "@/hooks/use-language";
 import type { MembershipNoticeModel } from "@/utils/chat-system-message";
 
 type Props = {
@@ -16,12 +17,15 @@ function initialFromName(name: string): string {
 /** Centered pill: avatar + bold name + action (leave / kick / join), not a chat bubble. */
 export function ChatMembershipNotice({ model }: Props) {
   const { color } = useAppTheme();
+  const { t } = useLanguage();
   const { displayName, variant } = model;
 
   const suffix =
-    variant === "leave" ? " rời khỏi nhóm"
-    : variant === "kick" ? " đã bị mời khỏi nhóm"
-    : " đã tham gia nhóm";
+    variant === "leave"
+      ? t("chat.membership.leaveSuffix")
+      : variant === "kick"
+        ? t("chat.membership.kickSuffix")
+        : t("chat.membership.joinSuffix");
 
   return (
     <View style={styles.wrap}>

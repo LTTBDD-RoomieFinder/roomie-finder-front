@@ -4,6 +4,7 @@ import { Pressable, StyleSheet } from "react-native";
 import { ThemedText } from "@/components/themed-text";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { useLanguage } from "@/hooks/use-language";
 import type { UserResponse } from "@/types/request";
 import { SendRequestModal } from "./send-request-modal";
 
@@ -20,6 +21,7 @@ export function SendRequestButton({
 }: SendRequestButtonProps) {
   const [modalVisible, setModalVisible] = useState(false);
   const { color } = useAppTheme();
+  const { t } = useLanguage();
   const isPrimary = variant === "primary";
 
   return (
@@ -44,7 +46,7 @@ export function SendRequestButton({
             { color: isPrimary ? color.primaryText : color.text },
           ]}
         >
-          Gửi lời mời kết bạn phòng
+          {t("request.buttonLabel")}
         </ThemedText>
       </Pressable>
 

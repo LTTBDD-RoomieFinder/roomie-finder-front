@@ -5,9 +5,12 @@ import {
 } from "@react-navigation/native";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import "react-native-reanimated";
 
+import { AppThemeProvider } from "@/contexts/app-theme-context";
+import { I18nProvider } from "@/contexts/i18n-context";
+import { useAppTheme } from "@/hooks/use-app-theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { useFcmToken } from "@/hooks/use-fcm-token";
 import { useGlobalChatBadgeRealtime } from "@/hooks/use-global-chat-badge-realtime";
@@ -24,7 +27,34 @@ export const unstable_settings = {
 };
 
 export default function RootLayout() {
+  return (
+    <AppThemeProvider>
+      <I18nProvider>
+        <RootLayoutInner />
+      </I18nProvider>
+    </AppThemeProvider>
+  );
+}
+
+function RootLayoutInner() {
   const colorScheme = useColorScheme();
+  const { palette } = useAppTheme();
+  const navigationTheme = useMemo(() => {
+    const base = colorScheme === "dark" ? DarkTheme : DefaultTheme;
+    return {
+      ...base,
+      colors: {
+        ...base.colors,
+        primary: palette.primary,
+        background: palette.background,
+        card: palette.card,
+        text: palette.text,
+        border: palette.border,
+        notification: palette.error,
+      },
+    };
+  }, [colorScheme, palette]);
+
   const router = useRouter();
   const segments = useSegments();
 
@@ -111,7 +141,7 @@ export default function RootLayout() {
   }
 
   return (
-    <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+    <ThemeProvider value={navigationTheme}>
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="(auth)" />
@@ -120,7 +150,7 @@ export default function RootLayout() {
         <Stack.Screen name="post" />
         <Stack.Screen name="profile" />
       </Stack>
-      <StatusBar style="auto" />
+      <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
     </ThemeProvider>
   );
 }

@@ -1,6 +1,7 @@
 import { ThemedText } from "@/components/themed-text";
 import { IMAGE_CONSTANTS } from "@/constants/room-constants";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { useLanguage } from "@/hooks/use-language";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import React, { useEffect, useState } from "react";
@@ -25,6 +26,7 @@ export default function ImageUploadSection({
   isProfile = false,
 }: Props) {
   const { color, scheme } = useAppTheme();
+  const { t } = useLanguage();
   const isDark = scheme === "dark";
 
   const [images, setImages] = useState<string[]>(data || []);
@@ -37,7 +39,10 @@ export default function ImageUploadSection({
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
     if (status !== "granted") {
-      Alert.alert("Thông báo", "Cần quyền truy cập thư viện ảnh!");
+      Alert.alert(
+        t("common.permissionTitle"),
+        t("common.mediaLibraryPermission"),
+      );
       return;
     }
 
@@ -114,7 +119,7 @@ export default function ImageUploadSection({
   return (
     <View style={styles.roomContainer}>
       <ThemedText style={[styles.label, { color: color.text }]}>
-        Hình ảnh phòng
+        {t("room.form.roomPhotos")}
       </ThemedText>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -130,7 +135,7 @@ export default function ImageUploadSection({
         >
           <Ionicons name="camera" size={32} color={color.textSecondary} />
           <ThemedText style={[styles.uploadText, { color: color.textSecondary }]}>
-            Thêm ảnh
+            {t("room.form.addPhoto")}
           </ThemedText>
         </TouchableOpacity>
 

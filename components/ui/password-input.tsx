@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import {
   Pressable,
   StyleSheet,
@@ -10,8 +10,7 @@ import {
 } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
-import { Colors } from "@/constants/theme";
-import { useColorScheme } from "@/hooks/use-color-scheme";
+import { useLanguage } from "@/hooks/use-language";
 import { useThemeColor } from "@/hooks/use-theme-color";
 import { IconSymbol } from "./icon-symbol";
 
@@ -29,16 +28,12 @@ export function PasswordInput({
   style,
   ...rest
 }: PasswordInputProps) {
-  const colorScheme = useColorScheme() ?? "light";
-
+  const { t } = useLanguage();
   const textColor = useThemeColor({}, "text");
   const backgroundColor = useThemeColor({}, "background");
   const tintColor = useThemeColor({}, "tint");
   const borderColor = useThemeColor({}, "icon");
-
-  const placeholderTextColor = useMemo(() => {
-    return Colors[colorScheme].icon;
-  }, [colorScheme]);
+  const placeholderTextColor = useThemeColor({}, "icon");
 
   const [isSecure, setIsSecure] = useState(true);
 
@@ -69,7 +64,7 @@ export function PasswordInput({
           onPress={() => setIsSecure((prev) => !prev)}
           hitSlop={10}
           accessibilityRole="button"
-          accessibilityLabel={isSecure ? "Show password" : "Hide password"}
+          accessibilityLabel={isSecure ? t("password.show") : t("password.hide")}
           style={styles.toggle}
         >
           <ThemedText style={[styles.toggleText, { color: tintColor }]}>

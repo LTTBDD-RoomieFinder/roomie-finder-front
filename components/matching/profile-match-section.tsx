@@ -12,6 +12,7 @@ import {
 
 import { ThemedText } from "@/components/themed-text";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { useLanguage } from "@/hooks/use-language";
 import { matchingService } from "@/services/matching-service";
 import type { MatchDetailResponse } from "@/types/matching";
 
@@ -37,14 +38,17 @@ function criterionPercent(raw: number | null | undefined): number | null {
 /**
  * Trọng số 1–5 (backend) → mô tả dễ hiểu (không hiển thị số thô).
  */
-function importanceDescription(weight: number | null | undefined): string | null {
+function importanceDescription(
+  weight: number | null | undefined,
+  t: (k: string) => string,
+): string | null {
   if (weight == null || Number.isNaN(Number(weight))) return null;
   const w = Number(weight);
-  if (w >= 4.5) return "Rất quan trọng";
-  if (w >= 3.5) return "Quan trọng";
-  if (w >= 2.5) return "Trung bình";
-  if (w >= 1.5) return "Bổ sung";
-  return "Thêm tham khảo";
+  if (w >= 4.5) return t("matching.importanceVeryHigh");
+  if (w >= 3.5) return t("matching.importanceHigh");
+  if (w >= 2.5) return t("matching.importanceMedium");
+  if (w >= 1.5) return t("matching.importanceLow");
+  return t("matching.importanceExtra");
 }
 
 /** Backend ErrorCode.PROFILE_NOT_FOUND — axios interceptor chỉ trả message string. */
@@ -58,16 +62,18 @@ type Props = {
   targetUserId: number | string | null | undefined;
   /** Current logged-in user id — hides section when same as target. */
   currentUserId?: number | string | null;
-  /** Line under the title, e.g. "So với chủ phòng" */
+  /** Line under the title; falls back to `matching.defaultHint`. */
   hint?: string;
 };
 
 export function ProfileMatchSection({
   targetUserId,
   currentUserId,
-  hint = "So khớp hồ sơ roommate với bạn",
+  hint,
 }: Props) {
   const { color } = useAppTheme();
+  const { t } = useLanguage();
+  const hintLine = hint ?? t("matching.defaultHint");
   const [detail, setDetail] = useState<MatchDetailResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -109,13 +115,13 @@ export function ProfileMatchSection({
         setError(
           typeof e === "string"
             ? e
-            : "Không tải được điểm phù hợp. Kiểm tra bạn đã tạo hồ sơ và kết nối mạng.",
+            : t("matching.loadError"),
         );
       }
     } finally {
       setLoading(false);
     }
-  }, [shouldShow, tid]);
+  }, [shouldShow, tid, t]);
 
   useEffect(() => {
     setHideSection(false);
@@ -147,18 +153,18 @@ export function ProfileMatchSection({
         <View style={styles.rowTop}>
           <Ionicons name="sparkles" size={20} color={color.primary} />
           <ThemedText type="defaultSemiBold" style={styles.title}>
-            Độ phù hợp hồ sơ
+            {t("matching.title")}
           </ThemedText>
         </View>
         <ThemedText style={[styles.hint, { color: color.textSecondary }]}>
-          {hint}
+          {hintLine}
         </ThemedText>
 
         {loading ? (
           <View style={styles.centerRow}>
             <ActivityIndicator color={color.primary} />
             <ThemedText style={{ color: color.textSecondary, marginLeft: 8 }}>
-              Đang tính toán…
+              {t("matching.computing")}
             </ThemedText>
           </View>
         ) : error ? (
@@ -190,7 +196,7 @@ export function ProfileMatchSection({
               ) : null}
             </View>
             <ThemedText style={{ color: color.textSecondary, fontSize: 13 }}>
-              Chi tiết
+              {t("matching.details")}
             </ThemedText>
             <Ionicons
               name="chevron-forward"
@@ -213,14 +219,14 @@ export function ProfileMatchSection({
             style={styles.modalBackdrop}
             onPress={() => setModalOpen(false)}
             accessibilityRole="button"
-            accessibilityLabel="Đóng"
+            accessibilityLabel={t("matching.closeA11y")}
           />
           <View style={[styles.modalCard, { backgroundColor: color.card }]}>
             <ThemedText type="subtitle" style={styles.modalTitle}>
-              Chi tiết điểm phù hợp
+              {t("matching.modalTitle")}
             </ThemedText>
             <ThemedText style={[styles.modalSub, { color: color.textSecondary }]}>
-              Tổng:{" "}
+              {t("matching.modalTotal")}{" "}
               <ThemedText type="defaultSemiBold" style={{ color: color.primary }}>
                 {pct}%
               </ThemedText>
@@ -238,12 +244,12 @@ export function ProfileMatchSection({
             >
               {breakdownList.length === 0 ? (
                 <ThemedText style={{ color: color.textSecondary }}>
-                  Không có chi tiết từng tiêu chí.
+                  {t("matching.noBreakdown")}
                 </ThemedText>
               ) : (
                 breakdownList.map((c, idx) => {
                   const itemPct = criterionPercent(c.rawScore);
-                  const imp = importanceDescription(c.weight);
+                  const imp = importanceDescription(c.weight, t);
                   const isAi = c.key === "ai_refinement";
                   return (
                     <View
@@ -255,7 +261,7 @@ export function ProfileMatchSection({
                     >
                       <View style={styles.criteriaHead}>
                         <ThemedText type="defaultSemiBold" numberOfLines={2} style={styles.criteriaTitle}>
-                          {c.label || c.key || "Tiêu chí"}
+                          {c.label || c.key || t("matching.criterionFallback")}
                         </ThemedText>
                         {itemPct != null ? (
                           <View
@@ -295,14 +301,13 @@ export function ProfileMatchSection({
                         <ThemedText
                           style={[styles.criteriaMeta, { color: color.textSecondary }]}
                         >
-                          Điều chỉnh nhẹ sau khi đã tính các tiêu chí phía trên (trộn với điểm
-                          tổng).
+                          {t("matching.aiNote")}
                         </ThemedText>
                       ) : imp ? (
                         <ThemedText
                           style={[styles.criteriaMeta, { color: color.textSecondary }]}
                         >
-                          Mức ảnh hưởng đến điểm tổng: {imp}
+                          {t("matching.importance", { label: imp })}
                         </ThemedText>
                       ) : null}
                       {c.comment ? (
@@ -323,7 +328,7 @@ export function ProfileMatchSection({
               style={[styles.closeBtn, { backgroundColor: color.primary + "22" }]}
             >
               <ThemedText style={{ color: color.primary, fontWeight: "700" }}>
-                Đóng
+                {t("matching.close")}
               </ThemedText>
             </Pressable>
           </View>

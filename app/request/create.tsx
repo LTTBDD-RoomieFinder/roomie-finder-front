@@ -15,6 +15,7 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { useLanguage } from "@/hooks/use-language";
 import { useCreateRequest } from "@/hooks/use-create-request";
 import { usePostsJoinEligibility } from "@/hooks/use-posts-join-eligibility";
 import type { UserResponse } from "@/types/request";
@@ -29,6 +30,7 @@ export default function CreateRequestScreen() {
   const params = useLocalSearchParams<CreateRequestParams>();
   const router = useRouter();
   const { color } = useAppTheme();
+  const { t } = useLanguage();
   const { create, isLoading, error, resetError } = useCreateRequest();
 
   const [message, setMessage] = useState("");
@@ -66,7 +68,7 @@ export default function CreateRequestScreen() {
     : null;
 
   const displayName =
-    receiver?.fullName || receiver?.username || "Người dùng";
+    receiver?.fullName || receiver?.username || t("request.card.fallbackName");
 
   useEffect(() => {
     // expo-router có thể render 1 frame đầu khi params chưa kịp load => rawReceiverId === undefined.
@@ -113,7 +115,7 @@ export default function CreateRequestScreen() {
           >
             <IconSymbol name="chevron.left" size={24} color={color.primary} />
           </Pressable>
-          <ThemedText style={styles.headerTitle}>Gửi lời mời</ThemedText>
+          <ThemedText style={styles.headerTitle}>{t("request.screenTitle")}</ThemedText>
         </View>
 
         <KeyboardAvoidingView
@@ -128,7 +130,7 @@ export default function CreateRequestScreen() {
               </View>
               <View style={styles.receiverInfo}>
                 <ThemedText style={[styles.receiverLabel, { color: color.text, opacity: 0.55 }]}>
-                  Gửi lời mời đến
+                  {t("request.sendTo")}
                 </ThemedText>
                 <ThemedText style={styles.receiverName}>{displayName}</ThemedText>
                 {receiver?.email ? (
@@ -143,9 +145,7 @@ export default function CreateRequestScreen() {
             <View style={[styles.tipBlock, { backgroundColor: color.border + "18", borderColor: color.border + "40" }]}>
               <IconSymbol name="info.circle.fill" size={16} color={color.primary} />
               <ThemedText style={[styles.tipText, { color: color.text, opacity: 0.75 }]}>
-                {hasPostContext
-                  ? "Theo bài đăng này, bạn sẽ vào cùng nhóm chat với chủ phòng và các bạn cùng phòng (nếu đã được chấp nhận)."
-                  : "Sau khi chấp nhận, cả hai sẽ có phòng chat riêng để thảo luận về giá cả và nội quy nhà."}
+                {hasPostContext ? t("request.tipWithPost") : t("request.tipGeneral")}
               </ThemedText>
             </View>
 
@@ -153,7 +153,7 @@ export default function CreateRequestScreen() {
               <View style={[styles.tipBlock, { borderColor: color.border + "40" }]}>
                 <ActivityIndicator size="small" color={color.primary} />
                 <ThemedText style={[styles.tipText, { color: color.text, opacity: 0.75 }]}>
-                  Đang kiểm tra còn chỗ trong nhóm chat…
+                  {t("request.checkingSlot")}
                 </ThemedText>
               </View>
             ) : null}
@@ -165,7 +165,7 @@ export default function CreateRequestScreen() {
               >
                 <IconSymbol name="exclamationmark.circle.fill" size={16} color={color.error} />
                 <ThemedText style={[styles.tipText, { color: color.error }]}>
-                  Không kiểm tra được chỗ trống — chạm để thử lại.
+                  {t("request.eligibilityError")}
                 </ThemedText>
               </Pressable>
             ) : null}
@@ -174,15 +174,20 @@ export default function CreateRequestScreen() {
               elig.disabledReason === "CHAT_ROOM_FULL" ? (
                 <View style={[styles.tipBlock, { borderColor: color.tint + "40", backgroundColor: color.tint + "10" }]}>
                   <ThemedText style={[styles.tipText, { color: color.icon }]}>
-                    {`Phòng đã đủ người (${elig.currentOccupancy}/${elig.roomCapacity}). Bạn sẽ được xếp hàng.`}
+                    {t("request.queueFull", {
+                      current: elig.currentOccupancy,
+                      capacity: elig.roomCapacity,
+                    })}
                   </ThemedText>
                 </View>
               ) : (
                 <View style={[styles.tipBlock, { borderColor: color.error + "40", backgroundColor: color.error + "12" }]}>
                   <ThemedText style={[styles.tipText, { color: color.error }]}>
                     {elig.disabledReason === "ALREADY_REQUESTED"
-                      ? "Bạn đã gửi lời mời cho bài đăng này rồi."
-                      : `Không thể gửi lời mời: ${elig.disabledReason ?? "UNKNOWN"}.`}
+                      ? t("request.alreadySent")
+                      : t("request.cannotSendReason", {
+                          reason: elig.disabledReason ?? "UNKNOWN",
+                        })}
                   </ThemedText>
                 </View>
               )
@@ -190,7 +195,10 @@ export default function CreateRequestScreen() {
 
             {/* Lời nhắn */}
             <ThemedText style={[styles.label, { color: color.text }]}>
-              Lời nhắn <ThemedText style={[styles.optional, { color: color.text, opacity: 0.5 }]}>(tùy chọn)</ThemedText>
+              {t("request.messageLabel")}{" "}
+              <ThemedText style={[styles.optional, { color: color.text, opacity: 0.5 }]}>
+                ({t("common.optional")})
+              </ThemedText>
             </ThemedText>
             <TextInput
               style={[
@@ -201,10 +209,13 @@ export default function CreateRequestScreen() {
                   backgroundColor: color.background,
                 },
               ]}
-              placeholder="Giới thiệu bản thân hoặc thêm lời nhắn..."
+              placeholder={t("request.modal.placeholder")}
               placeholderTextColor={color.placeholder}
               value={message}
-              onChangeText={(t) => { setMessage(t); if (error) resetError(); }}
+              onChangeText={(text) => {
+                setMessage(text);
+                if (error) resetError();
+              }}
               multiline
               numberOfLines={4}
               editable={!isLoading}
@@ -231,7 +242,7 @@ export default function CreateRequestScreen() {
                 <>
                   <IconSymbol name="envelope.fill" size={18} color={color.primaryText} />
                   <ThemedText style={[styles.submitLabel, { color: color.primaryText }]}>
-                    Gửi lời mời
+                    {t("request.send")}
                   </ThemedText>
                 </>
               )}

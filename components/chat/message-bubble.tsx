@@ -2,6 +2,7 @@ import { StyleSheet, View } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { useLanguage } from "@/hooks/use-language";
 import type { ChatMessage } from "@/types/chat";
 import { formatTimeVi } from "@/utils/format-time";
 
@@ -20,6 +21,7 @@ export function MessageBubble({
   seenByNames,
 }: Props) {
   const { color } = useAppTheme();
+  const { t } = useLanguage();
 
   return (
     <View style={[styles.row, isMine ? styles.rowMine : styles.rowTheirs]}>
@@ -43,7 +45,7 @@ export function MessageBubble({
               },
             ]}
           >
-            {senderName ?? "Thành viên"}
+            {senderName ?? t("chat.bubble.member")}
           </ThemedText>
         )}
         <ThemedText
@@ -67,7 +69,7 @@ export function MessageBubble({
 
         {isMine && message.id > 0 && message.status === "SEEN" && seenByNames?.length ? (
           <ThemedText style={[styles.readBy, { color: color.textSecondary }]}>
-            Đã xem: {seenByNames.join(", ")}
+            {t("chat.bubble.readBy", { names: seenByNames.join(", ") })}
           </ThemedText>
         ) : null}
       </View>

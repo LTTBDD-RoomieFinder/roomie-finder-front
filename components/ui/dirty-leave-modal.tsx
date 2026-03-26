@@ -1,4 +1,5 @@
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { useLanguage } from "@/hooks/use-language";
 import {
   ActivityIndicator,
   Modal,
@@ -24,6 +25,7 @@ export default function DirtyLeaveModal({
   onDiscard,
 }: Props) {
   const { color } = useAppTheme() || {};
+  const { t } = useLanguage();
 
   const styles = StyleSheet.create({
     overlay: {
@@ -99,8 +101,8 @@ export default function DirtyLeaveModal({
     <Modal transparent visible={visible} animationType="fade">
       <View style={styles.overlay}>
         <View style={styles.container}>
-          <Text style={styles.title}>Bạn có thay đổi chưa lưu</Text>
-          <Text style={styles.message}>Bạn muốn làm gì trước khi rời trang?</Text>
+          <Text style={styles.title}>{t("dirtyLeave.title")}</Text>
+          <Text style={styles.message}>{t("dirtyLeave.message")}</Text>
           <View style={styles.btnRow}>
             <TouchableOpacity
               style={[styles.btn, styles.btnPrimary]}
@@ -110,7 +112,7 @@ export default function DirtyLeaveModal({
               {saving ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={styles.textPrimary}>Lưu</Text>
+                <Text style={styles.textPrimary}>{t("dirtyLeave.save")}</Text>
               )}
             </TouchableOpacity>
             <TouchableOpacity
@@ -118,14 +120,14 @@ export default function DirtyLeaveModal({
               onPress={onStay}
               disabled={saving}
             >
-              <Text style={styles.textNeutral}>Ở lại</Text>
+              <Text style={styles.textNeutral}>{t("dirtyLeave.stay")}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.btn, styles.btnDanger]}
               onPress={onDiscard}
               disabled={saving}
             >
-              <Text style={styles.textDanger}>Không lưu</Text>
+              <Text style={styles.textDanger}>{t("dirtyLeave.discard")}</Text>
             </TouchableOpacity>
           </View>
         </View>

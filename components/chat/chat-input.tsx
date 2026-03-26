@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, TextInput, View } from "react-native";
 
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { useLanguage } from "@/hooks/use-language";
 
 type Props = {
   onSend: (content: string) => void;
@@ -12,6 +13,7 @@ type Props = {
 /** Text input row with send button for the chat room. */
 export function ChatInput({ onSend, disabled }: Props) {
   const { color } = useAppTheme();
+  const { t } = useLanguage();
   const [text, setText] = useState("");
 
   const canSend = text.trim().length > 0 && !disabled;
@@ -40,7 +42,7 @@ export function ChatInput({ onSend, disabled }: Props) {
         ]}
         value={text}
         onChangeText={setText}
-        placeholder="Nhập tin nhắn..."
+        placeholder={t("chat.inputPlaceholder")}
         placeholderTextColor={color.icon}
         multiline
         maxLength={2000}

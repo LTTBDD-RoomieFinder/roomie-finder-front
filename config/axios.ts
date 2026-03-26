@@ -102,17 +102,19 @@ axiosRequest.interceptors.response.use(
               const refreshToken = await getRefreshToken();
               if (!refreshToken) throw new Error("No refresh token");
 
-              const data = await refreshAxios.post("/auth/refresh", {
+              const response = await refreshAxios.post("/auth/refresh", {
                 refreshToken,
               });
-              const payload = res?.data ?? res;
+              const body = response.data as {
+                data: { accessToken: string; refreshToken?: string };
+              };
 
-              await setAccessToken(data.data.accessToken);
-              if (data.data.refreshToken) {
-                await setRefreshToken(data.data.refreshToken);
+              await setAccessToken(body.data.accessToken);
+              if (body.data.refreshToken) {
+                await setRefreshToken(body.data.refreshToken);
               }
 
-              onRefreshed(data.data.accessToken);
+              onRefreshed(body.data.accessToken);
             } catch {
               await clearTokens();
               useAuthStore.getState().logout();

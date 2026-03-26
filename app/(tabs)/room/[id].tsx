@@ -13,9 +13,10 @@ import {
 import { ProfileMatchSection } from "@/components/matching/profile-match-section";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
-import { GENDER_REQ_LABELS, ROOM_TYPE_LABELS } from "@/constants/room-constants";
 import { RoomResponse } from "@/data/response";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { useLanguage } from "@/hooks/use-language";
+import { genderReqLabelKey, roomTypeLabelKey } from "@/lib/i18n-labels";
 import { roomService } from "@/services/room-service";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { GenderRequirement, RoomType } from "@/types/enums";
@@ -29,6 +30,7 @@ export default function RoomDetailScreen() {
   const { id, from } = useLocalSearchParams();
   const router = useRouter();
   const { color } = useAppTheme();
+  const { t, locale } = useLanguage();
   const user = useAuthStore((state) => state.user);
 
   const [room, setRoom] = useState<RoomResponse | null>(null);
@@ -70,10 +72,10 @@ export default function RoomDetailScreen() {
   };
 
   const handleDelete = () => {
-    Alert.alert("Xóa phòng", "Bạn có chắc muốn xóa phòng này không? Hành động này không thể hoàn tác.", [
-      { text: "Hủy", style: "cancel" },
+    Alert.alert(t("room.deleteTitle"), t("room.deleteMessage"), [
+      { text: t("common.cancel"), style: "cancel" },
       {
-        text: "Xóa",
+        text: t("common.delete"),
         style: "destructive",
         onPress: async () => {
           try {
@@ -91,7 +93,7 @@ export default function RoomDetailScreen() {
   if (!isValidRoomId) {
     return (
       <ThemedView style={[styles.root, styles.centered]}>
-        <ThemedText>Không tìm thấy phòng.</ThemedText>
+        <ThemedText>{t("room.notFound")}</ThemedText>
       </ThemedView>
     );
   }
@@ -166,7 +168,7 @@ export default function RoomDetailScreen() {
           <View style={styles.titleSection}>
             <ThemedText type="title" style={styles.title}>{room.title}</ThemedText>
             <ThemedText style={[styles.price, { color: color.primary }]}>
-              {formatRoomPrice(room.price)}
+              {formatRoomPrice(room.price, t, locale)}
             </ThemedText>
           </View>
 
@@ -174,7 +176,7 @@ export default function RoomDetailScreen() {
             <ProfileMatchSection
               targetUserId={room.ownerId}
               currentUserId={user?.id}
-              hint="So khớp hồ sơ của bạn với chủ phòng đăng tin"
+              hint={t("matching.hintWithOwner")}
             />
           </View>
 
@@ -188,45 +190,53 @@ export default function RoomDetailScreen() {
           <View style={styles.infoGrid}>
             <View style={[styles.infoCard, { backgroundColor: color.card }]}>
               <MaterialIcons name="square-foot" size={24} color={color.primary} />
-              <ThemedText style={styles.infoTitle}>Diện tích</ThemedText>
+              <ThemedText style={styles.infoTitle}>{t("room.detail.area")}</ThemedText>
               <ThemedText style={styles.infoValue}>{room.area} m²</ThemedText>
             </View>
 
             <View style={[styles.infoCard, { backgroundColor: color.card }]}>
               <MaterialIcons name="groups" size={24} color={color.primary} />
-              <ThemedText style={styles.infoTitle}>Sức chứa</ThemedText>
-              <ThemedText style={styles.infoValue}>{room.capacity} người</ThemedText>
+              <ThemedText style={styles.infoTitle}>{t("room.detail.capacity")}</ThemedText>
+              <ThemedText style={styles.infoValue}>
+                {t("room.detail.capacityValue", { count: room.capacity })}
+              </ThemedText>
             </View>
 
             <View style={[styles.infoCard, { backgroundColor: color.card }]}>
               <MaterialIcons name="home" size={24} color={color.primary} />
-              <ThemedText style={styles.infoTitle}>Loại phòng</ThemedText>
+              <ThemedText style={styles.infoTitle}>{t("room.detail.roomType")}</ThemedText>
               <ThemedText style={styles.infoValue}>
-                {ROOM_TYPE_LABELS[room.roomType as RoomType]}
+                {t(roomTypeLabelKey(room.roomType as RoomType))}
               </ThemedText>
             </View>
           </View>
           
           {/* DESCRIPTION */}
           <View style={styles.section}>
-            <ThemedText type="subtitle" style={styles.sectionTitle}>Mô tả chi tiết</ThemedText>
+            <ThemedText type="subtitle" style={styles.sectionTitle}>
+              {t("room.detail.description")}
+            </ThemedText>
             <ThemedText style={styles.descriptionText}>{room.description}</ThemedText>
           </View>
 
           {/* GENDER */}
           <View style={styles.section}>
-            <ThemedText type="subtitle" style={styles.sectionTitle}>Yêu cầu người ở</ThemedText>
+            <ThemedText type="subtitle" style={styles.sectionTitle}>
+              {t("room.detail.tenantRequirement")}
+            </ThemedText>
             <View style={[styles.pill, { backgroundColor: color.card }]}>
               <MaterialIcons name="person" size={20} color={color.icon} />
               <ThemedText style={styles.pillText}>
-                {GENDER_REQ_LABELS[room.genderRequirement as GenderRequirement]}
+                {t(genderReqLabelKey(room.genderRequirement as GenderRequirement))}
               </ThemedText>
             </View>
           </View>
 
           {/* AMENITIES */}
           <View style={styles.section}>
-            <ThemedText type="subtitle" style={styles.sectionTitle}>Tiện ích nổi bật</ThemedText>
+            <ThemedText type="subtitle" style={styles.sectionTitle}>
+              {t("room.detail.amenities")}
+            </ThemedText>
             <View style={styles.amenities}>
               {room.amenities.map((a) => (
                 <View

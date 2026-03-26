@@ -20,6 +20,7 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { RoomResponse } from "@/data/response";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { useLanguage } from "@/hooks/use-language";
 import { postService } from "@/services/post-service";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { RoomSelectorModal } from "./room-selector-modal";
@@ -34,6 +35,7 @@ type Props = {
 
 export function CreatePostModal({ visible, onClose, onSuccess }: Props) {
   const { color } = useAppTheme();
+  const { t } = useLanguage();
   const user = useAuthStore((state) => state.user);
 
   const [title, setTitle] = useState("");
@@ -59,11 +61,11 @@ export function CreatePostModal({ visible, onClose, onSuccess }: Props) {
 
   const handlePost = async () => {
     if (!title.trim()) {
-      Alert.alert("Thiếu tiêu đề", "Vui lòng nhập tiêu đề bài đăng.");
+      Alert.alert(t("post.alerts.missingTitleTitle"), t("post.alerts.missingTitleMessage"));
       return;
     }
     if (!selectedRoom) {
-      Alert.alert("Chưa chọn phòng", "Vui lòng chọn phòng để đính kèm vào bài đăng.");
+      Alert.alert(t("post.alerts.missingRoomTitle"), t("post.alerts.missingRoomMessage"));
       return;
     }
 
@@ -79,7 +81,7 @@ export function CreatePostModal({ visible, onClose, onSuccess }: Props) {
       onSuccess?.();
       onClose();
     } catch (e: any) {
-      Alert.alert("Lỗi", e?.toString() ?? "Không thể tạo bài đăng.");
+      Alert.alert(t("common.error"), e?.toString() ?? t("post.alerts.createFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -106,7 +108,7 @@ export function CreatePostModal({ visible, onClose, onSuccess }: Props) {
               <Ionicons name="close" size={24} color={color.text} />
             </Pressable>
             <ThemedText type="subtitle" style={styles.headerTitle}>
-              Tạo bài đăng mới
+              {t("post.createTitle")}
             </ThemedText>
             <Pressable
               onPress={handlePost}
@@ -122,7 +124,7 @@ export function CreatePostModal({ visible, onClose, onSuccess }: Props) {
               {submitting ? (
                 <ActivityIndicator size="small" color="#fff" />
               ) : (
-                <ThemedText style={styles.postButtonText}>Đăng</ThemedText>
+                <ThemedText style={styles.postButtonText}>{t("post.publish")}</ThemedText>
               )}
             </Pressable>
           </View>
@@ -141,7 +143,7 @@ export function CreatePostModal({ visible, onClose, onSuccess }: Props) {
               </View>
               <View style={{ flex: 1, justifyContent: "center" }}>
                 <ThemedText type="defaultSemiBold" style={styles.userName}>
-                  {user?.fullName || "Bản thân"}
+                  {user?.fullName || t("post.displayNameFallback")}
                 </ThemedText>
                 {/* Status Picker Badge */}
                 <View style={{ zIndex: 10, elevation: 10 }}>
@@ -157,7 +159,10 @@ export function CreatePostModal({ visible, onClose, onSuccess }: Props) {
                       color={color.textSecondary} 
                     />
                     <ThemedText style={[styles.statusBadgeText, { color: color.textSecondary }]}>
-                      {STATUS_OPTIONS.find(o => o.value === status)?.label || "Đang hiển thị"}
+                      {t(
+                        STATUS_OPTIONS.find((o) => o.value === status)?.labelKey ??
+                          "post.statusBadgeFallback",
+                      )}
                     </ThemedText>
                     <Ionicons name="caret-down" size={10} color={color.textSecondary} style={{ marginLeft: 2 }}/>
                   </TouchableOpacity>
@@ -167,7 +172,9 @@ export function CreatePostModal({ visible, onClose, onSuccess }: Props) {
 
             <View style={styles.inputContainer}>
               <View style={styles.labelRow}>
-                <ThemedText style={[styles.label, { color: color.textSecondary }]}>Tiêu đề bài đăng</ThemedText>
+                <ThemedText style={[styles.label, { color: color.textSecondary }]}>
+                  {t("post.labels.postTitle")}
+                </ThemedText>
                 <ThemedText style={[styles.charCount, { color: color.placeholder }]}>
                   {title.length}/100
                 </ThemedText>
@@ -180,7 +187,7 @@ export function CreatePostModal({ visible, onClose, onSuccess }: Props) {
                     borderBottomColor: color.border
                   }
                 ]}
-                placeholder="Ví dụ: Căn hộ cao cấp tại Hai Bà Trưng..."
+                placeholder={t("post.placeholders.title")}
                 placeholderTextColor={color.placeholder}
                 value={title}
                 onChangeText={setTitle}
@@ -190,7 +197,9 @@ export function CreatePostModal({ visible, onClose, onSuccess }: Props) {
 
             <View style={styles.inputContainer}>
               <View style={styles.labelRow}>
-                <ThemedText style={[styles.label, { color: color.textSecondary }]}>Nội dung chi tiết</ThemedText>
+                <ThemedText style={[styles.label, { color: color.textSecondary }]}>
+                  {t("post.labels.content")}
+                </ThemedText>
                 <ThemedText style={[styles.charCount, { color: color.placeholder }]}>
                   {content.length}/2000
                 </ThemedText>
@@ -200,7 +209,7 @@ export function CreatePostModal({ visible, onClose, onSuccess }: Props) {
                   styles.contentInput,
                   { color: color.text }
                 ]}
-                placeholder="Mô tả về phòng trọ, tiện ích, giá cả..."
+                placeholder={t("post.placeholders.content")}
                 placeholderTextColor={color.placeholder}
                 multiline
                 value={content}
@@ -212,8 +221,14 @@ export function CreatePostModal({ visible, onClose, onSuccess }: Props) {
 
             <View style={styles.section}>
               <View style={styles.labelRow}>
-                <ThemedText style={[styles.label, { color: color.textSecondary }]}>Phòng đính kèm</ThemedText>
-                {!selectedRoom && <ThemedText style={{ color: color.error, fontSize: 11 }}>Bắt buộc</ThemedText>}
+                <ThemedText style={[styles.label, { color: color.textSecondary }]}>
+                  {t("post.labels.attachedRoom")}
+                </ThemedText>
+                {!selectedRoom && (
+                  <ThemedText style={{ color: color.error, fontSize: 11 }}>
+                    {t("post.roomRequiredTag")}
+                  </ThemedText>
+                )}
               </View>
 
               {selectedRoom ? (
@@ -240,7 +255,9 @@ export function CreatePostModal({ visible, onClose, onSuccess }: Props) {
                       {selectedRoom.title}
                     </ThemedText>
                     <ThemedText style={[styles.roomPrice, { color: color.tint }]}>
-                      {selectedRoom.price.toLocaleString("vi-VN")} đ/tháng
+                      {t("post.pricePerMonthShort", {
+                        amount: selectedRoom.price.toLocaleString("vi-VN"),
+                      })}
                     </ThemedText>
                     <View style={styles.roomMeta}>
                       <Ionicons name="location-outline" size={12} color={color.textSecondary} />
@@ -260,7 +277,7 @@ export function CreatePostModal({ visible, onClose, onSuccess }: Props) {
                 >
                   <Ionicons name="add-circle-outline" size={24} color={color.tint} />
                   <ThemedText style={{ color: color.tint, fontWeight: "600" }}>
-                    Chọn phòng trọ của bạn
+                    {t("post.selectRoom")}
                   </ThemedText>
                 </Pressable>
               )}
@@ -276,12 +293,16 @@ export function CreatePostModal({ visible, onClose, onSuccess }: Props) {
                 style={styles.toolbarItem}
               >
                 <Ionicons name="home" size={22} color="#4ade80" />
-                <ThemedText style={styles.toolbarText}>Thêm phòng</ThemedText>
+                <ThemedText style={styles.toolbarText}>
+                  {t("post.toolbarAddRoom")}
+                </ThemedText>
               </Pressable>
               <View style={styles.toolbarDivider} />
               <View style={styles.toolbarItem}>
                 <Ionicons name="images" size={22} color="#4ade80" />
-                <ThemedText style={styles.toolbarText}>Ảnh/Video</ThemedText>
+                <ThemedText style={styles.toolbarText}>
+                  {t("post.toolbarPhotoVideo")}
+                </ThemedText>
               </View>
             </View>
           )} */}
@@ -309,7 +330,7 @@ export function CreatePostModal({ visible, onClose, onSuccess }: Props) {
             onPress={() => setStatusPickerVisible(false)}
           >
             <View style={[styles.pickerContent, { backgroundColor: color.card, borderColor: color.border }]}>
-              <ThemedText style={styles.pickerTitle}>Chọn trạng thái</ThemedText>
+              <ThemedText style={styles.pickerTitle}>{t("post.selectStatus")}</ThemedText>
               {STATUS_OPTIONS.map((opt) => {
                 const isActive = status === opt.value;
                 return (
@@ -322,7 +343,7 @@ export function CreatePostModal({ visible, onClose, onSuccess }: Props) {
                     }}
                   >
                     <ThemedText style={{ color: isActive ? color.tint : color.text, fontWeight: isActive ? "700" : "400" }}>
-                      {opt.label}
+                      {t(opt.labelKey)}
                     </ThemedText>
                     {isActive && <Ionicons name="checkmark" size={20} color={color.tint} />}
                   </Pressable>

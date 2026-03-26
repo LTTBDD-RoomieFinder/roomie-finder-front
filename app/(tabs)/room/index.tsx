@@ -3,6 +3,7 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { RoomResponse } from "@/data/response";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { useLanguage } from "@/hooks/use-language";
 import { useRefresh } from "@/hooks/use-refresh";
 import { roomService } from "@/services/room-service";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
@@ -13,6 +14,7 @@ import { FlatList, Pressable, StyleSheet, View } from "react-native";
 export default function RoomListScreen() {
   const router = useRouter();
   const { color } = useAppTheme();
+  const { t } = useLanguage();
   const [rooms, setRooms] = useState<RoomResponse[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -38,7 +40,9 @@ export default function RoomListScreen() {
   return (
     <ThemedView style={styles.root}>
       <View style={styles.header}>
-        <ThemedText type="title" style={styles.headerTitle}>Quản lý phòng</ThemedText>
+        <ThemedText type="title" style={styles.headerTitle}>
+          {t("room.manageTitle")}
+        </ThemedText>
         <Pressable
           onPress={() => router.push("/(tabs)/room/new")}
           style={[
@@ -50,7 +54,7 @@ export default function RoomListScreen() {
         >
           <MaterialIcons name="add" size={18} color={color.primaryText} />
           <ThemedText type="defaultSemiBold" style={{ color: color.primaryText, fontSize: 13 }}>
-            Thêm mới
+            {t("room.addNew")}
           </ThemedText>
         </Pressable>
       </View>
@@ -72,10 +76,10 @@ export default function RoomListScreen() {
             ]}
           >
             <MaterialIcons name="maps-home-work" size={48} color={color.placeholder} />
-            <ThemedText type="defaultSemiBold" style={styles.emptyTitle}>Chưa có phòng nào</ThemedText>
-            <ThemedText style={styles.emptyDesc}>
-              Bắt đầu hành trình cho thuê của bạn bằng cách đăng phòng đầu tiên.
+            <ThemedText type="defaultSemiBold" style={styles.emptyTitle}>
+              {t("room.emptyTitle")}
             </ThemedText>
+            <ThemedText style={styles.emptyDesc}>{t("room.emptyDesc")}</ThemedText>
             <Pressable
               onPress={() => router.push("/(tabs)/room/new")}
               style={[
@@ -83,7 +87,9 @@ export default function RoomListScreen() {
                 { backgroundColor: color.primary }
               ]}
             >
-              <ThemedText type="defaultSemiBold" style={{ color: color.primaryText }}>Thêm phòng ngay</ThemedText>
+              <ThemedText type="defaultSemiBold" style={{ color: color.primaryText }}>
+                {t("room.addNow")}
+              </ThemedText>
             </Pressable>
           </View>
         }

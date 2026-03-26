@@ -2,7 +2,7 @@ import type { ComponentProps } from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 import { IconSymbol } from "@/components/ui/icon-symbol";
-import { Colors } from "@/constants/theme";
+import { useThemeColor } from "@/hooks/use-theme-color";
 import { useNotificationStore } from "@/stores/use-notification-store";
 
 type IconName = ComponentProps<typeof IconSymbol>["name"];
@@ -25,6 +25,7 @@ export function TabBarIconWithBadge({
   variant,
   size = 28,
 }: Props) {
+  const errorTint = useThemeColor({}, "error");
   const count = useNotificationStore((s) =>
     variant === "requests" ? s.requestUnreadCount : s.chatUnreadRoomsCount,
   );
@@ -43,7 +44,7 @@ export function TabBarIconWithBadge({
         <View
           style={[
             styles.badge,
-            { backgroundColor: Colors.light.error },
+            { backgroundColor: errorTint },
           ]}
         >
           <Text style={styles.badgeText}>{label}</Text>

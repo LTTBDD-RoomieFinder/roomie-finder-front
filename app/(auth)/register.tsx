@@ -14,13 +14,14 @@ import {
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { PasswordInput } from "@/components/ui/password-input";
-import { AUTH_TEXT } from "@/constants/auth-text";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { useLanguage } from "@/hooks/use-language";
 import { authService } from "@/services/auth";
 
 export default function Register() {
   const router = useRouter();
   const { logo, color } = useAppTheme();
+  const { t } = useLanguage();
 
   const [userName, setUserName] = useState("");
   const [email, setEmail] = useState("");
@@ -32,12 +33,12 @@ export default function Register() {
     if (loading) return;
 
     if (!userName || !email || !password || !confirmPassword) {
-      alert(AUTH_TEXT.ERRORS.ALL_FIELDS_REQUIRED);
+      alert(t("auth.errors.allFieldsRequired"));
       return;
     }
 
     if (password !== confirmPassword) {
-      alert(AUTH_TEXT.ERRORS.PASSWORD_MISMATCH);
+      alert(t("auth.errors.passwordMismatch"));
       return;
     }
 
@@ -72,17 +73,17 @@ export default function Register() {
         >
           <View style={styles.header}>
             <Image source={logo} style={styles.logo} contentFit="contain" />
-            <ThemedText type="title">Sign Up</ThemedText>
+            <ThemedText type="title">{t("auth.signUp")}</ThemedText>
           </View>
 
           <View style={styles.form}>
             <View style={styles.field}>
-              <ThemedText type="defaultSemiBold">Username</ThemedText>
+              <ThemedText type="defaultSemiBold">{t("auth.username")}</ThemedText>
               <TextInput
                 value={userName}
                 onChangeText={setUserName}
                 autoCapitalize="words"
-                placeholder="user"
+                placeholder={t("auth.userPlaceholder")}
                 placeholderTextColor={color.placeholder}
                 style={[
                   styles.input,
@@ -96,14 +97,14 @@ export default function Register() {
             </View>
 
             <View style={styles.field}>
-              <ThemedText type="defaultSemiBold">Email</ThemedText>
+              <ThemedText type="defaultSemiBold">{t("auth.email")}</ThemedText>
               <TextInput
                 value={email}
                 onChangeText={setEmail}
                 autoCapitalize="none"
                 autoCorrect={false}
                 keyboardType="email-address"
-                placeholder="you@example.com"
+                placeholder={t("auth.emailPlaceholder")}
                 placeholderTextColor={color.placeholder}
                 style={[
                   styles.input,
@@ -117,13 +118,13 @@ export default function Register() {
             </View>
 
             <PasswordInput
-              label="Password"
+              label={t("auth.password")}
               value={password}
               onChangeText={setPassword}
             />
 
             <PasswordInput
-              label="Confirm Password"
+              label={t("auth.confirmPassword")}
               value={confirmPassword}
               onChangeText={setConfirmPassword}
             />
@@ -142,16 +143,16 @@ export default function Register() {
                 type="defaultSemiBold"
                 style={{ color: color.primaryText }}
               >
-                Sign Up
+                {t("auth.signUp")}
               </ThemedText>
             </Pressable>
           </View>
 
           <View style={styles.footer}>
-            <ThemedText>Already have an account?</ThemedText>
+            <ThemedText>{t("auth.hasAccount")}</ThemedText>
             <Link href="/(auth)/login" asChild>
               <Pressable>
-                <ThemedText type="link">Sign In</ThemedText>
+                <ThemedText type="link">{t("auth.signIn")}</ThemedText>
               </Pressable>
             </Link>
           </View>

@@ -3,6 +3,8 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, TextInput, View }
 import { BlurView } from "expo-blur";
 
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { useLanguage } from "@/hooks/use-language";
+import { genderReqLabelKey, roomTypeLabelKey } from "@/lib/i18n-labels";
 import { ThemedText } from "../themed-text";
 import { AmenitiesChipList } from "./amenities-chip-list";
 import LocationPicker from "../ui/location-picker";
@@ -14,9 +16,8 @@ import { RoomFormValues } from "@/types/Room";
 import { imageService } from "@/services/image-service";
 import { roomService } from "@/services/room-service";
 import { useRouter } from "expo-router";
-import { GenderRequirement, RoomType } from "@/types/enums";
 import { AmenityService } from "@/services/amenity-service";
-import { GENDER_REQ_LABELS, ROOM_TYPE_LABELS } from "@/constants/room-constants";
+import { GENDER_REQ_ORDER, ROOM_TYPE_ORDER } from "@/constants/room-constants";
 
 type RoomFormProps = {
   initialValues: RoomFormValues;
@@ -26,6 +27,7 @@ type RoomFormProps = {
 
 export function RoomForm({ initialValues, submitLabel, onSubmit }: RoomFormProps) {
   const { color } = useAppTheme();
+  const { t } = useLanguage();
   const [values, setValues] = useState<RoomFormValues>(initialValues);
   // State quản lý danh sách từ API
   const [cities, setCities] = useState([]);
@@ -159,7 +161,7 @@ export function RoomForm({ initialValues, submitLabel, onSubmit }: RoomFormProps
       await onSubmit(roomCreateData);
     } catch (error: Error | any) {
       console.error("Error creating room:", error);
-      alert(error?.message || "Có lỗi xảy ra khi tạo phòng.");
+      alert(error?.message || t("room.form.genericError"));
     } finally {
       setIsSubmitting(false);
     }
@@ -191,22 +193,22 @@ export function RoomForm({ initialValues, submitLabel, onSubmit }: RoomFormProps
 
   return (
     <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-      <FormSection title="Thông tin cơ bản">
-        <Field label="Tiêu đề">
+      <FormSection title={t("room.form.basicSection")}>
+        <Field label={t("room.form.title")}>
           <TextInput
             value={values.title}
             onChangeText={(text) => setValues((prev) => ({ ...prev, title: text }))}
-            placeholder="Nhập tiêu đề phòng"
+            placeholder={t("room.form.titlePh")}
             placeholderTextColor={color.placeholder}
             style={fieldStyle}
           />
         </Field>
 
-        <Field label="Mô tả phòng">
+        <Field label={t("room.form.description")}>
           <TextInput
             value={values.description}
             onChangeText={(text) => setValues((prev) => ({ ...prev, description: text }))}
-            placeholder="Nhập mô tả chi tiết phòng..."
+            placeholder={t("room.form.descriptionPh")}
             placeholderTextColor={color.placeholder}
             style={[...fieldStyle, styles.textArea]}
             multiline
@@ -215,10 +217,10 @@ export function RoomForm({ initialValues, submitLabel, onSubmit }: RoomFormProps
           />
         </Field>
 
-        <Field label="Loại phòng">
+        <Field label={t("room.form.roomType")}>
           <View style={styles.chipContainer}>
-            {(Object.values(RoomType) as RoomType[]).map((type) =>
-              renderChip(ROOM_TYPE_LABELS[type], values.roomType === type, () =>
+            {ROOM_TYPE_ORDER.map((type) =>
+              renderChip(t(roomTypeLabelKey(type)), values.roomType === type, () =>
                 setValues((prev) => ({ ...prev, roomType: type }))
               )
             )}
@@ -226,7 +228,7 @@ export function RoomForm({ initialValues, submitLabel, onSubmit }: RoomFormProps
         </Field>
 
         <View style={styles.row}>
-          <Field label="Giá (đ/tháng)" style={styles.flex1}>
+          <Field label={t("room.form.price")} style={styles.flex1}>
             <TextInput
               value={values.price ? `${values.price}` : ""}
               onChangeText={(text) =>
@@ -242,7 +244,7 @@ export function RoomForm({ initialValues, submitLabel, onSubmit }: RoomFormProps
             />
           </Field>
 
-          <Field label="Diện tích (m²)" style={styles.flex1}>
+          <Field label={t("room.form.area")} style={styles.flex1}>
             <TextInput
               value={values.area ? `${values.area}` : ""}
               onChangeText={(text) =>
@@ -260,7 +262,7 @@ export function RoomForm({ initialValues, submitLabel, onSubmit }: RoomFormProps
         </View>
 
         <View style={styles.row}>
-          <Field label="Sức chứa (người)" style={styles.flex1}>
+          <Field label={t("room.form.capacity")} style={styles.flex1}>
             <TextInput
               value={values.capacity ? `${values.capacity}` : ""}
               onChangeText={(text) =>
@@ -277,10 +279,10 @@ export function RoomForm({ initialValues, submitLabel, onSubmit }: RoomFormProps
           </Field>
         </View>
 
-        <Field label="Yêu cầu giới tính">
+        <Field label={t("room.form.gender")}>
           <View style={styles.chipContainer}>
-            {(Object.values(GenderRequirement) as GenderRequirement[]).map((req) =>
-              renderChip(GENDER_REQ_LABELS[req], values.genderRequirement === req, () =>
+            {GENDER_REQ_ORDER.map((req) =>
+              renderChip(t(genderReqLabelKey(req)), values.genderRequirement === req, () =>
                 setValues((prev) => ({ ...prev, genderRequirement: req }))
               )
             )}
@@ -288,16 +290,16 @@ export function RoomForm({ initialValues, submitLabel, onSubmit }: RoomFormProps
         </Field>
       </FormSection>
 
-      <FormSection title="Địa chỉ">
+      <FormSection title={t("room.form.addressSection")}>
         <LocationPicker
-          label="Tỉnh/Thành phố"
+          label={t("room.form.province")}
           data={cities}
           selectedValue={selectedCityId}
           onValueChange={handleCityChange}
         />
 
         <LocationPicker
-          label="Quận/Huyện"
+          label={t("room.form.district")}
           data={districts}
           selectedValue={selectedDistrictId}
           onValueChange={handleDistrictChange}
@@ -305,25 +307,25 @@ export function RoomForm({ initialValues, submitLabel, onSubmit }: RoomFormProps
         />
 
         <LocationPicker
-          label="Phường/Xã"
+          label={t("room.form.ward")}
           data={wards}
           selectedValue={selectedWardId}
           onValueChange={(id) => setSelectedWardId(id)}
           disabled={!selectedDistrictId}
         />
 
-        <Field label="Địa chỉ cụ thể">
+        <Field label={t("room.form.street")}>
           <TextInput
             value={values.address.streetAddress}
             onChangeText={(text) => setValues((prev) => ({ ...prev, address: { ...prev.address, streetAddress: text } }))}
-            placeholder="Địa chỉ cụ thể (số nhà, tên đường...)"
+            placeholder={t("room.form.streetPh")}
             placeholderTextColor={color.placeholder}
             style={[fieldStyle, { marginTop: 12 }]}
           />
         </Field>
       </FormSection>
 
-      <FormSection title="Media & Tiện ích">
+      <FormSection title={t("room.form.mediaSection")}>
         <ImageUploadSection
           data={images}
           onChange={setImages}
@@ -331,7 +333,7 @@ export function RoomForm({ initialValues, submitLabel, onSubmit }: RoomFormProps
 
       </FormSection>
 
-      <FormSection title="Tiện ích">
+      <FormSection title={t("room.form.amenitiesSection")}>
         <AmenitiesChipList
           amenities={amenities}
           selectable
@@ -368,7 +370,7 @@ export function RoomForm({ initialValues, submitLabel, onSubmit }: RoomFormProps
         >
           <View style={[styles.loadingContainer, { backgroundColor: color.background }]}>
             <ActivityIndicator size="large" color={color.primary} />
-            <ThemedText style={{ marginTop: 16, fontWeight: "600" }}>Đang xử lý dữ liệu...</ThemedText>
+            <ThemedText style={{ marginTop: 16, fontWeight: "600" }}>{t("room.form.processing")}</ThemedText>
           </View>
         </BlurView>
       )}

@@ -2,12 +2,12 @@ import type { RequestStatus } from "@/types/request";
 
 export const REQUEST_REJECT_COOLDOWN_DAYS = 7;
 
-export const REQUEST_STATUS_LABEL: Record<RequestStatus, string> = {
-  PENDING: "Chờ xử lý",
-  ACCEPTED: "Đã chấp nhận",
-  REJECTED: "Đã từ chối",
-  CANCELLED: "Đã hủy",
-  EXPIRED: "Đã hết hạn",
+export const REQUEST_STATUS_LABEL_KEY: Record<RequestStatus, string> = {
+  PENDING: "request.status.PENDING",
+  ACCEPTED: "request.status.ACCEPTED",
+  REJECTED: "request.status.REJECTED",
+  CANCELLED: "request.status.CANCELLED",
+  EXPIRED: "request.status.EXPIRED",
 };
 
 export const REQUEST_STATUS_COLOR: Record<RequestStatus, string> = {
@@ -18,9 +18,10 @@ export const REQUEST_STATUS_COLOR: Record<RequestStatus, string> = {
   EXPIRED: "#6b7280",
 };
 
-export const REQUEST_ERROR_MESSAGES = {
-  DUPLICATE: "Đã tồn tại lời mời giữa bạn và người dùng này (đang chờ hoặc đã chấp nhận).",
-  COOLDOWN: "Bạn có thể gửi lời mời mới sau thời gian chờ.",
-  NOT_RECEIVER: "Chỉ người nhận mới có thể chấp nhận hoặc từ chối lời mời này.",
-  CANNOT_SEND_TO_SELF: "Bạn không thể gửi lời mời cho chính mình.",
+/** Backend / client error codes → i18n keys (`request.errors.*`). */
+export const REQUEST_ERROR_MESSAGE_KEYS = {
+  DUPLICATE: "request.errors.duplicate",
+  COOLDOWN: "request.errors.cooldown",
+  NOT_RECEIVER: "request.errors.notReceiver",
+  CANNOT_SEND_TO_SELF: "request.errors.cannotSendToSelf",
 } as const;

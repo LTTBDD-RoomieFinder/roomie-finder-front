@@ -12,6 +12,7 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { useLanguage } from "@/hooks/use-language";
 import { useCreateRequest } from "@/hooks/use-create-request";
 import type { UserResponse } from "@/types/request";
 
@@ -31,8 +32,9 @@ export function SendRequestModal({
   const [message, setMessage] = useState("");
   const { create, isLoading, error, resetError } = useCreateRequest();
 
-  const displayName = receiver?.fullName || receiver?.username || "Người dùng";
   const { color } = useAppTheme();
+  const { t } = useLanguage();
+  const displayName = receiver?.fullName || receiver?.username || t("request.card.fallbackName");
 
   const handleClose = () => {
     setMessage("");
@@ -77,7 +79,7 @@ export function SendRequestModal({
             </View>
 
             <ThemedText style={[styles.desc, { color: color.text, opacity: 0.65 }]}>
-              {displayName} sẽ nhận được thông báo và có thể chấp nhận để mở cuộc trò chuyện với bạn.
+              {t("request.modal.description", { name: displayName })}
             </ThemedText>
 
             <TextInput
@@ -89,7 +91,7 @@ export function SendRequestModal({
                   backgroundColor: color.background,
                 },
               ]}
-              placeholder="Lời giới thiệu (tùy chọn)"
+              placeholder={t("request.modal.placeholder")}
               placeholderTextColor={color.placeholder}
               value={message}
               onChangeText={(t) => { setMessage(t); if (error) resetError(); }}
@@ -111,7 +113,9 @@ export function SendRequestModal({
                 onPress={handleClose}
                 disabled={isLoading}
               >
-                <ThemedText style={[styles.cancelLabel, { color: color.text }]}>Hủy</ThemedText>
+                <ThemedText style={[styles.cancelLabel, { color: color.text }]}>
+                  {t("request.modal.cancel")}
+                </ThemedText>
               </Pressable>
               <Pressable
                 style={[styles.submitButton, { backgroundColor: isLoading ? color.primary + "80" : color.primary }]}
@@ -122,7 +126,7 @@ export function SendRequestModal({
                   <ActivityIndicator color={color.primaryText} size="small" />
                 ) : (
                   <ThemedText style={[styles.submitLabel, { color: color.primaryText }]}>
-                    Gửi lời mời
+                    {t("request.modal.send")}
                   </ThemedText>
                 )}
               </Pressable>

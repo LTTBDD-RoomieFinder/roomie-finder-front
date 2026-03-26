@@ -11,6 +11,7 @@ import {
 
 import type { PostResponse } from "@/data/response";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { useLanguage } from "@/hooks/use-language";
 import type { PostJoinEligibility } from "@/types/post-join-eligibility";
 
 const HIT = 36;
@@ -34,6 +35,7 @@ export function PostRequestChatIcon({
   onRetryEligibility,
 }: Props) {
   const { color } = useAppTheme();
+  const { t } = useLanguage();
   const isOwner =
     currentUserId !== undefined &&
     String(post.user.id) === String(currentUserId);
@@ -53,14 +55,14 @@ export function PostRequestChatIcon({
     const occ = eligibility?.currentOccupancy ?? 0;
     const cap = eligibility?.roomCapacity ?? 0;
     Alert.alert(
-      "Đã đủ người",
-      `Nhóm chat của bài đăng này đã đủ (${occ}/${cap}).`,
+      t("request.postIcon.fullTitle"),
+      t("request.postIcon.fullMessage", { occ, cap }),
     );
-  }, [eligibility]);
+  }, [eligibility, t]);
 
   const onAlreadyRequestedPress = useCallback(() => {
-    Alert.alert("Đã gửi lời mời", "Bạn đã gửi lời mời cho bài đăng này rồi.");
-  }, []);
+    Alert.alert(t("request.postIcon.alreadyTitle"), t("request.postIcon.alreadyMessage"));
+  }, [t]);
 
   if (isOwner) {
     return <View style={styles.placeholder} />;
@@ -75,7 +77,7 @@ export function PostRequestChatIcon({
           { backgroundColor: pressed ? color.tint + "18" : "transparent" },
         ]}
         hitSlop={8}
-        accessibilityLabel="Đăng nhập để gửi lời mời vào nhóm chat"
+        accessibilityLabel={t("request.postIcon.loginA11y")}
       >
         <Ionicons name="chatbubble-ellipses-outline" size={22} color={color.tint} />
       </Pressable>
@@ -91,7 +93,7 @@ export function PostRequestChatIcon({
           { backgroundColor: pressed ? color.error + "18" : "transparent" },
         ]}
         hitSlop={8}
-        accessibilityLabel="Thử lại"
+        accessibilityLabel={t("request.postIcon.retryA11y")}
       >
         <Ionicons name="refresh-outline" size={22} color={color.error} />
       </Pressable>
@@ -100,7 +102,7 @@ export function PostRequestChatIcon({
 
   if (eligibilityLoading || eligibility === undefined) {
     return (
-      <View style={styles.btn} accessibilityLabel="Đang kiểm tra">
+      <View style={styles.btn} accessibilityLabel={t("request.postIcon.checkingA11y")}>
         <ActivityIndicator size="small" color={color.tint} />
       </View>
     );
@@ -120,7 +122,9 @@ export function PostRequestChatIcon({
           { backgroundColor: pressed ? color.tint + "28" : color.tint + "14" },
         ]}
         hitSlop={8}
-        accessibilityLabel={canQueue ? "Xếp hàng vào nhóm chat" : "Gửi lời mời vào nhóm chat"}
+        accessibilityLabel={
+          canQueue ? t("request.postIcon.queueA11y") : t("request.postIcon.sendA11y")
+        }
       >
         <Ionicons name="chatbubbles-outline" size={21} color={color.tint} />
       </Pressable>
@@ -133,7 +137,7 @@ export function PostRequestChatIcon({
         onPress={onAlreadyRequestedPress}
         style={styles.btn}
         hitSlop={8}
-        accessibilityLabel="Bạn đã gửi lời mời rồi"
+        accessibilityLabel={t("request.postIcon.sentA11y")}
       >
         <Ionicons
           name="checkmark-circle-outline"
@@ -150,7 +154,7 @@ export function PostRequestChatIcon({
       onPress={onFullPress}
       style={styles.btn}
       hitSlop={8}
-      accessibilityLabel="Nhóm chat đã đủ người"
+      accessibilityLabel={t("request.postIcon.fullA11y")}
     >
       <Ionicons
         name="chatbubbles-outline"
