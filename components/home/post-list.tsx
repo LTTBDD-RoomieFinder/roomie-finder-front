@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import React from "react";
+import { useFocusEffect } from "@react-navigation/native";
+import React, { useCallback, useMemo } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -11,6 +12,7 @@ import { ThemedText } from "@/components/themed-text";
 import { PostResponse } from "@/data/response";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useLanguage } from "@/hooks/use-language";
+import { usePostsJoinEligibility } from "@/hooks/use-posts-join-eligibility";
 import { PostCard } from "./post-card";
 
 type Props = {
@@ -34,6 +36,36 @@ export function PostList({
 }: Props) {
   const { color } = useAppTheme();
   const { t } = useLanguage();
+
+  const postIdsNeedingEligibility = useMemo(
+    () =>
+      posts
+        .filter(
+          (p) =>
+            currentUserId !== undefined &&
+            String(p.user.id) !== String(currentUserId),
+        )
+        .map((p) => p.id),
+    [posts, currentUserId],
+  );
+
+  const {
+    eligibilityByPostId,
+    loading: eligLoading,
+    error: eligError,
+    refresh: refreshElig,
+  } = usePostsJoinEligibility(
+    postIdsNeedingEligibility,
+    Boolean(currentUserId && postIdsNeedingEligibility.length > 0),
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      if (currentUserId && postIdsNeedingEligibility.length > 0) {
+        refreshElig();
+      }
+    }, [currentUserId, postIdsNeedingEligibility, refreshElig]),
+  );
 
   if (loading && posts.length === 0) {
     return (
@@ -62,6 +94,10 @@ export function PostList({
           currentUserId={currentUserId}
           onEdit={onEdit}
           onDelete={onDelete}
+          eligibility={eligibilityByPostId[item.id]}
+          eligibilityLoading={eligLoading}
+          eligibilityError={eligError}
+          onRetryEligibility={refreshElig}
         />
       )}
       ItemSeparatorComponent={() => <View style={{ height: 8, backgroundColor: color.backgroundSecondary }} />}
