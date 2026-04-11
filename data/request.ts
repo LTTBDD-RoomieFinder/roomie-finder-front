@@ -1,5 +1,12 @@
 import { Gender } from "@/constants/gender";
-import { GenderRequirement, RoomType } from "@/types/enums";
+import {
+  DealBreakerType,
+  GenderRequirement,
+  ReportCategory,
+  ReportTargetType,
+  ReviewContext,
+  RoomType,
+} from "@/types/enums";
 import { PostStatus } from "@/types/PostStatus";
 
 export type LoginRequest = {
@@ -84,7 +91,15 @@ export type PostSearchRequest = {
   radiusInKm?: number;
   cursor?: number;
   size?: number;
-}
+};
+
+/** Bounding box cho `GET /search/map-pins`. */
+export type MapPinsBBoxRequest = {
+  minLat: number;
+  maxLat: number;
+  minLng: number;
+  maxLng: number;
+};
 
 export interface BaseProfileRequest {
   fullName: string;
@@ -111,3 +126,36 @@ export type ProfileOptionalFields = {
 
 export type CreateProfileRequest = BaseProfileRequest & ProfileOptionalFields;
 export type UpdateProfileRequest = BaseProfileRequest & ProfileOptionalFields;
+
+// ── Identity Verification ────────────────────────────────────────────────────
+
+export type SubmitVerificationRequest = {
+  documentNumber: string;
+  documentImageUrl: string;
+  documentBackImageUrl?: string;
+  selfieImageUrl: string;
+};
+
+// ── Deal-breakers ─────────────────────────────────────────────────────────────
+
+export type UpdateDealBreakersRequest = {
+  dealBreakers: DealBreakerType[];
+};
+
+// ── Reviews ──────────────────────────────────────────────────────────────────
+
+export type CreateReviewRequest = {
+  revieweeId: number;
+  rating: number;
+  comment?: string;
+  context: ReviewContext;
+};
+
+// ── Reports ──────────────────────────────────────────────────────────────────
+
+export type SubmitReportRequest = {
+  targetType: ReportTargetType;
+  targetId: number;
+  category: ReportCategory;
+  details: string;
+};

@@ -21,6 +21,7 @@
   },
   "tabs": {
     "home": "Trang chủ",
+    "map": "Bản đồ",
     "room": "Phòng",
     "requests": "Yêu cầu",
     "chats": "Tin nhắn",
@@ -80,6 +81,21 @@
     "deleteFailed": "Không thể xoá bài đăng.",
     "postEntryPrompt": "Bạn đang nghĩ gì, {{name}}?",
     "postEntryYou": "bạn"
+  },
+  "map": {
+    "title": "Bản đồ phòng",
+    "subtitle": "Kéo bản đồ để tải phòng trong khung nhìn — tối ưu cho nhiều người dùng.",
+    "loadingPins": "Đang cập nhật ghim…",
+    "openRoom": "Xem phòng",
+    "loadPinsError": "Không tải được ghim bản đồ.",
+    "webUnsupported": "Bản đồ tương tác chỉ hỗ trợ trên ứng dụng iOS và Android.",
+    "pinCount": "{{count}} phòng trên bản đồ",
+    "moreHidden": "+{{count}} chưa hiển thị (giới hạn hiệu năng)",
+    "a11yMapArea": "Bản đồ phòng trọ",
+    "androidNoGoogleKeyHint": "Chưa cấu hình Google Maps API key: bản đồ Android có thể hiển thị hạn chế. Thêm EXPO_PUBLIC_GOOGLE_MAPS_API_KEY và build lại native.",
+    "iosAppleMapsNote": "iOS dùng Apple Maps — không cần API key Google.",
+    "emptyHint": "Không có ghim trong vùng này. Thử zoom/kéo map hoặc kiểm tra bài PUBLISHED + phòng ACTIVE + địa chỉ có tọa độ.",
+    "openRoomFailed": "Không mở được chi tiết phòng từ bài đăng."
   },
   "post": {
     "status": {
@@ -484,5 +500,131 @@
     "defaultRoomTitle": "Phòng trọ",
     "negotiable": "Thỏa thuận",
     "addressPending": "Chưa cập nhật địa chỉ"
+  },
+  "verification": {
+    "sectionTitle": "Xác thực danh tính",
+    "sectionSubtitle": "Xác thực CCCD để nhận huy hiệu tin cậy",
+    "status": {
+      "PENDING": "Đang chờ duyệt",
+      "VERIFIED": "Đã xác thực",
+      "REJECTED": "Bị từ chối",
+      "EXPIRED": "Hết hạn"
+    },
+    "badge": "Đã xác thực",
+    "notSubmitted": "Chưa nộp tài liệu",
+    "submitTitle": "Nộp CCCD để xác thực",
+    "documentNumber": "Số CCCD",
+    "documentNumberPh": "030123456789",
+    "documentImageUrl": "URL ảnh mặt trước CCCD",
+    "documentBackImageUrl": "URL ảnh mặt sau CCCD (tuỳ chọn)",
+    "selfieImageUrl": "URL ảnh selfie cầm CCCD",
+    "submit": "Gửi xác thực",
+    "submitSuccess": "Đã gửi yêu cầu xác thực. Chờ admin duyệt!",
+    "pendingHint": "Tài liệu của bạn đang chờ admin xem xét.",
+    "verifiedHint": "Danh tính của bạn đã được xác thực.",
+    "rejectedHint": "Tài liệu bị từ chối. Vui lòng nộp lại.",
+    "expiredHint": "Xác thực đã hết hạn. Vui lòng nộp lại.",
+    "reviewNote": "Lý do từ chối",
+    "errors": {
+      "7001": "Không tìm thấy yêu cầu xác thực.",
+      "7002": "Bạn đã có yêu cầu đang chờ duyệt.",
+      "7003": "Danh tính đã được xác thực, không cần nộp lại.",
+      "7004": "Số CCCD là bắt buộc.",
+      "7005": "Ảnh mặt trước CCCD là bắt buộc.",
+      "7006": "Ảnh selfie là bắt buộc.",
+      "7007": "Trạng thái không hợp lệ cho hành động này.",
+      "7008": "Lý do từ chối là bắt buộc khi REJECTED."
+    }
+  },
+  "trust": {
+    "sectionTitle": "Điểm tin cậy",
+    "recalculate": "Cập nhật điểm",
+    "recalculateSuccess": "Điểm tin cậy đã được cập nhật!",
+    "loadError": "Không tải được điểm tin cậy.",
+    "label": {
+      "high": "Tin cậy cao",
+      "good": "Tin cậy tốt",
+      "basic": "Cơ bản",
+      "unverified": "Chưa xác minh"
+    },
+    "breakdown": {
+      "verification": "Xác thực danh tính",
+      "profile": "Hoàn thiện hồ sơ",
+      "responseRate": "Tỉ lệ phản hồi",
+      "reviews": "Đánh giá",
+      "reportPenalty": "Bị báo cáo"
+    },
+    "errors": {
+      "8001": "Không tìm thấy điểm tin cậy cho người dùng này."
+    }
+  },
+  "review": {
+    "sectionTitle": "Đánh giá",
+    "writeReview": "Viết đánh giá",
+    "rating": "Xếp hạng (1–5 sao)",
+    "comment": "Nhận xét",
+    "commentPh": "Chia sẻ trải nghiệm của bạn…",
+    "context": "Loại đánh giá",
+    "context_ROOMMATE_EXPERIENCE": "Đã ở cùng",
+    "context_LANDLORD_EXPERIENCE": "Đã thuê phòng",
+    "submit": "Gửi đánh giá",
+    "submitSuccess": "Đánh giá đã được gửi!",
+    "averageRating": "Điểm TB: {{score}}",
+    "totalReviews": "{{count}} đánh giá",
+    "noReviews": "Chưa có đánh giá nào.",
+    "errors": {
+      "9001": "Không tìm thấy đánh giá.",
+      "9002": "Bạn không thể tự đánh giá bản thân.",
+      "9003": "Bạn đã đánh giá người này trong ngữ cảnh này rồi.",
+      "9004": "Xếp hạng phải từ 1 đến 5.",
+      "9005": "Loại đánh giá là bắt buộc."
+    }
+  },
+  "report": {
+    "sectionTitle": "Báo cáo vi phạm",
+    "targetType_USER": "Người dùng",
+    "targetType_POST": "Bài đăng",
+    "category": "Lý do báo cáo",
+    "category_SCAM": "Lừa đảo tài chính",
+    "category_FAKE_LISTING": "Bài đăng phòng giả",
+    "category_IDENTITY_FRAUD": "Giả mạo danh tính",
+    "category_HARASSMENT": "Quấy rối, đe doạ",
+    "category_SPAM": "Spam",
+    "category_INAPPROPRIATE_CONTENT": "Nội dung không phù hợp",
+    "category_OTHER": "Lý do khác",
+    "details": "Chi tiết",
+    "detailsPh": "Mô tả cụ thể vi phạm bạn phát hiện…",
+    "submit": "Gửi báo cáo",
+    "submitSuccess": "Báo cáo đã được ghi nhận. Cảm ơn bạn!",
+    "status_PENDING": "Đang chờ xử lý",
+    "status_REVIEWED": "Đã xem xét",
+    "status_DISMISSED": "Không vi phạm",
+    "status_ACTIONED": "Đã xử lý",
+    "errors": {
+      "10001": "Không tìm thấy báo cáo.",
+      "10002": "Bạn đã báo cáo đối tượng này rồi.",
+      "10003": "Bạn không thể tự báo cáo bản thân.",
+      "10004": "Mục tiêu báo cáo là bắt buộc.",
+      "10005": "Lý do báo cáo là bắt buộc.",
+      "10006": "Chi tiết báo cáo không được để trống.",
+      "10007": "Chuyển trạng thái không hợp lệ."
+    }
+  },
+  "dealBreaker": {
+    "sectionTitle": "Điều kiện bắt buộc",
+    "sectionSubtitle": "Lọc ngay người không phù hợp khi gợi ý",
+    "save": "Lưu điều kiện",
+    "saveSuccess": "Đã lưu điều kiện!",
+    "none": "Chưa đặt điều kiện nào.",
+    "NO_SMOKING": "Không ở với người hút thuốc",
+    "NO_PETS": "Không ở với người nuôi thú cưng",
+    "NO_NIGHT_OWL": "Không ở với người thức khuya",
+    "NO_EARLY_BIRD": "Không ở với người dậy rất sớm",
+    "SAME_GENDER_ONLY": "Chỉ ở với người cùng giới",
+    "QUIET_ENVIRONMENT_REQUIRED": "Cần môi trường yên tĩnh",
+    "NO_FREQUENT_GUESTS": "Không ở với người hay dẫn khách về",
+    "errors": {
+      "11001": "Một hoặc nhiều điều kiện không hợp lệ."
+    }
   }
 }
