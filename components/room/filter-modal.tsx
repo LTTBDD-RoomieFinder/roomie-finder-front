@@ -1,18 +1,18 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { Modal, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Feather } from "@expo/vector-icons";
+import { ThemedText } from "@/components/themed-text";
+import Divider from "@/components/ui/divider";
+import MapPicker from "@/components/ui/map-picker";
+import { GENDER_REQ_ORDER, ROOM_TYPE_ORDER } from "@/constants/room-constants";
+import { PostSearchRequest } from "@/data/request";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useLanguage } from "@/hooks/use-language";
 import { genderReqLabelKey, roomTypeLabelKey } from "@/lib/i18n-labels";
-import { ThemedText } from "@/components/themed-text";
-import { PostSearchRequest } from "@/data/request";
-import { GenderRequirement, RoomType } from "@/types/enums";
-import { GENDER_REQ_ORDER, ROOM_TYPE_ORDER } from "@/constants/room-constants";
-import Divider from "@/components/ui/divider";
-import Slider from "@react-native-community/slider";
 import { AmenityService } from "@/services/amenity-service";
-import MapPicker from "@/components/ui/map-picker";
+import { GenderRequirement, RoomType } from "@/types/enums";
+import { Feather } from "@expo/vector-icons";
+import Slider from "@react-native-community/slider";
+import React, { useEffect, useMemo, useState } from "react";
+import { Modal, ScrollView, StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 interface Amenity {
   id: number;

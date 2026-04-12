@@ -2,12 +2,12 @@ import { Tabs } from "expo-router";
 import React from "react";
 
 import { HapticTab } from "@/components/haptic-tab";
-import { profileTabGuard } from "@/utils/profile-tab-guard";
 import { TabBarIconWithBadge } from "@/components/tab-bar-icon-with-badge";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useLanguage } from "@/hooks/use-language";
 import { useNotificationStore } from "@/stores/use-notification-store";
+import { profileTabGuard } from "@/utils/profile-tab-guard";
 
 export default function TabLayout() {
   const { color } = useAppTheme();
@@ -43,6 +43,26 @@ export default function TabLayout() {
           tabBarLabel: t("tabs.home"),
           tabBarIcon: ({ color }) => (
             <IconSymbol size={28} name="house.fill" color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="map"
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            const state = navigation.getState();
+            const current = state.routes[state.index];
+            if (current.name === "profile" && profileTabGuard.isDirty()) {
+              e.preventDefault();
+              profileTabGuard.requestNavigation("map");
+            }
+          },
+        })}
+        options={{
+          title: t("tabs.map"),
+          tabBarLabel: t("tabs.map"),
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={28} name="map.fill" color={color} />
           ),
         }}
       />

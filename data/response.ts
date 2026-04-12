@@ -59,4 +59,19 @@ export type PostResponse = {
   updatedAt: string;
   room: RoomResponse;
   user: UserResponse;
-}
+};
+
+/**
+ * `PostMapResponse` từ `GET /search/map-pins`.
+ * `id` là **post id** (`p.id`), không phải room id — mở chi tiết phòng cần resolve qua post.
+ */
+export type MapPinGeoItem = {
+  id: number;
+  price: number;
+  lat: number;
+  lng: number;
+  title: string;
+  thumbnailUrl?: string | null;
+  /** Backend hiện có thể không gửi — UI fallback `title`. */
+  shortTitle?: string | null;
+};

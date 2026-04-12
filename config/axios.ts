@@ -5,6 +5,7 @@ import axios, {
   AxiosResponse,
 } from "axios";
 import qs from "qs";
+import { Platform } from "react-native";
 
 import {
   clearTokens,
@@ -16,11 +17,31 @@ import {
 
 import { useAuthStore } from "@/stores/useAuthStore";
 
-// Base URL: use full path to API (e.g. http://localhost:8080/api/v1) or server root (http://localhost:8080).
-// If root is given, /api/v1 is appended to match backend (AuthController, RequestController).
-const RAW_API_URL =
-  process.env.EXPO_PUBLIC_API_URL || "http://localhost:8080";
-const base = RAW_API_URL.replace(/\/+$/, "");
+/** Android emulator: localhost is the emulator itself, not the dev machine. */
+function rewriteLocalhostForAndroidEmulator(url: string): string {
+  if (Platform.OS !== "android") return url;
+  try {
+    const normalized = /^https?:\/\//i.test(url) ? url : `http://${url}`;
+    const u = new URL(normalized);
+    const h = u.hostname.toLowerCase();
+    if (h === "localhost" || h === "127.0.0.1") {
+      u.hostname = "10.0.2.2";
+      return `${u.protocol}//${u.host}${u.pathname}`.replace(/\/+$/, "");
+    }
+  } catch {
+    /* keep url */
+  }
+  return url;
+}
+
+// Base URL: full API root (…/api/v1) or server root (…:8080); /api/v1 is appended when missing.
+const RAW_API_URL = rewriteLocalhostForAndroidEmulator(
+  (process.env.EXPO_PUBLIC_API_URL?.trim() || "http://localhost:8080").replace(
+    /\/+$/,
+    "",
+  ),
+);
+const base = RAW_API_URL;
 const API_URL = base.endsWith("/api/v1") ? base : base + "/api/v1";
 
 const axiosRequest: AxiosInstance = axios.create({
@@ -129,7 +150,7 @@ axiosRequest.interceptors.response.use(
 
     if (error.code === AxiosError.ERR_NETWORK) {
       const hint =
-        "Cannot reach server. Ensure backend is running (e.g. port 8080) and EXPO_PUBLIC_API_URL in .env is correct (e.g. http://localhost:8080). Restart with: npx expo start -c.";
+        "Cannot reach server. Check: (1) Backend running on port 8080. (2) EXPO_PUBLIC_API_URL — use http://10.0.2.2:8080 on Android emulator if you mean your PC, or your PC LAN IP for a physical device. (3) After changing app.config (cleartext), rebuild Android dev client if not using Expo Go. Restart bundler: npx expo start -c.";
       return Promise.reject(hint);
     }
 

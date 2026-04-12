@@ -21,6 +21,7 @@
   },
   "tabs": {
     "home": "Home",
+    "map": "Map",
     "room": "Rooms",
     "requests": "Requests",
     "chats": "Chats",
@@ -80,6 +81,21 @@
     "deleteFailed": "Could not delete the post.",
     "postEntryPrompt": "What's on your mind, {{name}}?",
     "postEntryYou": "there"
+  },
+  "map": {
+    "title": "Room map",
+    "subtitle": "Pan to load rooms in view — tuned for scale.",
+    "loadingPins": "Updating pins…",
+    "openRoom": "View room",
+    "loadPinsError": "Could not load map pins.",
+    "webUnsupported": "Interactive maps are available on the iOS and Android apps only.",
+    "pinCount": "{{count}} rooms on map",
+    "moreHidden": "+{{count}} not shown (performance cap)",
+    "a11yMapArea": "Room map",
+    "androidNoGoogleKeyHint": "Google Maps API key missing: Android tiles may be limited. Set EXPO_PUBLIC_GOOGLE_MAPS_API_KEY and rebuild native.",
+    "iosAppleMapsNote": "iOS uses Apple Maps — no Google API key required.",
+    "emptyHint": "No pins in this area. Try panning/zooming, or check PUBLISHED posts with ACTIVE rooms and valid coordinates.",
+    "openRoomFailed": "Could not open room details from this post."
   },
   "post": {
     "status": {
@@ -484,5 +500,131 @@
     "defaultRoomTitle": "Room",
     "negotiable": "Negotiable",
     "addressPending": "Address not set"
+  },
+  "verification": {
+    "sectionTitle": "Identity Verification",
+    "sectionSubtitle": "Verify your ID to earn a trusted badge",
+    "status": {
+      "PENDING": "Pending review",
+      "VERIFIED": "Verified",
+      "REJECTED": "Rejected",
+      "EXPIRED": "Expired"
+    },
+    "badge": "Verified",
+    "notSubmitted": "No document submitted",
+    "submitTitle": "Submit ID for verification",
+    "documentNumber": "ID number",
+    "documentNumberPh": "030123456789",
+    "documentImageUrl": "ID front image URL",
+    "documentBackImageUrl": "ID back image URL (optional)",
+    "selfieImageUrl": "Selfie with ID image URL",
+    "submit": "Submit for review",
+    "submitSuccess": "Verification request sent. Awaiting admin review!",
+    "pendingHint": "Your document is under review.",
+    "verifiedHint": "Your identity has been verified.",
+    "rejectedHint": "Document rejected. Please resubmit.",
+    "expiredHint": "Verification expired. Please resubmit.",
+    "reviewNote": "Rejection reason",
+    "errors": {
+      "7001": "Verification record not found.",
+      "7002": "You already have a pending verification request.",
+      "7003": "Identity already verified, no need to resubmit.",
+      "7004": "ID number is required.",
+      "7005": "ID front image is required.",
+      "7006": "Selfie image is required.",
+      "7007": "Invalid status for this action.",
+      "7008": "Review note is required when rejecting."
+    }
+  },
+  "trust": {
+    "sectionTitle": "Trust Score",
+    "recalculate": "Refresh score",
+    "recalculateSuccess": "Trust score updated!",
+    "loadError": "Couldn't load trust score.",
+    "label": {
+      "high": "Highly trusted",
+      "good": "Trusted",
+      "basic": "Basic",
+      "unverified": "Not verified"
+    },
+    "breakdown": {
+      "verification": "Identity verification",
+      "profile": "Profile completeness",
+      "responseRate": "Response rate",
+      "reviews": "Reviews",
+      "reportPenalty": "Report penalty"
+    },
+    "errors": {
+      "8001": "Trust score not found for this user."
+    }
+  },
+  "review": {
+    "sectionTitle": "Reviews",
+    "writeReview": "Write a review",
+    "rating": "Rating (1–5 stars)",
+    "comment": "Comment",
+    "commentPh": "Share your experience…",
+    "context": "Review type",
+    "context_ROOMMATE_EXPERIENCE": "Lived together",
+    "context_LANDLORD_EXPERIENCE": "Rented from them",
+    "submit": "Submit review",
+    "submitSuccess": "Review submitted!",
+    "averageRating": "Avg: {{score}}",
+    "totalReviews": "{{count}} reviews",
+    "noReviews": "No reviews yet.",
+    "errors": {
+      "9001": "Review not found.",
+      "9002": "You cannot review yourself.",
+      "9003": "You've already reviewed this user in this context.",
+      "9004": "Rating must be between 1 and 5.",
+      "9005": "Review context is required."
+    }
+  },
+  "report": {
+    "sectionTitle": "Report",
+    "targetType_USER": "User",
+    "targetType_POST": "Listing",
+    "category": "Report reason",
+    "category_SCAM": "Financial scam",
+    "category_FAKE_LISTING": "Fake listing",
+    "category_IDENTITY_FRAUD": "Identity fraud",
+    "category_HARASSMENT": "Harassment or threats",
+    "category_SPAM": "Spam",
+    "category_INAPPROPRIATE_CONTENT": "Inappropriate content",
+    "category_OTHER": "Other",
+    "details": "Details",
+    "detailsPh": "Describe the violation you found…",
+    "submit": "Submit report",
+    "submitSuccess": "Report received. Thank you!",
+    "status_PENDING": "Pending",
+    "status_REVIEWED": "Reviewed",
+    "status_DISMISSED": "Dismissed",
+    "status_ACTIONED": "Actioned",
+    "errors": {
+      "10001": "Report not found.",
+      "10002": "You've already reported this target.",
+      "10003": "You cannot report yourself.",
+      "10004": "Report target is required.",
+      "10005": "Report category is required.",
+      "10006": "Report details cannot be blank.",
+      "10007": "Invalid status transition."
+    }
+  },
+  "dealBreaker": {
+    "sectionTitle": "Deal-breakers",
+    "sectionSubtitle": "Instantly filter out incompatible roommates",
+    "save": "Save preferences",
+    "saveSuccess": "Preferences saved!",
+    "none": "No deal-breakers set.",
+    "NO_SMOKING": "No smokers",
+    "NO_PETS": "No pets",
+    "NO_NIGHT_OWL": "No night owls",
+    "NO_EARLY_BIRD": "No early birds",
+    "SAME_GENDER_ONLY": "Same gender only",
+    "QUIET_ENVIRONMENT_REQUIRED": "Quiet environment required",
+    "NO_FREQUENT_GUESTS": "No frequent guests",
+    "errors": {
+      "11001": "One or more deal-breaker types are invalid."
+    }
   }
 }
