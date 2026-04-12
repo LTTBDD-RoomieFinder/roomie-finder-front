@@ -35,15 +35,14 @@ import { SettingsModal } from "@/components/settings/settings-modal";
 import ConfirmModal from "@/components/ui/confirm-modal";
 import DirtyLeaveModal from "@/components/ui/dirty-leave-modal";
 import { Tag } from "@/types/Tag";
-import { useFocusEffect } from "expo-router";
 import { useNavigation } from "@react-navigation/native";
 
-import { TrustScoreBadge } from "@/components/reputation/trust-score-badge";
+import { DealBreakerSection } from "@/components/profile/deal-breaker-section";
+import { TrustScoreSection } from "@/components/profile/trust-score-section";
+import { VerificationSection } from "@/components/profile/verification-section";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useLanguage } from "@/hooks/use-language";
-import { trustService } from "@/services/trust-service";
-import type { TrustScoreResponse } from "@/types/reputation";
 import { profileTabGuard } from "@/utils/profile-tab-guard";
 
 type FormValues = {
@@ -120,10 +119,8 @@ export default function ProfileScreen() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const pendingNavRef = useRef<"home" | "map" | "room" | "requests" | "chats" | null>(null);
 
-  const [trustScore, setTrustScore] = useState<TrustScoreResponse | null>(null);
-  const [trustLoading, setTrustLoading] = useState(false);
-  const [trustError, setTrustError] = useState<string | null>(null);
-  const [recalcBusy, setRecalcBusy] = useState(false);
+  /** Bump to tell safety-center sections to re-fetch after profile save. */
+  const [safetyRefreshKey, setSafetyRefreshKey] = useState(0);
 
   const {
     control,
@@ -534,20 +531,6 @@ export default function ProfileScreen() {
     }
   }, [populateForm]);
 
-  const fetchTrust = useCallback(async () => {
-    setTrustLoading(true);
-    setTrustError(null);
-    try {
-      const data = await trustService.getMine();
-      setTrustScore(data);
-    } catch (e) {
-      setTrustScore(null);
-      setTrustError(typeof e === "string" ? e : t("trust.loadError"));
-    } finally {
-      setTrustLoading(false);
-    }
-  }, [t]);
-
   const fetchTags = useCallback(async () => {
     try {
       const res = await tagApi.getTag();
@@ -562,20 +545,6 @@ export default function ProfileScreen() {
     fetchTags();
     locationService.getCities().then(setCities);
   }, [fetchProfile, fetchTags]);
-
-  useEffect(() => {
-    if (!loading) {
-      void fetchTrust();
-    }
-  }, [loading, fetchTrust]);
-
-  useFocusEffect(
-    useCallback(() => {
-      if (!loading) {
-        void fetchTrust();
-      }
-    }, [loading, fetchTrust])
-  );
 
   useEffect(() => {
     if (cityId) {
@@ -639,6 +608,7 @@ export default function ProfileScreen() {
       }
 
       reset(merged);
+      setSafetyRefreshKey((k) => k + 1);
     },
     [images, isCreated, reset, t]
   );
@@ -697,23 +667,6 @@ export default function ProfileScreen() {
     setLeaveModalVisible(false);
   }, []);
 
-  const handleRecalculateTrust = useCallback(async () => {
-    setRecalcBusy(true);
-    try {
-      const data = await trustService.recalculate();
-      setTrustScore(data);
-      setTrustError(null);
-      Alert.alert(t("common.success"), t("trust.recalculateSuccess"));
-    } catch (e) {
-      Alert.alert(
-        t("common.error"),
-        typeof e === "string" ? e : t("trust.loadError")
-      );
-    } finally {
-      setRecalcBusy(false);
-    }
-  }, [t]);
-
   if (loading) {
     return <ActivityIndicator style={{ marginTop: 50 }} color={color.primary} />;
   }
@@ -749,38 +702,12 @@ export default function ProfileScreen() {
         </View>
       </View>
       <ScrollView contentContainerStyle={styles.container}>
-        <View style={styles.card}>
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionIcon}>
-              <IconSymbol name="checkmark.seal.fill" size={18} color={color.primary} />
-            </View>
-            <ThemedText style={styles.sectionTitle}>{t("trust.sectionTitle")}</ThemedText>
-          </View>
-          {trustLoading ? (
-            <ActivityIndicator color={color.primary} style={{ paddingVertical: 12 }} />
-          ) : trustError ? (
-            <ThemedText style={{ color: color.error, fontSize: 14 }}>{trustError}</ThemedText>
-          ) : trustScore ? (
-            <>
-              <TrustScoreBadge trust={trustScore} compact={false} />
-              <TouchableOpacity
-                style={[styles.saveBtn, { marginTop: 12, marginBottom: 0 }]}
-                onPress={handleRecalculateTrust}
-                disabled={recalcBusy}
-                activeOpacity={recalcBusy ? 1 : 0.7}
-              >
-                <ThemedText style={styles.saveText}>
-                  {recalcBusy ? t("common.loading") : t("trust.recalculate")}
-                </ThemedText>
-              </TouchableOpacity>
-            </>
-          ) : (
-            <ThemedText style={{ color: color.textSecondary, fontSize: 14 }}>
-              {t("trust.loadError")}
-            </ThemedText>
-          )}
-        </View>
+        {/* ── Safety Center ───────────────────────────────────────── */}
+        <TrustScoreSection refreshKey={safetyRefreshKey} />
+        <VerificationSection onVerificationSubmitted={() => setSafetyRefreshKey((k) => k + 1)} />
+        <DealBreakerSection />
 
+        {/* ── Profile form ──────────────────────────────────────── */}
         <View style={styles.card}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionIcon}>
