@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Dimensions,
   FlatList,
-  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -15,104 +15,133 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useFocusEffect } from "expo-router";
+import { Image } from "expo-image";
+import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ThemedText } from "@/components/themed-text";
-import { VerificationStatusChip } from "@/components/reputation/verification-status-chip";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useLanguage } from "@/hooks/use-language";
 import { verificationService } from "@/services/verification-service";
+import { useAuthStore } from "@/stores/useAuthStore";
 import { VerificationStatus } from "@/types/enums";
 import type { VerificationResponse } from "@/types/reputation";
-import { router } from "expo-router";
+import { decodeJwtPayload } from "@/utils/jwt";
+
+// ── Constants ──────────────────────────────────────────────────────────────────
+const SCREEN_W = Dimensions.get("window").width;
+const IMG_H = 200;
 
 type StatusFilter = VerificationStatus | "ALL";
-
-const TABS: { key: StatusFilter; labelKey: string }[] = [
-  { key: "ALL", labelKey: "adminVerify.filterAll" },
-  { key: VerificationStatus.PENDING, labelKey: "adminVerify.filterPending" },
-  { key: VerificationStatus.VERIFIED, labelKey: "adminVerify.filterVerified" },
-  { key: VerificationStatus.REJECTED, labelKey: "adminVerify.filterRejected" },
-];
-
 type ReviewAction = "approve" | "reject";
 
+const FILTER_TABS: { key: StatusFilter; icon: keyof typeof Ionicons.glyphMap; labelKey: string }[] = [
+  { key: "ALL", icon: "list-outline", labelKey: "adminVerify.filterAll" },
+  { key: VerificationStatus.PENDING, icon: "time-outline", labelKey: "adminVerify.filterPending" },
+  { key: VerificationStatus.VERIFIED, icon: "checkmark-circle-outline", labelKey: "adminVerify.filterVerified" },
+  { key: VerificationStatus.REJECTED, icon: "close-circle-outline", labelKey: "adminVerify.filterRejected" },
+];
+
+const STATUS_META: Record<VerificationStatus, { icon: string; bgLight: string; bgDark: string; fg: string }> = {
+  [VerificationStatus.PENDING]: { icon: "⏳", bgLight: "#FFF8E1", bgDark: "#3d3520", fg: "#F59E0B" },
+  [VerificationStatus.VERIFIED]: { icon: "✓", bgLight: "#E8F5E9", bgDark: "#1b3326", fg: "#4CAF50" },
+  [VerificationStatus.REJECTED]: { icon: "✕", bgLight: "#FFEBEE", bgDark: "#3b1f1f", fg: "#EF5350" },
+  [VerificationStatus.EXPIRED]: { icon: "⚠", bgLight: "#F5F5F5", bgDark: "#2a2a2a", fg: "#9E9E9E" },
+};
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function extractList(raw: unknown): VerificationResponse[] {
+  if (Array.isArray(raw)) return raw;
+  if (raw && typeof raw === "object") {
+    const r = raw as Record<string, unknown>;
+    if (Array.isArray(r.content)) return r.content as VerificationResponse[];
+    if (Array.isArray(r.data)) return r.data as VerificationResponse[];
+  }
+  return [];
+}
+
+function useIsAdmin(): boolean {
+  const user = useAuthStore((s) => s.user);
+  const accessToken = useAuthStore((s) => s.accessToken);
+  return useMemo(() => {
+    if (user?.roles?.includes("ADMIN")) return true;
+    if (!accessToken) return false;
+    const jwt = decodeJwtPayload(accessToken);
+    if (!jwt) return false;
+    if (jwt.scope === "ADMIN") return true;
+    if (Array.isArray(jwt.roles) && (jwt.roles as string[]).includes("ADMIN")) return true;
+    return false;
+  }, [user, accessToken]);
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
 export default function AdminVerificationsScreen() {
   const { color, scheme, radius } = useAppTheme();
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
+  const isDark = scheme === "dark";
 
+  // ── Auth guard (screen-level, NOT layout-level) ────────────────────────────
+  const isAdmin = useIsAdmin();
+  useEffect(() => {
+    if (!isAdmin) router.replace("/(tabs)/profile");
+  }, [isAdmin]);
+
+  // ── State ──────────────────────────────────────────────────────────────────
   const [filter, setFilter] = useState<StatusFilter>("PENDING");
   const [items, setItems] = useState<VerificationResponse[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
-  // Detail/review modal
   const [selected, setSelected] = useState<VerificationResponse | null>(null);
   const [reviewAction, setReviewAction] = useState<ReviewAction | null>(null);
   const [reviewNote, setReviewNote] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [fullScreenImg, setFullScreenImg] = useState<string | null>(null);
 
-  const isDark = scheme === "dark";
+  // ── Data fetching ────────────────────────────────────────────────────────
+  const fetchList = useCallback(
+    async (activeFilter: StatusFilter, isRefresh = false) => {
+      if (isRefresh) setRefreshing(true);
+      else setLoading(true);
+      setFetchError(null);
+      try {
+        const status = activeFilter === "ALL" ? undefined : activeFilter;
+        const raw = await verificationService.adminList(status);
+        setItems(extractList(raw));
+      } catch (e: any) {
+        const msg = typeof e === "string" ? e : e?.message ?? t("common.error");
+        setFetchError(msg);
+        setItems([]);
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [t],
+  );
 
-  // Normalize the API response — backend may return a raw array, a paged object
-  // { content: [...] }, or still wrapped { data: [...] }
-  function extractList(raw: unknown): VerificationResponse[] {
-    if (Array.isArray(raw)) return raw;
-    if (raw && typeof raw === "object") {
-      const r = raw as Record<string, unknown>;
-      if (Array.isArray(r.content)) return r.content as VerificationResponse[];
-      if (Array.isArray(r.data)) return r.data as VerificationResponse[];
-    }
-    return [];
-  }
-
-  const fetchList = useCallback(async (activeFilter: StatusFilter, isRefresh = false) => {
-    if (isRefresh) setRefreshing(true);
-    else setLoading(true);
-    setFetchError(null);
-    try {
-      const status = activeFilter === "ALL" ? undefined : activeFilter;
-      const raw = await verificationService.adminList(status);
-      setItems(extractList(raw));
-    } catch (e: any) {
-      const msg = typeof e === "string" ? e : e?.message ?? t("common.error");
-      setFetchError(msg);
-      setItems([]);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [t]);
-
-  // Re-fetch when filter tab changes
   useEffect(() => {
-    fetchList(filter);
-  }, [filter]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (isAdmin) fetchList(filter);
+  }, [filter, isAdmin]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Also re-fetch every time the screen gains focus (e.g. back from background)
-  useFocusEffect(useCallback(() => { fetchList(filter); }, [filter])); // eslint-disable-line react-hooks/exhaustive-deps
+  useFocusEffect(
+    useCallback(() => {
+      if (isAdmin) fetchList(filter);
+    }, [filter, isAdmin]), // eslint-disable-line react-hooks/exhaustive-deps
+  );
 
-
-
-
+  // ── Actions ────────────────────────────────────────────────────────────────
   const openDetail = (item: VerificationResponse) => {
     setSelected(item);
     setReviewAction(null);
     setReviewNote("");
   };
-
   const closeDetail = () => {
     setSelected(null);
     setReviewAction(null);
-    setReviewNote("");
-  };
-
-  const startAction = (action: ReviewAction) => {
-    setReviewAction(action);
     setReviewNote("");
   };
 
@@ -141,332 +170,175 @@ export default function AdminVerificationsScreen() {
     }
   };
 
-  // ── Styles ──────────────────────────────────────────────────────────────────
-  const styles = StyleSheet.create({
-    safeHeader: {
-      backgroundColor: color.primary,
-      paddingTop: insets.top,
-    },
-    headerRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      paddingHorizontal: 16,
-      paddingVertical: 14,
-      gap: 12,
-    },
-    backBtn: {
-      padding: 4,
-      borderRadius: 20,
-    },
-    headerTitle: {
-      fontSize: 18,
-      fontWeight: "700",
-      color: "#fff",
-      flex: 1,
-    },
-    tabBar: {
-      flexDirection: "row",
-      backgroundColor: color.background,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: color.border,
-    },
-    tab: {
-      flex: 1,
-      paddingVertical: 12,
-      alignItems: "center",
-    },
-    tabText: {
-      fontSize: 13,
-      fontWeight: "600",
-      color: color.textSecondary,
-    },
-    tabTextActive: {
-      color: color.primary,
-    },
-    tabIndicator: {
-      position: "absolute",
-      bottom: 0,
-      left: 8,
-      right: 8,
-      height: 2,
-      borderRadius: 1,
-      backgroundColor: color.primary,
-    },
-    list: {
-      flex: 1,
-      backgroundColor: color.background,
-    },
-    listContent: {
-      padding: 16,
-      gap: 12,
-    },
-    emptyContainer: {
-      flex: 1,
-      alignItems: "center",
-      justifyContent: "center",
-      paddingTop: 80,
-      gap: 12,
-    },
-    card: {
-      backgroundColor: color.card,
-      borderRadius: radius.card,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: color.border,
-      padding: 16,
-      gap: 10,
-      ...Platform.select({
-        ios: { shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8 },
-        android: { elevation: 2 },
-      }),
-    },
-    cardRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-    },
-    cardMeta: {
-      gap: 4,
-      flex: 1,
-    },
-    cardId: {
-      fontSize: 12,
-      color: color.textSecondary,
-    },
-    cardDocNum: {
-      fontSize: 15,
-      fontWeight: "600",
-      color: color.text,
-    },
-    cardDate: {
-      fontSize: 12,
-      color: color.textSecondary,
-    },
-    chevron: {
-      marginLeft: 8,
-    },
-    // ── Detail modal ──
-    modalOverlay: {
-      flex: 1,
-      backgroundColor: "rgba(0,0,0,0.45)",
-      justifyContent: "flex-end",
-    },
-    modalSheet: {
-      backgroundColor: color.background,
-      borderTopLeftRadius: 24,
-      borderTopRightRadius: 24,
-      paddingBottom: insets.bottom + 16,
-      maxHeight: "92%",
-    },
-    modalHandle: {
-      width: 40,
-      height: 4,
-      borderRadius: 2,
-      backgroundColor: color.border,
-      alignSelf: "center",
-      marginTop: 12,
-      marginBottom: 4,
-    },
-    modalHeader: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      paddingHorizontal: 20,
-      paddingVertical: 12,
-      borderBottomWidth: StyleSheet.hairlineWidth,
-      borderBottomColor: color.border,
-    },
-    modalTitle: {
-      fontSize: 17,
-      fontWeight: "700",
-    },
-    modalBody: {
-      padding: 20,
-      gap: 16,
-    },
-    infoRow: {
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-    },
-    infoLabel: {
-      fontSize: 13,
-      color: color.textSecondary,
-    },
-    infoValue: {
-      fontSize: 14,
-      fontWeight: "600",
-      color: color.text,
-      flexShrink: 1,
-      textAlign: "right",
-    },
-    imageGrid: {
-      flexDirection: "row",
-      gap: 10,
-    },
-    imageBox: {
-      flex: 1,
-      borderRadius: 12,
-      overflow: "hidden",
-      backgroundColor: color.backgroundSecondary,
-    },
-    imageBoxLabel: {
-      fontSize: 11,
-      color: color.textSecondary,
-      paddingHorizontal: 8,
-      paddingTop: 8,
-      paddingBottom: 4,
-      fontWeight: "600",
-      textTransform: "uppercase",
-    },
-    verifyImg: {
-      width: "100%",
-      height: 140,
-    },
-    noteInput: {
-      backgroundColor: color.backgroundSecondary,
-      borderRadius: 10,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: color.border,
-      padding: 12,
-      fontSize: 15,
-      color: color.text,
-      minHeight: 80,
-      textAlignVertical: "top",
-    },
-    actionRow: {
-      flexDirection: "row",
-      gap: 12,
-    },
-    approveBtn: {
-      flex: 1,
-      backgroundColor: color.primary,
-      borderRadius: 12,
-      paddingVertical: 14,
-      alignItems: "center",
-      flexDirection: "row",
-      justifyContent: "center",
-      gap: 6,
-    },
-    rejectBtn: {
-      flex: 1,
-      backgroundColor: color.error + "18",
-      borderRadius: 12,
-      borderWidth: 1.5,
-      borderColor: color.error,
-      paddingVertical: 14,
-      alignItems: "center",
-      flexDirection: "row",
-      justifyContent: "center",
-      gap: 6,
-    },
-    confirmBtn: {
-      borderRadius: 12,
-      paddingVertical: 14,
-      alignItems: "center",
-      flexDirection: "row",
-      justifyContent: "center",
-      gap: 6,
-    },
-    cancelBtn: {
-      backgroundColor: color.backgroundSecondary,
-      borderRadius: 12,
-      paddingVertical: 14,
-      alignItems: "center",
-    },
-    btnText: {
-      fontWeight: "700",
-      fontSize: 15,
-    },
-    sectionLabel: {
-      fontSize: 13,
-      fontWeight: "700",
-      color: color.textSecondary,
-      textTransform: "uppercase",
-      letterSpacing: 0.5,
-    },
-    reviewedNote: {
-      backgroundColor: isDark ? "#2a2a1f" : "#fffbe6",
-      borderRadius: 10,
-      padding: 12,
-      borderLeftWidth: 3,
-      borderLeftColor: "#f59e0b",
-    },
-  });
-
-  const renderCard = ({ item }: { item: VerificationResponse }) => (
-    <Pressable
-      style={({ pressed }) => [styles.card, pressed && { opacity: 0.85 }]}
-      onPress={() => openDetail(item)}
-    >
-      <View style={styles.cardRow}>
-        <View style={styles.cardMeta}>
-          <ThemedText style={styles.cardId}>ID #{item.id} · User #{item.userId}</ThemedText>
-          <ThemedText style={styles.cardDocNum}>
-            {item.documentNumberMasked || t("adminVerify.noDocNum")}
-          </ThemedText>
-          <ThemedText style={styles.cardDate}>
-            {new Date(item.createdAt).toLocaleDateString()} {new Date(item.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-          </ThemedText>
-        </View>
-        <View style={{ alignItems: "flex-end", gap: 6 }}>
-          <VerificationStatusChip status={item.status} />
-          <Ionicons name="chevron-forward" size={16} color={color.textSecondary} style={styles.chevron} />
-        </View>
+  // ── Early return for non-admin ─────────────────────────────────────────
+  if (!isAdmin) {
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: color.background }}>
+        <ActivityIndicator color={color.primary} />
       </View>
-    </Pressable>
-  );
+    );
+  }
 
-  return (
-    <View style={{ flex: 1, backgroundColor: color.background }}>
-      {/* Header */}
-      <View style={styles.safeHeader}>
-        <View style={styles.headerRow}>
-          <Pressable style={styles.backBtn} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color="#fff" />
-          </Pressable>
-          <ThemedText style={styles.headerTitle}>{t("adminVerify.title")}</ThemedText>
-          <Pressable onPress={() => fetchList(filter, true)}>
-            <Ionicons name="refresh" size={22} color="#fff" />
-          </Pressable>
-        </View>
+  // ── Counts per status for tab badges ────────────────────────────────────
+  const pendingCount = items.filter((i) => i.status === VerificationStatus.PENDING).length;
+
+  // ── Status chip ─────────────────────────────────────────────────────────
+  const StatusBadge = ({ status }: { status: VerificationStatus }) => {
+    const meta = STATUS_META[status];
+    return (
+      <View style={[s.statusBadge, { backgroundColor: isDark ? meta.bgDark : meta.bgLight }]}>
+        <ThemedText style={[s.statusBadgeIcon, { color: meta.fg }]}>{meta.icon}</ThemedText>
+        <ThemedText style={[s.statusBadgeLabel, { color: meta.fg }]}>
+          {t(`verification.status.${status}`)}
+        </ThemedText>
       </View>
+    );
+  };
 
-      {/* Tab bar */}
-      <View style={styles.tabBar}>
-        {TABS.map((tab) => {
-          const active = filter === tab.key;
-          return (
-            <Pressable
-              key={tab.key}
-              style={styles.tab}
-              onPress={() => setFilter(tab.key)}
-            >
-              <ThemedText style={[styles.tabText, active && styles.tabTextActive]}>
-                {t(tab.labelKey)}
+  // ── List card ────────────────────────────────────────────────────────────
+  const renderCard = ({ item }: { item: VerificationResponse }) => {
+    const meta = STATUS_META[item.status];
+    return (
+      <Pressable
+        style={({ pressed }) => [
+          s.card,
+          {
+            backgroundColor: color.card,
+            borderColor: color.border,
+            borderLeftColor: meta.fg,
+            borderLeftWidth: 3,
+            transform: [{ scale: pressed ? 0.985 : 1 }],
+          },
+        ]}
+        onPress={() => openDetail(item)}
+      >
+        <View style={s.cardBody}>
+          <View style={s.cardTop}>
+            <View style={{ flex: 1, gap: 2 }}>
+              <ThemedText style={[s.cardDocNum, { color: color.text }]}>
+                {item.documentNumberMasked || t("adminVerify.noDocNum")}
               </ThemedText>
-              {active && <View style={styles.tabIndicator} />}
-            </Pressable>
-          );
-        })}
+              <ThemedText style={[s.cardSub, { color: color.textSecondary }]}>
+                #{item.id} · User #{item.userId}
+              </ThemedText>
+            </View>
+            <StatusBadge status={item.status} />
+          </View>
+
+          <View style={[s.cardFooter, { borderTopColor: color.border }]}>
+            <View style={s.cardFooterItem}>
+              <Ionicons name="calendar-outline" size={13} color={color.textSecondary} />
+              <ThemedText style={[s.cardFooterText, { color: color.textSecondary }]}>
+                {new Date(item.createdAt).toLocaleDateString()}
+              </ThemedText>
+            </View>
+            {item.verifiedAt && (
+              <View style={s.cardFooterItem}>
+                <Ionicons name="checkmark-done-outline" size={13} color={meta.fg} />
+                <ThemedText style={[s.cardFooterText, { color: meta.fg }]}>
+                  {new Date(item.verifiedAt).toLocaleDateString()}
+                </ThemedText>
+              </View>
+            )}
+            <View style={{ flex: 1 }} />
+            <Ionicons name="chevron-forward" size={16} color={color.textSecondary} />
+          </View>
+        </View>
+      </Pressable>
+    );
+  };
+
+  // ── Render ──────────────────────────────────────────────────────────────────
+  return (
+    <View style={[s.root, { backgroundColor: color.background }]}>
+      {/* ─── Header ─────────────────────────────────────────────── */}
+      <View style={[s.header, { paddingTop: insets.top, backgroundColor: color.primary }]}>
+        <View style={s.headerRow}>
+          <Pressable
+            style={({ pressed }) => [s.headerBtn, pressed && { opacity: 0.7 }]}
+            onPress={() => router.back()}
+            hitSlop={12}
+          >
+            <Ionicons name="arrow-back" size={22} color="#fff" />
+          </Pressable>
+
+          <View style={{ flex: 1 }}>
+            <ThemedText style={s.headerTitle}>{t("adminVerify.title")}</ThemedText>
+            <ThemedText style={s.headerSub}>
+              {items.length > 0
+                ? `${items.length} ${t("adminVerify.filterAll").toLowerCase()}`
+                : ""}
+            </ThemedText>
+          </View>
+
+          <Pressable
+            style={({ pressed }) => [s.headerBtn, pressed && { opacity: 0.7 }]}
+            onPress={() => fetchList(filter, true)}
+            hitSlop={12}
+          >
+            <Ionicons name="refresh" size={20} color="#fff" />
+          </Pressable>
+        </View>
       </View>
 
-      {/* List */}
+      {/* ─── Filter tabs ────────────────────────────────────────── */}
+      <View style={[s.tabBar, { backgroundColor: color.background, borderBottomColor: color.border }]}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.tabScroll}>
+          {FILTER_TABS.map((tab) => {
+            const active = filter === tab.key;
+            return (
+              <Pressable
+                key={tab.key}
+                style={[
+                  s.tab,
+                  active
+                    ? { backgroundColor: color.primary, borderColor: color.primary }
+                    : { backgroundColor: "transparent", borderColor: color.border },
+                ]}
+                onPress={() => setFilter(tab.key)}
+              >
+                <Ionicons
+                  name={tab.icon as any}
+                  size={14}
+                  color={active ? "#fff" : color.textSecondary}
+                />
+                <ThemedText
+                  style={[
+                    s.tabLabel,
+                    { color: active ? "#fff" : color.textSecondary },
+                  ]}
+                >
+                  {t(tab.labelKey)}
+                </ThemedText>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      </View>
+
+      {/* ─── Content ────────────────────────────────────────────── */}
       {loading && !refreshing ? (
-        <View style={styles.emptyContainer}>
+        <View style={s.centeredBox}>
           <ActivityIndicator size="large" color={color.primary} />
-          <ThemedText style={{ color: color.textSecondary, marginTop: 12 }}>{t("common.loading")}</ThemedText>
+          <ThemedText style={[s.centeredText, { color: color.textSecondary }]}>
+            {t("common.loading")}
+          </ThemedText>
         </View>
       ) : fetchError ? (
-        <View style={styles.emptyContainer}>
-          <Ionicons name="alert-circle-outline" size={52} color={color.error} />
-          <ThemedText style={{ color: color.error, fontSize: 14, textAlign: "center", marginTop: 12, paddingHorizontal: 24 }}>
+        <View style={s.centeredBox}>
+          <View style={[s.errorCircle, { backgroundColor: color.error + "18" }]}>
+            <Ionicons name="alert-circle" size={40} color={color.error} />
+          </View>
+          <ThemedText style={[s.centeredText, { color: color.error, marginTop: 16 }]}>
             {fetchError}
           </ThemedText>
           <TouchableOpacity
             onPress={() => fetchList(filter)}
-            style={{ marginTop: 16, paddingHorizontal: 24, paddingVertical: 10, backgroundColor: color.primary, borderRadius: 20 }}
+            style={[s.retryBtn, { backgroundColor: color.primary }]}
+            activeOpacity={0.8}
           >
-            <ThemedText style={{ color: "#fff", fontWeight: "700" }}>{t("common.retry")}</ThemedText>
+            <Ionicons name="refresh" size={16} color="#fff" />
+            <ThemedText style={s.retryBtnText}>{t("common.retry")}</ThemedText>
           </TouchableOpacity>
         </View>
       ) : (
@@ -474,15 +346,21 @@ export default function AdminVerificationsScreen() {
           data={items}
           keyExtractor={(item) => String(item.id)}
           renderItem={renderCard}
-          style={styles.list}
-          contentContainerStyle={[styles.listContent, items.length === 0 && { flex: 1 }]}
+          style={{ flex: 1 }}
+          contentContainerStyle={[s.listContent, items.length === 0 && { flex: 1 }]}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={() => fetchList(filter, true)} tintColor={color.primary} />
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => fetchList(filter, true)}
+              tintColor={color.primary}
+            />
           }
           ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Ionicons name="shield-checkmark-outline" size={52} color={color.border} />
-              <ThemedText style={{ color: color.textSecondary, fontSize: 15 }}>
+            <View style={s.centeredBox}>
+              <View style={[s.emptyCircle, { backgroundColor: color.backgroundSecondary }]}>
+                <Ionicons name="shield-checkmark-outline" size={44} color={color.border} />
+              </View>
+              <ThemedText style={[s.centeredText, { color: color.textSecondary, marginTop: 16 }]}>
                 {t("adminVerify.empty")}
               </ThemedText>
             </View>
@@ -490,134 +368,162 @@ export default function AdminVerificationsScreen() {
         />
       )}
 
-      {/* Detail / Review modal */}
-      <Modal visible={!!selected} animationType="slide" transparent onRequestClose={closeDetail}>
+      {/* ════════════════ DETAIL MODAL ════════════════════════════════ */}
+      <Modal
+        visible={!!selected}
+        animationType="slide"
+        transparent
+        onRequestClose={closeDetail}
+      >
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={styles.modalOverlay}
+          style={[s.modalOverlay]}
         >
-          <View style={styles.modalSheet}>
-            <View style={styles.modalHandle} />
-            <View style={styles.modalHeader}>
-              <ThemedText style={styles.modalTitle}>{t("adminVerify.detailTitle")}</ThemedText>
-              <Pressable onPress={closeDetail}>
-                <Ionicons name="close" size={24} color={color.textSecondary} />
+          <Pressable style={StyleSheet.absoluteFill} onPress={closeDetail} />
+          <View style={[s.modalSheet, { backgroundColor: color.background, paddingBottom: insets.bottom + 16 }]}>
+            {/* Handle */}
+            <View style={s.modalHandleWrap}>
+              <View style={[s.modalHandle, { backgroundColor: color.border }]} />
+            </View>
+
+            {/* Modal Header */}
+            <View style={[s.modalHeader, { borderBottomColor: color.border }]}>
+              <ThemedText style={[s.modalTitle, { color: color.text }]}>
+                {t("adminVerify.detailTitle")}
+              </ThemedText>
+              <Pressable
+                onPress={closeDetail}
+                style={({ pressed }) => [s.modalCloseBtn, { backgroundColor: pressed ? color.backgroundSecondary : "transparent" }]}
+                hitSlop={12}
+              >
+                <Ionicons name="close" size={22} color={color.textSecondary} />
               </Pressable>
             </View>
 
             {selected && (
-              <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.modalBody} keyboardShouldPersistTaps="handled">
-                {/* Status + basic info */}
-                <View style={{ gap: 10 }}>
-                  <View style={styles.infoRow}>
-                    <ThemedText style={styles.infoLabel}>{t("adminVerify.fieldId")}</ThemedText>
-                    <ThemedText style={styles.infoValue}>#{selected.id}</ThemedText>
+              <ScrollView
+                style={{ flex: 1 }}
+                contentContainerStyle={s.modalBody}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+              >
+                {/* ── Status banner ─── */}
+                <View style={[s.statusBanner, { backgroundColor: isDark ? STATUS_META[selected.status].bgDark : STATUS_META[selected.status].bgLight }]}>
+                  <View style={[s.statusBannerIcon, { backgroundColor: STATUS_META[selected.status].fg + "22" }]}>
+                    <ThemedText style={{ fontSize: 22 }}>{STATUS_META[selected.status].icon}</ThemedText>
                   </View>
-                  <View style={styles.infoRow}>
-                    <ThemedText style={styles.infoLabel}>{t("adminVerify.fieldUserId")}</ThemedText>
-                    <ThemedText style={styles.infoValue}>#{selected.userId}</ThemedText>
-                  </View>
-                  <View style={styles.infoRow}>
-                    <ThemedText style={styles.infoLabel}>{t("adminVerify.fieldDocNum")}</ThemedText>
-                    <ThemedText style={styles.infoValue}>
-                      {selected.documentNumberMasked || "—"}
+                  <View style={{ flex: 1 }}>
+                    <ThemedText style={[s.statusBannerTitle, { color: STATUS_META[selected.status].fg }]}>
+                      {t(`verification.status.${selected.status}`)}
+                    </ThemedText>
+                    <ThemedText style={[s.statusBannerSub, { color: color.textSecondary }]}>
+                      ID #{selected.id} · User #{selected.userId}
                     </ThemedText>
                   </View>
-                  <View style={styles.infoRow}>
-                    <ThemedText style={styles.infoLabel}>{t("adminVerify.fieldStatus")}</ThemedText>
-                    <VerificationStatusChip status={selected.status} />
-                  </View>
-                  <View style={styles.infoRow}>
-                    <ThemedText style={styles.infoLabel}>{t("adminVerify.fieldSubmitted")}</ThemedText>
-                    <ThemedText style={styles.infoValue}>
-                      {new Date(selected.createdAt).toLocaleString()}
-                    </ThemedText>
-                  </View>
+                </View>
+
+                {/* ── Info grid ─── */}
+                <View style={[s.infoCard, { backgroundColor: color.card, borderColor: color.border }]}>
+                  <InfoRow label={t("adminVerify.fieldDocNum")} value={selected.documentNumberMasked || "—"} color={color} />
+                  <View style={[s.infoDivider, { backgroundColor: color.border }]} />
+                  <InfoRow label={t("adminVerify.fieldSubmitted")} value={new Date(selected.createdAt).toLocaleString()} color={color} />
                   {selected.verifiedAt && (
-                    <View style={styles.infoRow}>
-                      <ThemedText style={styles.infoLabel}>{t("adminVerify.fieldVerifiedAt")}</ThemedText>
-                      <ThemedText style={styles.infoValue}>
-                        {new Date(selected.verifiedAt).toLocaleString()}
-                      </ThemedText>
-                    </View>
+                    <>
+                      <View style={[s.infoDivider, { backgroundColor: color.border }]} />
+                      <InfoRow label={t("adminVerify.fieldVerifiedAt")} value={new Date(selected.verifiedAt).toLocaleString()} color={color} />
+                    </>
                   )}
                 </View>
 
-                {/* Review note (if already reviewed) */}
+                {/* ── Previous note ─── */}
                 {selected.reviewNote && (
-                  <View style={styles.reviewedNote}>
-                    <ThemedText style={{ fontSize: 13, fontWeight: "600", color: "#92400e", marginBottom: 4 }}>
-                      {t("adminVerify.previousNote")}
-                    </ThemedText>
-                    <ThemedText style={{ fontSize: 14, color: "#92400e" }}>{selected.reviewNote}</ThemedText>
+                  <View style={[s.noteCard, { backgroundColor: isDark ? "#2a2a1f" : "#FFFDE7", borderColor: "#F59E0B40" }]}>
+                    <View style={s.noteCardHeader}>
+                      <Ionicons name="chatbubble-ellipses-outline" size={14} color="#F59E0B" />
+                      <ThemedText style={s.noteCardTitle}>{t("adminVerify.previousNote")}</ThemedText>
+                    </View>
+                    <ThemedText style={[s.noteCardBody, { color: color.text }]}>{selected.reviewNote}</ThemedText>
                   </View>
                 )}
 
-                {/* Document images */}
+                {/* ── Document images ─── */}
                 {(selected.documentImageUrl || selected.documentBackImageUrl || selected.selfieImageUrl) && (
-                  <View style={{ gap: 8 }}>
-                    <ThemedText style={styles.sectionLabel}>{t("adminVerify.imagesTitle")}</ThemedText>
-                    <View style={styles.imageGrid}>
+                  <View style={s.imagesSection}>
+                    <ThemedText style={[s.sectionLabel, { color: color.textSecondary }]}>
+                      {t("adminVerify.imagesTitle")}
+                    </ThemedText>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.imagesScroll}>
                       {selected.documentImageUrl && (
-                        <View style={styles.imageBox}>
-                          <ThemedText style={styles.imageBoxLabel}>{t("adminVerify.imgFront")}</ThemedText>
-                          <Image
-                            source={{ uri: selected.documentImageUrl }}
-                            style={styles.verifyImg}
-                            resizeMode="cover"
-                          />
-                        </View>
+                        <ImageCard
+                          uri={selected.documentImageUrl}
+                          label={t("adminVerify.imgFront")}
+                          color={color}
+                          isDark={isDark}
+                          onPress={() => setFullScreenImg(selected.documentImageUrl!)}
+                        />
                       )}
                       {selected.documentBackImageUrl && (
-                        <View style={styles.imageBox}>
-                          <ThemedText style={styles.imageBoxLabel}>{t("adminVerify.imgBack")}</ThemedText>
-                          <Image
-                            source={{ uri: selected.documentBackImageUrl }}
-                            style={styles.verifyImg}
-                            resizeMode="cover"
-                          />
-                        </View>
+                        <ImageCard
+                          uri={selected.documentBackImageUrl}
+                          label={t("adminVerify.imgBack")}
+                          color={color}
+                          isDark={isDark}
+                          onPress={() => setFullScreenImg(selected.documentBackImageUrl!)}
+                        />
                       )}
                       {selected.selfieImageUrl && (
-                        <View style={styles.imageBox}>
-                          <ThemedText style={styles.imageBoxLabel}>{t("adminVerify.imgSelfie")}</ThemedText>
-                          <Image
-                            source={{ uri: selected.selfieImageUrl }}
-                            style={styles.verifyImg}
-                            resizeMode="cover"
-                          />
-                        </View>
+                        <ImageCard
+                          uri={selected.selfieImageUrl}
+                          label={t("adminVerify.imgSelfie")}
+                          color={color}
+                          isDark={isDark}
+                          onPress={() => setFullScreenImg(selected.selfieImageUrl!)}
+                        />
                       )}
-                    </View>
+                    </ScrollView>
                   </View>
                 )}
 
-                {/* Action area (only for PENDING) */}
+                {/* ── Action area (PENDING only) ─── */}
                 {selected.status === VerificationStatus.PENDING && (
-                  <View style={{ gap: 12 }}>
-                    <ThemedText style={styles.sectionLabel}>{t("adminVerify.actionTitle")}</ThemedText>
+                  <View style={s.actionSection}>
+                    <ThemedText style={[s.sectionLabel, { color: color.textSecondary }]}>
+                      {t("adminVerify.actionTitle")}
+                    </ThemedText>
 
                     {!reviewAction ? (
-                      <View style={styles.actionRow}>
-                        <TouchableOpacity style={styles.approveBtn} onPress={() => startAction("approve")} activeOpacity={0.82}>
-                          <Ionicons name="checkmark-circle" size={18} color="#fff" />
-                          <ThemedText style={[styles.btnText, { color: "#fff" }]}>{t("adminVerify.approve")}</ThemedText>
+                      <View style={s.actionRow}>
+                        <TouchableOpacity
+                          style={[s.actionBtn, { backgroundColor: "#4CAF50" }]}
+                          onPress={() => { setReviewAction("approve"); setReviewNote(""); }}
+                          activeOpacity={0.82}
+                        >
+                          <Ionicons name="checkmark-circle" size={20} color="#fff" />
+                          <ThemedText style={s.actionBtnText}>{t("adminVerify.approve")}</ThemedText>
                         </TouchableOpacity>
-                        <TouchableOpacity style={styles.rejectBtn} onPress={() => startAction("reject")} activeOpacity={0.82}>
-                          <Ionicons name="close-circle" size={18} color={color.error} />
-                          <ThemedText style={[styles.btnText, { color: color.error }]}>{t("adminVerify.reject")}</ThemedText>
+                        <TouchableOpacity
+                          style={[s.actionBtn, { backgroundColor: "#EF5350" }]}
+                          onPress={() => { setReviewAction("reject"); setReviewNote(""); }}
+                          activeOpacity={0.82}
+                        >
+                          <Ionicons name="close-circle" size={20} color="#fff" />
+                          <ThemedText style={s.actionBtnText}>{t("adminVerify.reject")}</ThemedText>
                         </TouchableOpacity>
                       </View>
                     ) : (
-                      <View style={{ gap: 12 }}>
-                        <ThemedText style={{ fontSize: 14, color: color.text }}>
+                      <View style={s.reviewForm}>
+                        <ThemedText style={[s.reviewFormLabel, { color: color.text }]}>
                           {reviewAction === "reject"
                             ? t("adminVerify.rejectNoteLabel")
                             : t("adminVerify.approveNoteLabel")}
                         </ThemedText>
                         <TextInput
-                          style={styles.noteInput}
-                          placeholder={reviewAction === "reject" ? t("adminVerify.notePlaceholderReject") : t("adminVerify.notePlaceholderApprove")}
+                          style={[s.noteInput, { backgroundColor: color.backgroundSecondary, borderColor: color.border, color: color.text }]}
+                          placeholder={
+                            reviewAction === "reject"
+                              ? t("adminVerify.notePlaceholderReject")
+                              : t("adminVerify.notePlaceholderApprove")
+                          }
                           placeholderTextColor={color.placeholder}
                           value={reviewNote}
                           onChangeText={setReviewNote}
@@ -625,7 +531,7 @@ export default function AdminVerificationsScreen() {
                           maxLength={500}
                         />
                         <TouchableOpacity
-                          style={[styles.confirmBtn, { backgroundColor: reviewAction === "approve" ? color.primary : color.error }]}
+                          style={[s.submitBtn, { backgroundColor: reviewAction === "approve" ? "#4CAF50" : "#EF5350" }]}
                           onPress={submitReview}
                           activeOpacity={0.82}
                           disabled={submitting}
@@ -639,19 +545,23 @@ export default function AdminVerificationsScreen() {
                                 size={18}
                                 color="#fff"
                               />
-                              <ThemedText style={[styles.btnText, { color: "#fff" }]}>
-                                {reviewAction === "approve" ? t("adminVerify.confirmApprove") : t("adminVerify.confirmReject")}
+                              <ThemedText style={s.actionBtnText}>
+                                {reviewAction === "approve"
+                                  ? t("adminVerify.confirmApprove")
+                                  : t("adminVerify.confirmReject")}
                               </ThemedText>
                             </>
                           )}
                         </TouchableOpacity>
                         <TouchableOpacity
-                          style={styles.cancelBtn}
+                          style={[s.cancelReviewBtn, { backgroundColor: color.backgroundSecondary }]}
                           onPress={() => setReviewAction(null)}
                           activeOpacity={0.82}
                           disabled={submitting}
                         >
-                          <ThemedText style={[styles.btnText, { color: color.textSecondary }]}>{t("common.cancel")}</ThemedText>
+                          <ThemedText style={[s.cancelReviewText, { color: color.textSecondary }]}>
+                            {t("common.cancel")}
+                          </ThemedText>
                         </TouchableOpacity>
                       </View>
                     )}
@@ -662,6 +572,169 @@ export default function AdminVerificationsScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      {/* ════════════════ FULLSCREEN IMAGE VIEWER ══════════════════════ */}
+      <Modal
+        visible={!!fullScreenImg}
+        animationType="fade"
+        transparent
+        onRequestClose={() => setFullScreenImg(null)}
+      >
+        <View style={s.fullImgOverlay}>
+          <Pressable style={s.fullImgClose} onPress={() => setFullScreenImg(null)}>
+            <Ionicons name="close-circle" size={36} color="#fff" />
+          </Pressable>
+          {fullScreenImg && (
+            <Image
+              source={{ uri: fullScreenImg }}
+              style={s.fullImg}
+              contentFit="contain"
+              transition={200}
+            />
+          )}
+        </View>
+      </Modal>
     </View>
   );
 }
+
+// ── Sub-components ──────────────────────────────────────────────────────────────
+
+function InfoRow({ label, value, color }: { label: string; value: string; color: any }) {
+  return (
+    <View style={s.infoRow}>
+      <ThemedText style={[s.infoLabel, { color: color.textSecondary }]}>{label}</ThemedText>
+      <ThemedText style={[s.infoValue, { color: color.text }]} numberOfLines={1}>
+        {value}
+      </ThemedText>
+    </View>
+  );
+}
+
+function ImageCard({
+  uri,
+  label,
+  color,
+  isDark,
+  onPress,
+}: {
+  uri: string;
+  label: string;
+  color: any;
+  isDark: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable onPress={onPress} style={({ pressed }) => [s.imgCard, pressed && { opacity: 0.85 }]}>
+      <Image source={{ uri }} style={s.imgCardImage} contentFit="cover" transition={200} />
+      <View style={[s.imgCardLabel, { backgroundColor: isDark ? "rgba(0,0,0,0.7)" : "rgba(255,255,255,0.88)" }]}>
+        <ThemedText style={[s.imgCardLabelText, { color: color.text }]}>{label}</ThemedText>
+        <Ionicons name="expand-outline" size={12} color={color.textSecondary} />
+      </View>
+    </Pressable>
+  );
+}
+
+// ── Styles ─────────────────────────────────────────────────────────────────────
+const s = StyleSheet.create({
+  root: { flex: 1 },
+
+  // Header
+  header: { paddingBottom: 16 },
+  headerRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingTop: 12, gap: 12 },
+  headerBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.18)", alignItems: "center", justifyContent: "center" },
+  headerTitle: { fontSize: 20, fontWeight: "800", color: "#fff", letterSpacing: -0.3 },
+  headerSub: { fontSize: 13, color: "rgba(255,255,255,0.7)", marginTop: 1 },
+
+  // Tabs
+  tabBar: { borderBottomWidth: StyleSheet.hairlineWidth, paddingVertical: 10 },
+  tabScroll: { paddingHorizontal: 16, gap: 8 },
+  tab: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1 },
+  tabLabel: { fontSize: 13, fontWeight: "600" },
+
+  // List
+  listContent: { padding: 16, gap: 10 },
+
+  // Card
+  card: { borderRadius: 14, borderWidth: StyleSheet.hairlineWidth, overflow: "hidden",
+    ...Platform.select({
+      ios: { shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 6 },
+      android: { elevation: 2 },
+    }),
+  },
+  cardBody: { padding: 14, gap: 10 },
+  cardTop: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
+  cardDocNum: { fontSize: 16, fontWeight: "700", letterSpacing: 0.4 },
+  cardSub: { fontSize: 12 },
+  cardFooter: { flexDirection: "row", alignItems: "center", gap: 12, paddingTop: 10, borderTopWidth: StyleSheet.hairlineWidth },
+  cardFooterItem: { flexDirection: "row", alignItems: "center", gap: 4 },
+  cardFooterText: { fontSize: 12 },
+
+  // Status badge
+  statusBadge: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
+  statusBadgeIcon: { fontSize: 11 },
+  statusBadgeLabel: { fontSize: 12, fontWeight: "600" },
+
+  // Centered
+  centeredBox: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 32, paddingTop: 60 },
+  centeredText: { fontSize: 15, textAlign: "center", lineHeight: 22 },
+  errorCircle: { width: 72, height: 72, borderRadius: 36, alignItems: "center", justifyContent: "center" },
+  emptyCircle: { width: 80, height: 80, borderRadius: 40, alignItems: "center", justifyContent: "center" },
+  retryBtn: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 20, paddingHorizontal: 24, paddingVertical: 12, borderRadius: 24 },
+  retryBtnText: { color: "#fff", fontWeight: "700", fontSize: 14 },
+
+  // Modal
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
+  modalSheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: "94%", overflow: "hidden" },
+  modalHandleWrap: { alignItems: "center", paddingTop: 12 },
+  modalHandle: { width: 40, height: 4, borderRadius: 2 },
+  modalHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: StyleSheet.hairlineWidth },
+  modalTitle: { fontSize: 18, fontWeight: "700" },
+  modalCloseBtn: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
+  modalBody: { padding: 20, gap: 16, paddingBottom: 40 },
+
+  // Status banner
+  statusBanner: { flexDirection: "row", alignItems: "center", gap: 14, padding: 16, borderRadius: 14 },
+  statusBannerIcon: { width: 48, height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center" },
+  statusBannerTitle: { fontSize: 17, fontWeight: "700" },
+  statusBannerSub: { fontSize: 13, marginTop: 2 },
+
+  // Info card
+  infoCard: { borderRadius: 14, borderWidth: StyleSheet.hairlineWidth, overflow: "hidden" },
+  infoRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingVertical: 12 },
+  infoLabel: { fontSize: 13 },
+  infoValue: { fontSize: 14, fontWeight: "600", flexShrink: 1, textAlign: "right", maxWidth: "60%" },
+  infoDivider: { height: StyleSheet.hairlineWidth, marginHorizontal: 16 },
+
+  // Note card
+  noteCard: { borderRadius: 12, borderWidth: 1, padding: 14, gap: 8 },
+  noteCardHeader: { flexDirection: "row", alignItems: "center", gap: 6 },
+  noteCardTitle: { fontSize: 13, fontWeight: "700", color: "#F59E0B" },
+  noteCardBody: { fontSize: 14, lineHeight: 20 },
+
+  // Images
+  imagesSection: { gap: 10 },
+  sectionLabel: { fontSize: 12, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.5 },
+  imagesScroll: { gap: 10 },
+  imgCard: { width: SCREEN_W * 0.55, borderRadius: 14, overflow: "hidden", backgroundColor: "#E5E7EB" },
+  imgCardImage: { width: "100%", height: IMG_H },
+  imgCardLabel: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 10, paddingVertical: 8 },
+  imgCardLabelText: { fontSize: 12, fontWeight: "600" },
+
+  // Actions
+  actionSection: { gap: 12 },
+  actionRow: { flexDirection: "row", gap: 12 },
+  actionBtn: { flex: 1, height: 52, borderRadius: 14, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
+  actionBtnText: { color: "#fff", fontWeight: "700", fontSize: 15 },
+  reviewForm: { gap: 12 },
+  reviewFormLabel: { fontSize: 14, fontWeight: "600" },
+  noteInput: { borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, padding: 14, fontSize: 15, minHeight: 90, textAlignVertical: "top" },
+  submitBtn: { height: 52, borderRadius: 14, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
+  cancelReviewBtn: { height: 44, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  cancelReviewText: { fontWeight: "600", fontSize: 14 },
+
+  // Fullscreen image
+  fullImgOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.92)", alignItems: "center", justifyContent: "center" },
+  fullImgClose: { position: "absolute", top: 50, right: 20, zIndex: 10 },
+  fullImg: { width: SCREEN_W, height: SCREEN_W * 1.4 },
+});
