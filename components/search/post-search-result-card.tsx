@@ -7,6 +7,7 @@ import { ThemedText } from "@/components/themed-text";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useLanguage } from "@/hooks/use-language";
 import { RoomResponse } from "@/data/response";
+import { useProfileAvatarStore } from "@/stores/useProfileAvatarStore";
 import { formatDate } from "@/utils/format-post";
 
 export type PostSearchAuthor = {
@@ -34,12 +35,25 @@ export function PostSearchResultCard({ post, onPress }: Props) {
   const { color } = useAppTheme();
   const { t, locale } = useLanguage();
 
+  // Avatar cache — fetch if not yet resolved
+  const { cache, fetchAvatar } = useProfileAvatarStore();
+
   if (!post) return null;
 
   const { title, content, createdAt, room, author } = post;
   
   const authorName = author?.fullName || t("postSearch.anonymous");
   const avatarLetter = authorName.trim().charAt(0).toUpperCase();
+
+  // Kick off background fetch for the author (if we have their id)
+  const authorIdKey = author?.id != null ? String(author.id) : null;
+  if (authorIdKey && !(authorIdKey in cache)) fetchAvatar(authorIdKey);
+
+  // Priority: cache → author.avatarUrl from search payload → null
+  const resolvedAvatar =
+    (authorIdKey ? cache[authorIdKey] : undefined) ??
+    author?.avatarUrl ??
+    null;
   const thumb = room?.imageUrls?.[0];
   const loc = locale === "vi" ? "vi-VN" : "en-US";
   const priceDisplay = room?.price
@@ -60,9 +74,9 @@ export function PostSearchResultCard({ post, onPress }: Props) {
       ]}
     >
       <View style={styles.topRow}>
-        {author?.avatarUrl ? (
+        {resolvedAvatar ? (
           <Image
-            source={{ uri: author.avatarUrl }}
+            source={{ uri: resolvedAvatar }}
             style={styles.avatar}
             contentFit="cover"
             transition={150}

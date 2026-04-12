@@ -10,6 +10,7 @@ import { PostResponse } from "@/data/response";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useLanguage } from "@/hooks/use-language";
 import { usePostsJoinEligibility } from "@/hooks/use-posts-join-eligibility";
+import { useProfileAvatarStore } from "@/stores/useProfileAvatarStore";
 import { formatDate } from "@/utils/format-post";
 import { formatRoomPrice } from "@/utils/format-room";
 
@@ -28,6 +29,12 @@ export function PostCard({ post, currentUserId, onEdit, onDelete }: Props) {
   const myUserIdNumber =
     currentUserId === undefined ? undefined : Number(currentUserId);
 
+  // Avatar from shared cache — triggers a background fetch if not yet loaded
+  const { cache, fetchAvatar } = useProfileAvatarStore();
+  const userId = String(post.user.id);
+  if (!(userId in cache)) fetchAvatar(userId);
+  const resolvedAvatar = cache[userId] ?? post.user.avatarUrl ?? null;
+
   // Eligibility cho icon request chat (xếp hàng khi full).
   const {
     eligibilityByPostId,
@@ -42,8 +49,8 @@ export function PostCard({ post, currentUserId, onEdit, onDelete }: Props) {
       <View style={styles.header}>
         <Image
           source={
-            post.user.avatarUrl
-              ? { uri: post.user.avatarUrl }
+            resolvedAvatar
+              ? { uri: resolvedAvatar }
               : require("@/assets/images/default-avatar.png")
           }
           style={[styles.avatar, { backgroundColor: color.backgroundSecondary }]}

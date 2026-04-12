@@ -44,6 +44,7 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useLanguage } from "@/hooks/use-language";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { useProfileAvatarStore } from "@/stores/useProfileAvatarStore";
 import { profileTabGuard } from "@/utils/profile-tab-guard";
 import { router } from "expo-router";
 
@@ -107,6 +108,7 @@ export default function ProfileScreen() {
   const { t } = useLanguage();
   const authUser = useAuthStore((s) => s.user);
   const isAdmin = authUser?.roles?.includes("ADMIN") ?? false;
+  const setAvatarInCache = useProfileAvatarStore((s) => s.setAvatar);
 
   const [loading, setLoading] = useState(true);
   const [isCreated, setIsCreated] = useState(true);
@@ -528,6 +530,10 @@ export default function ProfileScreen() {
       setProfile(p);
       setIsCreated(true);
       populateForm(p);
+      // Pre-populate the shared avatar cache with own profile avatar
+      if (authUser?.id) {
+        setAvatarInCache(authUser.id, p.avatarUrl ?? null);
+      }
     } catch {
       setIsCreated(false);
     } finally {
@@ -611,10 +617,15 @@ export default function ProfileScreen() {
         Alert.alert(t("profile.savedSuccess"));
       }
 
+      // Keep avatar cache in sync with the newly saved avatar
+      if (authUser?.id && merged.avatarUrl) {
+        setAvatarInCache(authUser.id, merged.avatarUrl);
+      }
+
       reset(merged);
       setSafetyRefreshKey((k) => k + 1);
     },
-    [images, isCreated, reset, t]
+    [authUser?.id, images, isCreated, reset, setAvatarInCache, t]
   );
 
   const onSubmit = async (data: FormValues) => {
