@@ -5,11 +5,9 @@ import { useAuthStore } from "@/stores/useAuthStore";
 import { decodeJwtPayload } from "@/utils/jwt";
 
 export default function AdminLayout() {
-  const { accessToken, isInitialized, user } = useAuthStore((s) => ({
-    accessToken: s.accessToken,
-    isInitialized: s.isInitialized,
-    user: s.user,
-  }));
+  const accessToken = useAuthStore((s) => s.accessToken);
+  const isInitialized = useAuthStore((s) => s.isInitialized);
+  const user = useAuthStore((s) => s.user);
 
   // Wait until store is hydrated from AsyncStorage before deciding
   if (!isInitialized) {
