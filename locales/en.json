@@ -95,7 +95,10 @@
     "androidNoGoogleKeyHint": "Google Maps API key missing: Android tiles may be limited. Set EXPO_PUBLIC_GOOGLE_MAPS_API_KEY and rebuild native.",
     "iosAppleMapsNote": "iOS uses Apple Maps — no Google API key required.",
     "emptyHint": "No pins in this area. Try panning/zooming, or check PUBLISHED posts with ACTIVE rooms and valid coordinates.",
-    "openRoomFailed": "Could not open room details from this post."
+    "openRoomFailed": "Could not open room details from this post.",
+    "viewRoomDetail": "View full details",
+    "previewLoading": "Loading room…",
+    "tapPinHint": "Tap a pin to preview the room"
   },
   "post": {
     "status": {

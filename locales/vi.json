@@ -95,7 +95,10 @@
     "androidNoGoogleKeyHint": "Chưa cấu hình Google Maps API key: bản đồ Android có thể hiển thị hạn chế. Thêm EXPO_PUBLIC_GOOGLE_MAPS_API_KEY và build lại native.",
     "iosAppleMapsNote": "iOS dùng Apple Maps — không cần API key Google.",
     "emptyHint": "Không có ghim trong vùng này. Thử zoom/kéo map hoặc kiểm tra bài PUBLISHED + phòng ACTIVE + địa chỉ có tọa độ.",
-    "openRoomFailed": "Không mở được chi tiết phòng từ bài đăng."
+    "openRoomFailed": "Không mở được chi tiết phòng từ bài đăng.",
+    "viewRoomDetail": "Xem chi tiết đầy đủ",
+    "previewLoading": "Đang tải phòng…",
+    "tapPinHint": "Nhấn vào ghim để xem trước phòng"
   },
   "post": {
     "status": {

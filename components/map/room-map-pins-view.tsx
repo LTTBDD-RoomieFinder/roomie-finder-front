@@ -11,13 +11,14 @@ import MapView, { type Region } from "react-native-maps";
 import { isAxiosError } from "axios";
 import { useRouter } from "expo-router";
 
-import { MapPinWithCallout } from "@/components/map/map-pin-with-callout";
+import { RoomMapPin } from "@/components/map/room-map-pin";
+import { RoomPreviewSheet } from "@/components/map/room-preview-sheet";
 import { ThemedText } from "@/components/themed-text";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useLanguage } from "@/hooks/use-language";
 import { mapPinsService } from "@/services/map-pins-service";
 import { postService } from "@/services/post-service";
-import type { MapPinGeoItem } from "@/data/response";
+import type { MapPinGeoItem, PostResponse } from "@/data/response";
 import { regionToMapPinsQuery } from "@/utils/map-bbox";
 import { getNativeMapProvider, mapUsesGoogleOnAndroid } from "@/utils/map-runtime";
 
@@ -28,9 +29,8 @@ const DEFAULT_REGION: Region = {
   longitudeDelta: 0.08,
 };
 
-/** Giới hạn marker để tránh jank khi payload lớn (scale UX). */
+/** Giới hạn marker để tránh jank khi payload lớn. */
 const MAX_VISIBLE_PINS = 220;
-
 const DEBOUNCE_MS = 420;
 
 type Props = {
@@ -46,6 +46,12 @@ export function RoomMapPinsView({ initialRegion = DEFAULT_REGION }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Selected pin + preview sheet state
+  const [selectedPinId, setSelectedPinId] = useState<number | null>(null);
+  const [previewPost, setPreviewPost] = useState<PostResponse | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const previewFetchSeqRef = useRef(0);
+
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const regionRef = useRef<Region>(initialRegion);
   const abortRef = useRef<AbortController | null>(null);
@@ -53,10 +59,7 @@ export function RoomMapPinsView({ initialRegion = DEFAULT_REGION }: Props) {
 
   const mapProvider = useMemo(() => getNativeMapProvider(), []);
 
-  const visiblePins = useMemo(
-    () => pins.slice(0, MAX_VISIBLE_PINS),
-    [pins],
-  );
+  const visiblePins = useMemo(() => pins.slice(0, MAX_VISIBLE_PINS), [pins]);
   const hiddenCount = Math.max(0, pins.length - visiblePins.length);
 
   const runDebouncedFetch = useCallback(
@@ -123,16 +126,27 @@ export function RoomMapPinsView({ initialRegion = DEFAULT_REGION }: Props) {
     runDebouncedFetch(initialRegion);
   }, [initialRegion, runDebouncedFetch]);
 
-  /** Backend map pin `id` = post id — lấy post rồi mở phòng đính kèm. */
-  const openPinFromMap = useCallback(
+  /** Tap on a pin → fetch post detail and open preview sheet. */
+  const handlePinPress = useCallback(
     async (pin: MapPinGeoItem) => {
+      // If same pin tapped twice → close
+      if (selectedPinId === pin.id) {
+        setSelectedPinId(null);
+        setPreviewPost(null);
+        return;
+      }
+
+      setSelectedPinId(pin.id);
+      setPreviewPost(null);
+      setPreviewLoading(true);
+
+      const seq = ++previewFetchSeqRef.current;
       try {
         const post = await postService.getPostById(pin.id);
-        router.push({
-          pathname: "/(tabs)/room/[id]",
-          params: { id: post.room.id },
-        });
+        if (seq !== previewFetchSeqRef.current) return;
+        setPreviewPost(post);
       } catch (e) {
+        if (seq !== previewFetchSeqRef.current) return;
         const msg =
           typeof e === "string"
             ? e
@@ -140,14 +154,36 @@ export function RoomMapPinsView({ initialRegion = DEFAULT_REGION }: Props) {
               ? e.message
               : t("map.openRoomFailed");
         Alert.alert(t("common.error"), msg);
+        setSelectedPinId(null);
+      } finally {
+        if (seq === previewFetchSeqRef.current) setPreviewLoading(false);
       }
     },
-    [router, t],
+    [selectedPinId, t],
+  );
+
+  const handleCloseSheet = useCallback(() => {
+    setSelectedPinId(null);
+    setPreviewPost(null);
+    setPreviewLoading(false);
+  }, []);
+
+  const handleViewDetails = useCallback(
+    (roomId: number) => {
+      handleCloseSheet();
+      router.push({
+        pathname: "/(tabs)/room/[id]",
+        params: { id: roomId, from: "map" },
+      });
+    },
+    [handleCloseSheet, router],
   );
 
   const retry = useCallback(() => {
     runDebouncedFetch(regionRef.current);
   }, [runDebouncedFetch]);
+
+  const sheetVisible = selectedPinId !== null;
 
   if (Platform.OS === "web") {
     return (
@@ -169,40 +205,43 @@ export function RoomMapPinsView({ initialRegion = DEFAULT_REGION }: Props) {
         initialRegion={initialRegion}
         onMapReady={onMapReady}
         onRegionChangeComplete={onRegionChangeComplete}
+        onPress={sheetVisible ? handleCloseSheet : undefined}
         rotateEnabled={false}
         pitchEnabled={false}
         mapType="standard"
       >
         {visiblePins.map((pin) => (
-          <MapPinWithCallout
+          <RoomMapPin
             key={pin.id}
             pin={pin}
+            isSelected={pin.id === selectedPinId}
             t={t}
             locale={locale}
-            onOpenPin={openPinFromMap}
+            onPress={handlePinPress}
           />
         ))}
       </MapView>
 
+      {/* ── Status pills ────────────────────────────────────────────── */}
       <View style={[styles.topBar, { pointerEvents: "box-none" }]}>
         {loading && (
           <View style={[styles.pill, { backgroundColor: color.card, borderColor: color.border }]}>
-            <ActivityIndicator size="small" color={color.primary} accessibilityLabel={t("map.loadingPins")} />
+            <ActivityIndicator size="small" color={color.primary} />
             <ThemedText style={[styles.pillText, { color: color.textSecondary }]}>
               {t("map.loadingPins")}
             </ThemedText>
           </View>
         )}
-
         {!loading && visiblePins.length > 0 && (
           <View style={[styles.pill, { backgroundColor: color.card, borderColor: color.border }]}>
             <ThemedText style={[styles.pillText, { color: color.text }]}>
               {t("map.pinCount", { count: visiblePins.length })}
-              {hiddenCount > 0 ? ` · ${t("map.moreHidden", { count: hiddenCount })}` : ""}
+              {hiddenCount > 0
+                ? ` · ${t("map.moreHidden", { count: hiddenCount })}`
+                : ""}
             </ThemedText>
           </View>
         )}
-
         {!loading && !error && pins.length === 0 && (
           <View style={[styles.pill, { backgroundColor: color.card, borderColor: color.border }]}>
             <ThemedText style={[styles.pillText, { color: color.textSecondary }]}>
@@ -212,10 +251,14 @@ export function RoomMapPinsView({ initialRegion = DEFAULT_REGION }: Props) {
         )}
       </View>
 
+      {/* ── Error banner ─────────────────────────────────────────────── */}
       {error && !loading && (
         <Pressable
           onPress={retry}
-          style={[styles.errorBanner, { backgroundColor: color.card, borderColor: color.error }]}
+          style={[
+            styles.errorBanner,
+            { backgroundColor: color.card, borderColor: color.error },
+          ]}
           accessibilityRole="button"
         >
           <ThemedText style={{ color: color.error, fontSize: 13, fontWeight: "600" }}>
@@ -232,13 +275,22 @@ export function RoomMapPinsView({ initialRegion = DEFAULT_REGION }: Props) {
         </View>
       )}
 
-      {Platform.OS === "ios" && (
+      {Platform.OS === "ios" && !sheetVisible && (
         <View style={[styles.footerNote, { backgroundColor: color.card, borderColor: color.border }]}>
           <ThemedText style={[styles.footerNoteText, { color: color.textSecondary }]}>
             {t("map.iosAppleMapsNote")}
           </ThemedText>
         </View>
       )}
+
+      {/* ── Room preview sheet ─────────────────────────────────────── */}
+      <RoomPreviewSheet
+        visible={sheetVisible}
+        post={previewPost}
+        loading={previewLoading}
+        onClose={handleCloseSheet}
+        onViewDetails={handleViewDetails}
+      />
     </View>
   );
 }
