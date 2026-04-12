@@ -1,4 +1,4 @@
-type TabTarget = "home" | "room" | "requests" | "chats";
+type TabTarget = "home" | "map" | "room" | "requests" | "chats";
 
 type Listener = (target: TabTarget) => void;
 

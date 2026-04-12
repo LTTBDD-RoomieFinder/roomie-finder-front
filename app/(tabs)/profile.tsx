@@ -1,12 +1,12 @@
 import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 
 import { ThemedText } from "@/components/themed-text";
@@ -19,10 +19,10 @@ import { profileApi } from "@/apis/profile";
 import { tagApi } from "@/apis/tag";
 import { Gender } from "@/constants/gender";
 import {
-  BaseProfileRequest,
-  CreateProfileRequest,
-  ProfileOptionalFields,
-  UpdateProfileRequest,
+    BaseProfileRequest,
+    CreateProfileRequest,
+    ProfileOptionalFields,
+    UpdateProfileRequest,
 } from "@/data/request";
 import { Profile } from "@/types/Profile";
 
@@ -35,11 +35,15 @@ import { SettingsModal } from "@/components/settings/settings-modal";
 import ConfirmModal from "@/components/ui/confirm-modal";
 import DirtyLeaveModal from "@/components/ui/dirty-leave-modal";
 import { Tag } from "@/types/Tag";
+import { useFocusEffect } from "expo-router";
 import { useNavigation } from "@react-navigation/native";
 
+import { TrustScoreBadge } from "@/components/reputation/trust-score-badge";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useLanguage } from "@/hooks/use-language";
+import { trustService } from "@/services/trust-service";
+import type { TrustScoreResponse } from "@/types/reputation";
 import { profileTabGuard } from "@/utils/profile-tab-guard";
 
 type FormValues = {
@@ -114,7 +118,12 @@ export default function ProfileScreen() {
   const [leaveModalVisible, setLeaveModalVisible] = useState(false);
   const [leaveSaving, setLeaveSaving] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const pendingNavRef = useRef<"home" | "room" | "requests" | "chats" | null>(null);
+  const pendingNavRef = useRef<"home" | "map" | "room" | "requests" | "chats" | null>(null);
+
+  const [trustScore, setTrustScore] = useState<TrustScoreResponse | null>(null);
+  const [trustLoading, setTrustLoading] = useState(false);
+  const [trustError, setTrustError] = useState<string | null>(null);
+  const [recalcBusy, setRecalcBusy] = useState(false);
 
   const {
     control,
@@ -525,6 +534,20 @@ export default function ProfileScreen() {
     }
   }, [populateForm]);
 
+  const fetchTrust = useCallback(async () => {
+    setTrustLoading(true);
+    setTrustError(null);
+    try {
+      const data = await trustService.getMine();
+      setTrustScore(data);
+    } catch (e) {
+      setTrustScore(null);
+      setTrustError(typeof e === "string" ? e : t("trust.loadError"));
+    } finally {
+      setTrustLoading(false);
+    }
+  }, [t]);
+
   const fetchTags = useCallback(async () => {
     try {
       const res = await tagApi.getTag();
@@ -539,6 +562,20 @@ export default function ProfileScreen() {
     fetchTags();
     locationService.getCities().then(setCities);
   }, [fetchProfile, fetchTags]);
+
+  useEffect(() => {
+    if (!loading) {
+      void fetchTrust();
+    }
+  }, [loading, fetchTrust]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!loading) {
+        void fetchTrust();
+      }
+    }, [loading, fetchTrust])
+  );
 
   useEffect(() => {
     if (cityId) {
@@ -660,6 +697,23 @@ export default function ProfileScreen() {
     setLeaveModalVisible(false);
   }, []);
 
+  const handleRecalculateTrust = useCallback(async () => {
+    setRecalcBusy(true);
+    try {
+      const data = await trustService.recalculate();
+      setTrustScore(data);
+      setTrustError(null);
+      Alert.alert(t("common.success"), t("trust.recalculateSuccess"));
+    } catch (e) {
+      Alert.alert(
+        t("common.error"),
+        typeof e === "string" ? e : t("trust.loadError")
+      );
+    } finally {
+      setRecalcBusy(false);
+    }
+  }, [t]);
+
   if (loading) {
     return <ActivityIndicator style={{ marginTop: 50 }} color={color.primary} />;
   }
@@ -695,6 +749,38 @@ export default function ProfileScreen() {
         </View>
       </View>
       <ScrollView contentContainerStyle={styles.container}>
+        <View style={styles.card}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionIcon}>
+              <IconSymbol name="checkmark.seal.fill" size={18} color={color.primary} />
+            </View>
+            <ThemedText style={styles.sectionTitle}>{t("trust.sectionTitle")}</ThemedText>
+          </View>
+          {trustLoading ? (
+            <ActivityIndicator color={color.primary} style={{ paddingVertical: 12 }} />
+          ) : trustError ? (
+            <ThemedText style={{ color: color.error, fontSize: 14 }}>{trustError}</ThemedText>
+          ) : trustScore ? (
+            <>
+              <TrustScoreBadge trust={trustScore} compact={false} />
+              <TouchableOpacity
+                style={[styles.saveBtn, { marginTop: 12, marginBottom: 0 }]}
+                onPress={handleRecalculateTrust}
+                disabled={recalcBusy}
+                activeOpacity={recalcBusy ? 1 : 0.7}
+              >
+                <ThemedText style={styles.saveText}>
+                  {recalcBusy ? t("common.loading") : t("trust.recalculate")}
+                </ThemedText>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <ThemedText style={{ color: color.textSecondary, fontSize: 14 }}>
+              {t("trust.loadError")}
+            </ThemedText>
+          )}
+        </View>
+
         <View style={styles.card}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionIcon}>
