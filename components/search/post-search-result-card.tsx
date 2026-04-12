@@ -11,8 +11,9 @@ import { useProfileAvatarStore } from "@/stores/useProfileAvatarStore";
 import { formatDate } from "@/utils/format-post";
 
 export type PostSearchAuthor = {
-  id?: number;
-  fullName: string;
+  id?: number | string;
+  fullName?: string | null;
+  username?: string | null;
   phoneNumber?: string;
   avatarUrl?: string | null;
 };
@@ -22,8 +23,11 @@ export type PostSearchResult = {
   title: string;
   content: string;
   createdAt: string;
-  room?: RoomResponse; 
+  room?: RoomResponse;
+  /** Normalised by postSearchService from `user` field. */
   author?: PostSearchAuthor;
+  /** Raw field from backend — used as fallback if normalisation missed. */
+  user?: PostSearchAuthor;
 };
 
 type Props = {
@@ -40,9 +44,14 @@ export function PostSearchResultCard({ post, onPress }: Props) {
 
   if (!post) return null;
 
-  const { title, content, createdAt, room, author } = post;
-  
-  const authorName = author?.fullName || t("postSearch.anonymous");
+  const { title, content, createdAt, room } = post;
+
+  // author is normalised by postSearchService; fall back to raw user field
+  const author = post.author ?? post.user;
+  const authorName =
+    author?.fullName?.trim() ||
+    author?.username?.trim() ||
+    t("postSearch.anonymous");
   const avatarLetter = authorName.trim().charAt(0).toUpperCase();
 
   // Kick off background fetch for the author (if we have their id)
