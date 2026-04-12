@@ -43,7 +43,9 @@ import { VerificationSection } from "@/components/profile/verification-section";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useLanguage } from "@/hooks/use-language";
+import { useAuthStore } from "@/stores/useAuthStore";
 import { profileTabGuard } from "@/utils/profile-tab-guard";
+import { router } from "expo-router";
 
 type FormValues = {
   fullName: string;
@@ -103,6 +105,8 @@ export default function ProfileScreen() {
   const navigation = useNavigation();
   const { color, scheme, radius } = useAppTheme();
   const { t } = useLanguage();
+  const authUser = useAuthStore((s) => s.user);
+  const isAdmin = authUser?.roles?.includes("ADMIN") ?? false;
 
   const [loading, setLoading] = useState(true);
   const [isCreated, setIsCreated] = useState(true);
@@ -706,6 +710,47 @@ export default function ProfileScreen() {
         <TrustScoreSection refreshKey={safetyRefreshKey} />
         <VerificationSection onVerificationSubmitted={() => setSafetyRefreshKey((k) => k + 1)} />
         <DealBreakerSection />
+
+        {/* ── Admin Panel (only for ADMIN role) ─────────────────── */}
+        {isAdmin && (
+          <TouchableOpacity
+            activeOpacity={0.82}
+            onPress={() => router.push("/admin/verifications")}
+            style={[
+              styles.card,
+              {
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 14,
+                borderWidth: 1.5,
+                borderColor: "#f59e0b",
+                backgroundColor: isDark ? "#2a2a1f" : "#fffbe6",
+              },
+            ]}
+          >
+            <View
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                backgroundColor: "#f59e0b22",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <IconSymbol name="shield.fill" size={20} color="#f59e0b" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <ThemedText style={{ fontWeight: "700", fontSize: 15, color: "#92400e" }}>
+                {t("adminVerify.adminPanelBtn")}
+              </ThemedText>
+              <ThemedText style={{ fontSize: 13, color: "#b45309", marginTop: 2 }}>
+                {t("adminVerify.adminPanelVerify")}
+              </ThemedText>
+            </View>
+            <IconSymbol name="chevron.right" size={16} color="#b45309" />
+          </TouchableOpacity>
+        )}
 
         {/* ── Profile form ──────────────────────────────────────── */}
         <View style={styles.card}>

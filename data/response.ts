@@ -5,8 +5,9 @@ export type UserResponse = {
   id: string;
   username: string;
   email: string;
-  fullName: string;
+  fullName: string | null;
   roles: string[];
+  avatarUrl?: string | null;
 }
 
 export type LoginResponse = {

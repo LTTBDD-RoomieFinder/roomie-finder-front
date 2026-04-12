@@ -41,13 +41,17 @@ export function PostCard({ post, currentUserId, onEdit, onDelete }: Props) {
     <View style={[styles.card]}>
       <View style={styles.header}>
         <Image
-          source={require("@/assets/images/default-avatar.png")}
+          source={
+            post.user.avatarUrl
+              ? { uri: post.user.avatarUrl }
+              : require("@/assets/images/default-avatar.png")
+          }
           style={[styles.avatar, { backgroundColor: color.backgroundSecondary }]}
           contentFit="cover"
         />
         <View style={{ flex: 1 }}>
           <ThemedText type="defaultSemiBold" style={styles.userName}>
-            {post.user.username}
+            {post.user.fullName || post.user.username}
           </ThemedText>
           <View style={styles.metaRow}>
             <ThemedText style={[styles.metaText, { color: color.textSecondary }]}>

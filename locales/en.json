@@ -626,5 +626,42 @@
     "errors": {
       "11001": "One or more deal-breaker types are invalid."
     }
+  },
+  "adminVerify": {
+    "title": "Verification Management",
+    "filterAll": "All",
+    "filterPending": "Pending",
+    "filterVerified": "Verified",
+    "filterRejected": "Rejected",
+    "empty": "No verifications found",
+    "noDocNum": "No document number",
+    "detailTitle": "Verification Detail",
+    "fieldId": "Verification ID",
+    "fieldUserId": "User ID",
+    "fieldDocNum": "Document No.",
+    "fieldStatus": "Status",
+    "fieldSubmitted": "Submitted at",
+    "fieldVerifiedAt": "Verified at",
+    "previousNote": "Previous review note",
+    "imagesTitle": "Documents",
+    "imgFront": "Front",
+    "imgBack": "Back",
+    "imgSelfie": "Selfie",
+    "actionTitle": "Review action",
+    "approve": "Approve",
+    "reject": "Reject",
+    "confirmApprove": "Confirm Approve",
+    "confirmReject": "Confirm Reject",
+    "approveNoteLabel": "Add a note (optional)",
+    "rejectNoteLabel": "Reason for rejection (required)",
+    "notePlaceholderApprove": "Optional note for user…",
+    "notePlaceholderReject": "Enter reason for rejection…",
+    "noteRequired": "Note required",
+    "noteRequiredMsg": "Please enter a reason when rejecting.",
+    "approvedMsg": "Verification approved successfully.",
+    "rejectedMsg": "Verification rejected.",
+    "reviewFailed": "Failed to submit review. Please try again.",
+    "adminPanelBtn": "Admin Panel",
+    "adminPanelVerify": "Review pending verifications"
   }
 }

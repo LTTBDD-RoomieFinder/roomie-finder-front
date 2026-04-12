@@ -626,5 +626,42 @@
     "errors": {
       "11001": "Một hoặc nhiều điều kiện không hợp lệ."
     }
+  },
+  "adminVerify": {
+    "title": "Quản lý xác thực",
+    "filterAll": "Tất cả",
+    "filterPending": "Chờ duyệt",
+    "filterVerified": "Đã duyệt",
+    "filterRejected": "Từ chối",
+    "empty": "Không có yêu cầu nào",
+    "noDocNum": "Chưa có số CCCD",
+    "detailTitle": "Chi tiết xác thực",
+    "fieldId": "Mã xác thực",
+    "fieldUserId": "Mã người dùng",
+    "fieldDocNum": "Số CCCD",
+    "fieldStatus": "Trạng thái",
+    "fieldSubmitted": "Ngày gửi",
+    "fieldVerifiedAt": "Ngày duyệt",
+    "previousNote": "Ghi chú trước đó",
+    "imagesTitle": "Hình ảnh giấy tờ",
+    "imgFront": "Mặt trước",
+    "imgBack": "Mặt sau",
+    "imgSelfie": "Ảnh selfie",
+    "actionTitle": "Hành động",
+    "approve": "Duyệt",
+    "reject": "Từ chối",
+    "confirmApprove": "Xác nhận duyệt",
+    "confirmReject": "Xác nhận từ chối",
+    "approveNoteLabel": "Thêm ghi chú (tuỳ chọn)",
+    "rejectNoteLabel": "Lý do từ chối (bắt buộc)",
+    "notePlaceholderApprove": "Ghi chú cho người dùng…",
+    "notePlaceholderReject": "Nhập lý do từ chối…",
+    "noteRequired": "Thiếu lý do",
+    "noteRequiredMsg": "Vui lòng nhập lý do khi từ chối.",
+    "approvedMsg": "Đã duyệt xác thực thành công.",
+    "rejectedMsg": "Đã từ chối xác thực.",
+    "reviewFailed": "Không thể gửi kết quả duyệt. Vui lòng thử lại.",
+    "adminPanelBtn": "Admin Panel",
+    "adminPanelVerify": "Duyệt xác thực CCCD đang chờ"
   }
 }

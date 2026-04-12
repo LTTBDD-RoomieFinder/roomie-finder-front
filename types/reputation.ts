@@ -20,6 +20,8 @@ export type VerificationResponse = {
   createdAt: string;
   /** Only present in admin responses. */
   selfieImageUrl?: string | null;
+  documentImageUrl?: string | null;
+  documentBackImageUrl?: string | null;
 };
 
 // ── Trust Score ──────────────────────────────────────────────────────────────

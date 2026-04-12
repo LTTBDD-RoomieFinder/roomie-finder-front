@@ -13,6 +13,7 @@ export type PostSearchAuthor = {
   id?: number;
   fullName: string;
   phoneNumber?: string;
+  avatarUrl?: string | null;
 };
 
 export type PostSearchResult = {
@@ -59,11 +60,20 @@ export function PostSearchResultCard({ post, onPress }: Props) {
       ]}
     >
       <View style={styles.topRow}>
-        <View style={[styles.avatar, { backgroundColor: color.primary + "1A" }]}> 
-          <ThemedText style={{ fontWeight: "800", color: color.primary, fontSize: 16 }}>
-            {avatarLetter}
-          </ThemedText>
-        </View>
+        {author?.avatarUrl ? (
+          <Image
+            source={{ uri: author.avatarUrl }}
+            style={styles.avatar}
+            contentFit="cover"
+            transition={150}
+          />
+        ) : (
+          <View style={[styles.avatar, { backgroundColor: color.primary + "1A" }]}>
+            <ThemedText style={{ fontWeight: "800", color: color.primary, fontSize: 16 }}>
+              {avatarLetter}
+            </ThemedText>
+          </View>
+        )}
         
         <View style={styles.authorInfo}>
           <ThemedText type="defaultSemiBold" numberOfLines={1} style={{ fontSize: 15 }}>
