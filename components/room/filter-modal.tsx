@@ -49,7 +49,18 @@ export function FilterModal({ visible, onClose, onApply, initialFilters = {} }: 
   }, [initialFilters, visible]);
 
   const handleApply = () => {
-    onApply(filters);
+    const cleaned = { ...filters };
+
+    // radiusInKm requires both userLat and userLng — strip it if coords are missing
+    if (cleaned.radiusInKm !== undefined && (!cleaned.userLat || !cleaned.userLng)) {
+      delete cleaned.radiusInKm;
+    }
+
+    // Strip no-op price bounds (full open range) to keep the payload lean
+    if (cleaned.minPrice === 0) delete cleaned.minPrice;
+    if (cleaned.maxPrice === 20000000) delete cleaned.maxPrice;
+
+    onApply(cleaned);
     onClose();
   };
 
@@ -248,8 +259,8 @@ export function FilterModal({ visible, onClose, onApply, initialFilters = {} }: 
                 onLocationSelect={(lat, lng) => {
                   setFilters((prev) => ({
                     ...prev,
-                    latitude: lat,
-                    longitude: lng,
+                    userLat: lat,
+                    userLng: lng,
                     cityName: undefined,
                     districtName: undefined,
                     wardName: undefined,

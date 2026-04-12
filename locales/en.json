@@ -361,6 +361,7 @@
     "noResultsHint": "Try different keywords or adjust filters.",
     "loadMore": "Load more",
     "seeAll": "See all results",
+    "searchError": "Search failed. Please check your filters and try again.",
     "amenityChip": "Amenities ({{count}})",
     "priceChip": "{{min}}–{{max}} M",
     "filter": {

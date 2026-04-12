@@ -361,6 +361,7 @@
     "noResultsHint": "Thử đổi từ khóa hoặc mở bộ lọc để tìm chính xác hơn.",
     "loadMore": "Tải thêm",
     "seeAll": "Xem tất cả kết quả",
+    "searchError": "Tìm kiếm thất bại. Vui lòng kiểm tra bộ lọc và thử lại.",
     "amenityChip": "Tiện ích ({{count}})",
     "priceChip": "{{min}}–{{max}}tr",
     "filter": {

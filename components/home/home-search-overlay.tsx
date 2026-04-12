@@ -53,6 +53,7 @@ export function HomeSearchOverlay({ visible, onClose }: Props) {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const [isFilterModalVisible, setFilterModalVisible] = useState(false);
 
   const cursorRef = useRef<number | null>(null);
@@ -111,6 +112,7 @@ export function HomeSearchOverlay({ visible, onClose }: Props) {
       }
 
       try {
+        setSearchError(null);
         const requestPayload: PostSearchRequest = {
           keyword: currentKeyword,
           ...currentFilters,
@@ -130,8 +132,13 @@ export function HomeSearchOverlay({ visible, onClose }: Props) {
         setPosts((prev) => (isLoadMore ? [...prev, ...newPosts] : newPosts));
         setHasMore(hasNext);
         cursorRef.current = hasNext ? nextCursor : null;
-      } catch (e) {
-        console.error("HomeSearchOverlay.search failed:", e);
+      } catch (e: any) {
+        const msg =
+          e?.response?.data?.message ||
+          e?.message ||
+          t("search.searchError");
+        if (!isLoadMore) setSearchError(msg);
+        console.error("[Search] failed:", msg, e?.response?.data);
       } finally {
         setLoading(false);
         setLoadingMore(false);
@@ -330,6 +337,19 @@ export function HomeSearchOverlay({ visible, onClose }: Props) {
             <View style={styles.center}>
               <ActivityIndicator size="large" color={color.primary} />
               <ThemedText style={{ marginTop: 12 }}>{t("search.searching")}</ThemedText>
+            </View>
+          ) : searchError ? (
+            <View style={styles.center}>
+              <Feather name="alert-circle" size={44} color={color.error} />
+              <ThemedText style={{ marginTop: 12, color: color.error, textAlign: "center" }}>
+                {searchError}
+              </ThemedText>
+              <TouchableOpacity
+                onPress={() => fetchResults(false, keyword, filters)}
+                style={{ marginTop: 16, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: color.primary, borderRadius: 20 }}
+              >
+                <ThemedText style={{ color: "#fff", fontWeight: "700" }}>{t("common.retry")}</ThemedText>
+              </TouchableOpacity>
             </View>
           ) : posts.length === 0 ? (
             <View style={styles.center}>
