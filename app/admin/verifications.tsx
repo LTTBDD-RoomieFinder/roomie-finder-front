@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -48,6 +48,7 @@ export default function AdminVerificationsScreen() {
   const [items, setItems] = useState<VerificationResponse[]>([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   // Detail/review modal
   const [selected, setSelected] = useState<VerificationResponse | null>(null);
@@ -56,24 +57,44 @@ export default function AdminVerificationsScreen() {
   const [submitting, setSubmitting] = useState(false);
 
   const isDark = scheme === "dark";
-  const primaryLight = isDark ? "#1f3333" : "#e6faf9";
+
+  // Normalize the API response — backend may return a raw array, a paged object
+  // { content: [...] }, or still wrapped { data: [...] }
+  function extractList(raw: unknown): VerificationResponse[] {
+    if (Array.isArray(raw)) return raw;
+    if (raw && typeof raw === "object") {
+      const r = raw as Record<string, unknown>;
+      if (Array.isArray(r.content)) return r.content as VerificationResponse[];
+      if (Array.isArray(r.data)) return r.data as VerificationResponse[];
+    }
+    return [];
+  }
 
   const fetchList = useCallback(async (activeFilter: StatusFilter, isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
+    setFetchError(null);
     try {
       const status = activeFilter === "ALL" ? undefined : activeFilter;
-      const data = await verificationService.adminList(status);
-      setItems(Array.isArray(data) ? data : []);
-    } catch {
+      const raw = await verificationService.adminList(status);
+      setItems(extractList(raw));
+    } catch (e: any) {
+      const msg = typeof e === "string" ? e : e?.message ?? t("common.error");
+      setFetchError(msg);
       setItems([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [t]);
 
-  useFocusEffect(useCallback(() => { fetchList(filter); }, [filter, fetchList]));
+  // Re-fetch when filter tab changes
+  useEffect(() => {
+    fetchList(filter);
+  }, [filter]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Also re-fetch every time the screen gains focus (e.g. back from background)
+  useFocusEffect(useCallback(() => { fetchList(filter); }, [filter])); // eslint-disable-line react-hooks/exhaustive-deps
 
 
 
@@ -433,6 +454,20 @@ export default function AdminVerificationsScreen() {
       {loading && !refreshing ? (
         <View style={styles.emptyContainer}>
           <ActivityIndicator size="large" color={color.primary} />
+          <ThemedText style={{ color: color.textSecondary, marginTop: 12 }}>{t("common.loading")}</ThemedText>
+        </View>
+      ) : fetchError ? (
+        <View style={styles.emptyContainer}>
+          <Ionicons name="alert-circle-outline" size={52} color={color.error} />
+          <ThemedText style={{ color: color.error, fontSize: 14, textAlign: "center", marginTop: 12, paddingHorizontal: 24 }}>
+            {fetchError}
+          </ThemedText>
+          <TouchableOpacity
+            onPress={() => fetchList(filter)}
+            style={{ marginTop: 16, paddingHorizontal: 24, paddingVertical: 10, backgroundColor: color.primary, borderRadius: 20 }}
+          >
+            <ThemedText style={{ color: "#fff", fontWeight: "700" }}>{t("common.retry")}</ThemedText>
+          </TouchableOpacity>
         </View>
       ) : (
         <FlatList
