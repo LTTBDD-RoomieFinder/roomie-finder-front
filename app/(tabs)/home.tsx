@@ -12,6 +12,7 @@ import { HomeSearchOverlay } from "@/components/home/home-search-overlay";
 import { MyPostsSheet } from "@/components/home/my-posts-sheet";
 import { PostEntry } from "@/components/home/post-entry";
 import { PostList } from "@/components/home/post-list";
+import { profileApi } from "@/apis/profile";
 import { PostResponse } from "@/data/response";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useLanguage } from "@/hooks/use-language";
@@ -36,6 +37,7 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<"feed" | "recommended">("feed");
+  const [canUseRecommended, setCanUseRecommended] = useState(false);
 
   const [isCreatePostVisible, setCreatePostVisible] = useState(false);
   const [isMyPostsVisible, setMyPostsVisible] = useState(false);
@@ -116,13 +118,27 @@ export default function HomeScreen() {
     }
   }, [toFeedPost]);
 
+  const checkProfileAvailability = useCallback(async () => {
+    try {
+      await profileApi.getProfile();
+      setCanUseRecommended(true);
+    } catch {
+      setCanUseRecommended(false);
+      setActiveTab("feed");
+    }
+  }, []);
+
   useEffect(() => {
-    if (activeTab === "recommended") {
+    checkProfileAvailability();
+  }, [checkProfileAvailability]);
+
+  useEffect(() => {
+    if (canUseRecommended && activeTab === "recommended") {
       fetchRecommendedPosts();
       return;
     }
     fetchPosts();
-  }, [activeTab, fetchPosts, fetchRecommendedPosts]);
+  }, [activeTab, canUseRecommended, fetchPosts, fetchRecommendedPosts]);
 
   useFocusEffect(
     useCallback(() => {
@@ -133,7 +149,8 @@ export default function HomeScreen() {
   const handleRefresh = () => {
     setRefreshing(true);
     void syncTabBadgesToStore();
-    if (activeTab === "recommended") {
+    void checkProfileAvailability();
+    if (canUseRecommended && activeTab === "recommended") {
       fetchRecommendedPosts(false);
       return;
     }
@@ -213,57 +230,59 @@ export default function HomeScreen() {
       <View style={{ flex: 1, backgroundColor: color.background }}>
         {/* Vùng bấm để tạo bài viết */}
         <PostEntry onPress={() => setCreatePostVisible(true)} />
-        <View
-          style={{
-            flexDirection: "row",
-            paddingHorizontal: 16,
-            paddingBottom: 10,
-            gap: 8,
-          }}
-        >
-          <Pressable
-            onPress={() => setActiveTab("feed")}
-            style={({ pressed }) => [
-              styles.tabBtn,
-              {
-                backgroundColor:
-                  activeTab === "feed"
-                    ? color.primary
-                    : pressed
-                    ? color.border
-                    : color.backgroundSecondary,
-              },
-            ]}
+        {canUseRecommended ? (
+          <View
+            style={{
+              flexDirection: "row",
+              paddingHorizontal: 16,
+              paddingBottom: 10,
+              gap: 8,
+            }}
           >
-            <ThemedText
-              type="defaultSemiBold"
-              style={{ color: activeTab === "feed" ? color.primaryText : color.text }}
+            <Pressable
+              onPress={() => setActiveTab("feed")}
+              style={({ pressed }) => [
+                styles.tabBtn,
+                {
+                  backgroundColor:
+                    activeTab === "feed"
+                      ? color.primary
+                      : pressed
+                      ? color.border
+                      : color.backgroundSecondary,
+                },
+              ]}
             >
-              {t("home.feedTab")}
-            </ThemedText>
-          </Pressable>
-          <Pressable
-            onPress={() => setActiveTab("recommended")}
-            style={({ pressed }) => [
-              styles.tabBtn,
-              {
-                backgroundColor:
-                  activeTab === "recommended"
-                    ? color.primary
-                    : pressed
-                    ? color.border
-                    : color.backgroundSecondary,
-              },
-            ]}
-          >
-            <ThemedText
-              type="defaultSemiBold"
-              style={{ color: activeTab === "recommended" ? color.primaryText : color.text }}
+              <ThemedText
+                type="defaultSemiBold"
+                style={{ color: activeTab === "feed" ? color.primaryText : color.text }}
+              >
+                {t("home.feedTab")}
+              </ThemedText>
+            </Pressable>
+            <Pressable
+              onPress={() => setActiveTab("recommended")}
+              style={({ pressed }) => [
+                styles.tabBtn,
+                {
+                  backgroundColor:
+                    activeTab === "recommended"
+                      ? color.primary
+                      : pressed
+                      ? color.border
+                      : color.backgroundSecondary,
+                },
+              ]}
             >
-              {t("home.recommendedTab")}
-            </ThemedText>
-          </Pressable>
-        </View>
+              <ThemedText
+                type="defaultSemiBold"
+                style={{ color: activeTab === "recommended" ? color.primaryText : color.text }}
+              >
+                {t("home.recommendedTab")}
+              </ThemedText>
+            </Pressable>
+          </View>
+        ) : null}
         <View style={{ height: 8, backgroundColor: color.backgroundSecondary }} />
 
         {/* Danh sách bài viết */}
@@ -275,7 +294,7 @@ export default function HomeScreen() {
           currentUserId={user?.id}
           onEdit={(post) => setEditingPost(post)}
           onDelete={handleDeleteFromFeed}
-          scoresByPostId={activeTab === "recommended" ? recommendedScores : undefined}
+          scoresByPostId={canUseRecommended && activeTab === "recommended" ? recommendedScores : undefined}
         />
       </View>
 
