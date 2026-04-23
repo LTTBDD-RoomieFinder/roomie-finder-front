@@ -8,6 +8,7 @@ import React, {
 } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Animated,
   Dimensions,
   NativeScrollEvent,
@@ -22,17 +23,17 @@ import {
 } from "react-native";
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ThemedText } from "@/components/themed-text";
-import { VerificationStatusChip } from "@/components/reputation/verification-status-chip";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import type { PostResponse } from "@/data/response";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useLanguage } from "@/hooks/use-language";
 import { genderReqLabelKey, roomTypeLabelKey } from "@/lib/i18n-labels";
-import { useProfileAvatarStore } from "@/stores/useProfileAvatarStore";
-import { VerificationStatus } from "@/types/enums";
 import { formatRoomPrice } from "@/utils/format-room";
+import { openGoogleMapsDirections } from "@/utils/open-google-directions";
 
 const { height: SCREEN_H, width: SCREEN_W } = Dimensions.get("window");
 const SHEET_HEIGHT = Math.round(SCREEN_H * 0.68);
@@ -42,6 +43,8 @@ type Props = {
   visible: boolean;
   post: PostResponse | null;
   loading: boolean;
+  /** Tọa độ ghim map (ưu tiên hơn address trong bài). */
+  directionsTarget?: { lat: number; lng: number } | null;
   onClose: () => void;
   onViewDetails: (roomId: number) => void;
 };
@@ -50,11 +53,13 @@ function RoomPreviewSheetInner({
   visible,
   post,
   loading,
+  directionsTarget = null,
   onClose,
   onViewDetails,
 }: Props) {
   const { color, scheme, radius } = useAppTheme();
   const { t, locale } = useLanguage();
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const isDark = scheme === "dark";
 
@@ -63,12 +68,7 @@ function RoomPreviewSheetInner({
 
   // Image carousel state
   const [imgPage, setImgPage] = useState(0);
-
-  // Avatar from shared cache
-  const { cache, fetchAvatar } = useProfileAvatarStore();
-  const ownerId = post?.user?.id ? String(post.user.id) : null;
-  if (ownerId && !(ownerId in cache)) fetchAvatar(ownerId);
-  const ownerAvatar = (ownerId ? cache[ownerId] : null) ?? post?.user?.avatarUrl ?? null;
+  const carouselRef = useRef<ScrollView>(null);
 
   // Animate in/out
   useEffect(() => {
@@ -81,6 +81,12 @@ function RoomPreviewSheetInner({
     }).start();
     if (!visible) setImgPage(0);
   }, [visible, translateY]);
+
+  useEffect(() => {
+    if (!visible || !post) return;
+    setImgPage(0);
+    carouselRef.current?.scrollTo({ x: 0, animated: false });
+  }, [post?.id, visible]);
 
   // Swipe-down to close
   const panResponder = useMemo(
@@ -116,16 +122,61 @@ function RoomPreviewSheetInner({
   );
 
   const room = post?.room;
-  const images: string[] = room?.imageUrls?.length
-    ? room.imageUrls
-    : [];
+  const images: string[] =
+    room?.imageUrls?.filter((u) => typeof u === "string" && u.length > 0) ?? [];
 
   const priceStr = room ? formatRoomPrice(room.price, t, locale) : "";
   const roomTypeLabel = room ? t(roomTypeLabelKey(room.roomType)) : "";
   const genderLabel = room ? t(genderReqLabelKey(room.genderRequirement)) : "";
 
+  const displayTitle =
+    (room?.title?.trim() || post?.title?.trim() || "") ||
+    t("postSearch.noTitle");
+  const displayDescription = (
+    room?.description?.trim() ||
+    post?.content?.trim() ||
+    ""
+  ).trim();
+
+  const addressLine = [
+    room?.address?.streetAddress,
+    room?.address?.ward,
+    room?.address?.district,
+    room?.address?.city,
+  ]
+    .filter(Boolean)
+    .join(", ");
+
   const ownerName = post?.user?.fullName || post?.user?.username || t("common.user");
   const ownerLetter = ownerName.trim().charAt(0).toUpperCase();
+
+  const destForDirections =
+    directionsTarget ??
+    (post?.room?.address?.lat != null &&
+    post?.room?.address?.lng != null &&
+    Number.isFinite(post.room.address.lat) &&
+    Number.isFinite(post.room.address.lng)
+      ? { lat: post.room.address.lat, lng: post.room.address.lng }
+      : null);
+
+  const handleOpenDirections = useCallback(async () => {
+    if (!destForDirections) {
+      Alert.alert(t("common.error"), t("map.directionsNoCoords"));
+      return;
+    }
+    try {
+      await openGoogleMapsDirections(destForDirections.lat, destForDirections.lng);
+    } catch {
+      Alert.alert(t("common.error"), t("map.directionsOpenFailed"));
+    }
+  }, [destForDirections, t]);
+
+  const handleOpenOwnerProfile = useCallback(() => {
+    const uid = post?.user?.id?.toString().trim();
+    if (!uid) return;
+    onClose();
+    router.push({ pathname: "/user/[id]", params: { id: uid } });
+  }, [post?.user?.id, onClose, router]);
 
   if (!visible) return null;
 
@@ -171,6 +222,7 @@ function RoomPreviewSheetInner({
               {images.length > 0 ? (
                 <>
                   <ScrollView
+                    ref={carouselRef}
                     horizontal
                     pagingEnabled
                     showsHorizontalScrollIndicator={false}
@@ -220,6 +272,45 @@ function RoomPreviewSheetInner({
               )}
             </View>
 
+            {images.length > 1 && (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.thumbStripInner}
+                style={[
+                  styles.thumbStrip,
+                  { borderBottomColor: color.border, backgroundColor: color.background },
+                ]}
+              >
+                {images.map((uri, i) => (
+                  <Pressable
+                    key={`${i}-${uri}`}
+                    onPress={() => {
+                      setImgPage(i);
+                      carouselRef.current?.scrollTo({
+                        x: i * SCREEN_W,
+                        animated: true,
+                      });
+                    }}
+                  >
+                    <Image
+                      source={{ uri }}
+                      style={[
+                        styles.thumbTile,
+                        {
+                          borderColor:
+                            i === imgPage ? color.primary : color.border,
+                          borderWidth: i === imgPage ? 2 : StyleSheet.hairlineWidth,
+                        },
+                      ]}
+                      contentFit="cover"
+                      transition={150}
+                    />
+                  </Pressable>
+                ))}
+              </ScrollView>
+            )}
+
             {/* ── Content ──────────────────────────────────────────────── */}
             <View style={styles.content}>
               {/* Price + type row */}
@@ -236,22 +327,26 @@ function RoomPreviewSheetInner({
 
               {/* Title */}
               <ThemedText style={styles.roomTitle} numberOfLines={2}>
-                {room?.title}
+                {displayTitle}
               </ThemedText>
 
               {/* ── Specs row ────── */}
-              <View style={[styles.specsRow, { backgroundColor: color.backgroundSecondary, borderRadius: radius.card }]}>
+              <View style={[styles.specsRow, { backgroundColor: color.backgroundSecondary, borderRadius: radius.lg }]}>
                 <View style={styles.specItem}>
                   <Ionicons name="resize-outline" size={16} color={color.primary} />
                   <ThemedText style={[styles.specText, { color: color.text }]}>
-                    {room?.area} m²
+                    {room?.area && room.area > 0
+                      ? `${room.area} m²`
+                      : "—"}
                   </ThemedText>
                 </View>
                 <View style={[styles.specDivider, { backgroundColor: color.border }]} />
                 <View style={styles.specItem}>
                   <Ionicons name="people-outline" size={16} color={color.primary} />
                   <ThemedText style={[styles.specText, { color: color.text }]}>
-                    {t("room.detail.capacityValue", { count: room?.capacity ?? 0 })}
+                    {room?.capacity && room.capacity > 0
+                      ? t("room.detail.capacityValue", { count: room.capacity })
+                      : "—"}
                   </ThemedText>
                 </View>
                 <View style={[styles.specDivider, { backgroundColor: color.border }]} />
@@ -267,47 +362,49 @@ function RoomPreviewSheetInner({
               <View style={styles.locationRow}>
                 <Ionicons name="location" size={15} color={color.primary} />
                 <ThemedText style={[styles.locationText, { color: color.textSecondary }]} numberOfLines={2}>
-                  {[
-                    room?.address?.streetAddress,
-                    room?.address?.ward,
-                    room?.address?.district,
-                    room?.address?.city,
-                  ]
-                    .filter(Boolean)
-                    .join(", ")}
+                  {addressLine || t("postSearch.addressPending")}
                 </ThemedText>
               </View>
 
-              {/* ── Owner ────── */}
-              <View style={[styles.ownerRow, { borderColor: color.border }]}>
-                {ownerAvatar ? (
-                  <Image
-                    source={{ uri: ownerAvatar }}
-                    style={styles.ownerAvatar}
-                    contentFit="cover"
-                  />
-                ) : (
-                  <View style={[styles.ownerAvatar, { backgroundColor: color.primary + "22", alignItems: "center", justifyContent: "center" }]}>
-                    <ThemedText style={{ fontWeight: "700", color: color.primary, fontSize: 15 }}>
-                      {ownerLetter}
-                    </ThemedText>
-                  </View>
-                )}
+              {/* ── Owner (tap → public profile & reviews) ────── */}
+              <Pressable
+                onPress={handleOpenOwnerProfile}
+                disabled={!post.user?.id}
+                accessibilityRole="button"
+                accessibilityLabel={t("publicUser.openProfileA11y")}
+                style={({ pressed }) => [
+                  styles.ownerRow,
+                  { borderColor: color.border },
+                  pressed && post.user?.id ? { opacity: 0.88 } : null,
+                ]}
+              >
+                <UserAvatar
+                  userId={post.user?.id}
+                  hintUrl={post.user?.avatarUrl}
+                  name={ownerName}
+                  size={44}
+                  style={styles.ownerAvatar}
+                />
                 <View style={{ flex: 1 }}>
                   <ThemedText style={[styles.ownerName, { color: color.text }]} numberOfLines={1}>
                     {ownerName}
                   </ThemedText>
-                  <ThemedText style={[styles.ownerSub, { color: color.textSecondary }]}>
-                    @{post.user.username}
-                  </ThemedText>
+                  {!!post.user?.username?.trim() && (
+                    <ThemedText style={[styles.ownerSub, { color: color.textSecondary }]}>
+                      @{post.user.username}
+                    </ThemedText>
+                  )}
                 </View>
                 <View style={styles.viewCount}>
                   <Ionicons name="eye-outline" size={13} color={color.textSecondary} />
                   <ThemedText style={[styles.viewCountText, { color: color.textSecondary }]}>
-                    {post.viewCount}
+                    {post.viewCount ?? 0}
                   </ThemedText>
                 </View>
-              </View>
+                {post.user?.id ? (
+                  <Ionicons name="chevron-forward" size={18} color={color.icon} style={{ marginLeft: 4 }} />
+                ) : null}
+              </Pressable>
 
               {/* ── Amenities ────── */}
               {(room?.amenities?.length ?? 0) > 0 && (
@@ -335,7 +432,7 @@ function RoomPreviewSheetInner({
               )}
 
               {/* ── Description ────── */}
-              {!!room?.description && (
+              {!!displayDescription && (
                 <View style={styles.descSection}>
                   <ThemedText style={[styles.sectionLabel, { color: color.textSecondary }]}>
                     {t("room.detail.description")}
@@ -344,7 +441,7 @@ function RoomPreviewSheetInner({
                     style={[styles.description, { color: color.text }]}
                     numberOfLines={3}
                   >
-                    {room.description}
+                    {displayDescription}
                   </ThemedText>
                 </View>
               )}
@@ -374,16 +471,36 @@ function RoomPreviewSheetInner({
               },
             ]}
           >
-            <TouchableOpacity
-              style={[styles.ctaBtn, { backgroundColor: color.primary }]}
-              onPress={() => onViewDetails(post.room.id)}
-              activeOpacity={0.82}
-            >
-              <Ionicons name="arrow-forward-circle" size={20} color="#fff" />
-              <ThemedText style={[styles.ctaBtnText, { color: "#fff" }]}>
-                {t("map.viewRoomDetail")}
-              </ThemedText>
-            </TouchableOpacity>
+            <View style={styles.ctaRow}>
+              <TouchableOpacity
+                style={[
+                  styles.ctaBtnOutline,
+                  {
+                    borderColor: color.primary,
+                    backgroundColor: color.backgroundSecondary,
+                    opacity: destForDirections ? 1 : 0.45,
+                  },
+                ]}
+                onPress={handleOpenDirections}
+                activeOpacity={0.82}
+                disabled={!destForDirections}
+              >
+                <Ionicons name="navigate" size={18} color={color.primary} />
+                <ThemedText style={[styles.ctaBtnOutlineText, { color: color.primary }]}>
+                  {t("map.openDirections")}
+                </ThemedText>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.ctaBtn, { backgroundColor: color.primary, flex: 1 }]}
+                onPress={() => onViewDetails(post.room.id)}
+                activeOpacity={0.82}
+              >
+                <Ionicons name="arrow-forward-circle" size={20} color="#fff" />
+                <ThemedText style={[styles.ctaBtnText, { color: "#fff" }]}>
+                  {t("map.viewRoomDetail")}
+                </ThemedText>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
       </Animated.View>
@@ -429,6 +546,22 @@ const styles = StyleSheet.create({
   // Carousel
   carouselWrap: {
     position: "relative",
+  },
+  thumbStrip: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    maxHeight: 84,
+  },
+  thumbStripInner: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    gap: 8,
+    alignItems: "center",
+  },
+  thumbTile: {
+    width: 58,
+    height: 58,
+    borderRadius: 12,
+    backgroundColor: "#e5e7eb",
   },
   dots: {
     position: "absolute",
@@ -608,6 +741,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 12,
     borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  ctaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  ctaBtnOutline: {
+    height: 54,
+    paddingHorizontal: 14,
+    borderRadius: 27,
+    borderWidth: 2,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+  ctaBtnOutlineText: {
+    fontWeight: "700",
+    fontSize: 14,
+    maxWidth: 110,
   },
   ctaBtn: {
     height: 54,

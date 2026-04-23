@@ -51,16 +51,6 @@ const STATUS_META: Record<VerificationStatus, { icon: string; bgLight: string; b
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-function extractList(raw: unknown): VerificationResponse[] {
-  if (Array.isArray(raw)) return raw;
-  if (raw && typeof raw === "object") {
-    const r = raw as Record<string, unknown>;
-    if (Array.isArray(r.content)) return r.content as VerificationResponse[];
-    if (Array.isArray(r.data)) return r.data as VerificationResponse[];
-  }
-  return [];
-}
-
 function useIsAdmin(): boolean {
   const user = useAuthStore((s) => s.user);
   const accessToken = useAuthStore((s) => s.accessToken);
@@ -109,8 +99,8 @@ export default function AdminVerificationsScreen() {
       setFetchError(null);
       try {
         const status = activeFilter === "ALL" ? undefined : activeFilter;
-        const raw = await verificationService.adminList(status);
-        setItems(extractList(raw));
+        const list = await verificationService.adminList(status);
+        setItems(list);
       } catch (e: any) {
         const msg = typeof e === "string" ? e : e?.message ?? t("common.error");
         setFetchError(msg);
@@ -216,7 +206,7 @@ export default function AdminVerificationsScreen() {
           <View style={s.cardTop}>
             <View style={{ flex: 1, gap: 2 }}>
               <ThemedText style={[s.cardDocNum, { color: color.text }]}>
-                {item.documentNumberMasked || t("adminVerify.noDocNum")}
+                {item.documentNumber || item.documentNumberMasked || t("adminVerify.noDocNum")}
               </ThemedText>
               <ThemedText style={[s.cardSub, { color: color.textSecondary }]}>
                 #{item.id} · User #{item.userId}
@@ -427,7 +417,11 @@ export default function AdminVerificationsScreen() {
 
                 {/* ── Info grid ─── */}
                 <View style={[s.infoCard, { backgroundColor: color.card, borderColor: color.border }]}>
-                  <InfoRow label={t("adminVerify.fieldDocNum")} value={selected.documentNumberMasked || "—"} color={color} />
+                  <InfoRow
+                    label={t("adminVerify.fieldDocNum")}
+                    value={selected.documentNumber || selected.documentNumberMasked || "—"}
+                    color={color}
+                  />
                   <View style={[s.infoDivider, { backgroundColor: color.border }]} />
                   <InfoRow label={t("adminVerify.fieldSubmitted")} value={new Date(selected.createdAt).toLocaleString()} color={color} />
                   {selected.verifiedAt && (

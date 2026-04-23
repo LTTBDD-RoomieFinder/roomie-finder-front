@@ -87,7 +87,7 @@
   },
   "map": {
     "title": "Bản đồ phòng",
-    "subtitle": "Kéo bản đồ để tải phòng trong khung nhìn — tối ưu cho nhiều người dùng.",
+    "subtitle": "Kéo bản đồ để tải phòng trong khung nhìn.",
     "loadingPins": "Đang cập nhật ghim…",
     "openRoom": "Xem phòng",
     "loadPinsError": "Không tải được ghim bản đồ.",
@@ -98,8 +98,12 @@
     "androidNoGoogleKeyHint": "Chưa cấu hình Google Maps API key: bản đồ Android có thể hiển thị hạn chế. Thêm EXPO_PUBLIC_GOOGLE_MAPS_API_KEY và build lại native.",
     "iosAppleMapsNote": "iOS dùng Apple Maps — không cần API key Google.",
     "emptyHint": "Không có ghim trong vùng này. Thử zoom/kéo map hoặc kiểm tra bài PUBLISHED + phòng ACTIVE + địa chỉ có tọa độ.",
+    "invalidCoordsHint": "API trả về {{count}} bài nhưng không có tọa độ hợp lệ để ghim (kiểm tra lat/lng địa chỉ ở backend).",
     "openRoomFailed": "Không mở được chi tiết phòng từ bài đăng.",
     "viewRoomDetail": "Xem chi tiết đầy đủ",
+    "openDirections": "Chỉ đường",
+    "directionsNoCoords": "Bài đăng không có tọa độ để chỉ đường.",
+    "directionsOpenFailed": "Không mở được Google Maps.",
     "previewLoading": "Đang tải phòng…",
     "tapPinHint": "Nhấn vào ghim để xem trước phòng"
   },
@@ -200,7 +204,9 @@
       "roomType": "Loại phòng",
       "description": "Mô tả chi tiết",
       "tenantRequirement": "Yêu cầu người ở",
-      "amenities": "Tiện ích nổi bật"
+      "amenities": "Tiện ích nổi bật",
+      "host": "Chủ phòng",
+      "hostLoading": "Đang tải…"
     },
     "form": {
       "basicSection": "Thông tin cơ bản",
@@ -256,7 +262,7 @@
     "incomingTab": "Nhận được ({{count}})",
     "outgoingTab": "Đã gửi ({{count}})",
     "headerTitle": "Lời mời kết bạn phòng",
-    "headerSubtitle": "Chấp nhận để tạo phòng chat riêng, thảo luận giá cả & nội quy",
+    "headerSubtitle": "Chấp nhận để tạo phòng chat riêng",
     "emptyIncomingTitle": "Chưa có lời mời nào",
     "emptyOutgoingTitle": "Bạn chưa gửi lời mời nào",
     "emptyIncomingSub": "Khi ai đó gửi lời mời kết bạn phòng cho bạn, chúng sẽ xuất hiện tại đây.",
@@ -632,6 +638,19 @@
     "NO_FREQUENT_GUESTS": "Không ở với người hay dẫn khách về",
     "errors": {
       "11001": "Một hoặc nhiều điều kiện không hợp lệ."
+    }
+  },
+  "publicUser": {
+    "title": "Hồ sơ thành viên",
+    "reviewsSection": "Đánh giá",
+    "reviewCount": "{{count}} đánh giá",
+    "noReviews": "Chưa có đánh giá nào.",
+    "loadError": "Không tải được hồ sơ này.",
+    "invalidUser": "Thành viên không hợp lệ.",
+    "openProfileA11y": "Xem hồ sơ và đánh giá người đăng",
+    "reviewContext": {
+      "ROOMMATE_EXPERIENCE": "Trải nghiệm ở ghép",
+      "LANDLORD_EXPERIENCE": "Trải nghiệm chủ nhà / cho thuê"
     }
   },
   "adminVerify": {

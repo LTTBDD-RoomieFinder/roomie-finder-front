@@ -13,6 +13,7 @@ import { ProfileMatchSection } from "@/components/matching/profile-match-section
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import {
   REQUEST_REJECT_COOLDOWN_DAYS,
   REQUEST_STATUS_COLOR,
@@ -179,9 +180,13 @@ export default function RequestDetailScreen() {
         >
           {/* Thẻ thông tin người dùng */}
           <View style={[styles.userCard, { backgroundColor: color.primary + "10", borderColor: color.primary + "25" }]}>
-            <View style={[styles.avatarWrap, { backgroundColor: color.primary + "20" }]}>
-              <IconSymbol name="person.fill" size={30} color={color.primary} />
-            </View>
+            <UserAvatar
+              userId={otherUser?.id}
+              hintUrl={otherUser?.avatarUrl}
+              name={displayName}
+              size={56}
+              style={styles.avatarWrap}
+            />
             <View style={styles.userInfo}>
               <ThemedText style={styles.displayName}>{displayName}</ThemedText>
               {otherUser?.email ? (

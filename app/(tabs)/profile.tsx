@@ -109,6 +109,7 @@ export default function ProfileScreen() {
   const authUser = useAuthStore((s) => s.user);
   const isAdmin = authUser?.roles?.includes("ADMIN") ?? false;
   const setAvatarInCache = useProfileAvatarStore((s) => s.setAvatar);
+  const refreshAvatar = useProfileAvatarStore((s) => s.fetchAvatar);
 
   const [loading, setLoading] = useState(true);
   const [isCreated, setIsCreated] = useState(true);
@@ -539,7 +540,7 @@ export default function ProfileScreen() {
     } finally {
       setLoading(false);
     }
-  }, [populateForm]);
+  }, [authUser?.id, populateForm, setAvatarInCache]);
 
   const fetchTags = useCallback(async () => {
     try {
@@ -617,15 +618,16 @@ export default function ProfileScreen() {
         Alert.alert(t("profile.savedSuccess"));
       }
 
-      // Keep avatar cache in sync with the newly saved avatar
-      if (authUser?.id && merged.avatarUrl) {
-        setAvatarInCache(authUser.id, merged.avatarUrl);
+      if (authUser?.id) {
+        const nextAvatar = merged.avatarUrl?.trim() || null;
+        setAvatarInCache(authUser.id, nextAvatar);
+        refreshAvatar(authUser.id, { force: true });
       }
 
       reset(merged);
       setSafetyRefreshKey((k) => k + 1);
     },
-    [authUser?.id, images, isCreated, reset, setAvatarInCache, t]
+    [authUser?.id, images, isCreated, refreshAvatar, reset, setAvatarInCache, t]
   );
 
   const onSubmit = async (data: FormValues) => {

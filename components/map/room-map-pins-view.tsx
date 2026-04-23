@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import MapView, { type Region } from "react-native-maps";
 import { isAxiosError } from "axios";
+import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 
 import { RoomMapPin } from "@/components/map/room-map-pin";
@@ -21,6 +22,7 @@ import { postService } from "@/services/post-service";
 import type { MapPinGeoItem, PostResponse } from "@/data/response";
 import { regionToMapPinsQuery } from "@/utils/map-bbox";
 import { getNativeMapProvider, mapUsesGoogleOnAndroid } from "@/utils/map-runtime";
+import { mergeMapPinIntoPostPreview } from "@/utils/normalize-post";
 
 const DEFAULT_REGION: Region = {
   latitude: 21.0285,
@@ -32,6 +34,14 @@ const DEFAULT_REGION: Region = {
 /** Giới hạn marker để tránh jank khi payload lớn. */
 const MAX_VISIBLE_PINS = 220;
 const DEBOUNCE_MS = 420;
+
+function hasRenderableCoordinates(lat: number, lng: number): boolean {
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return false;
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return false;
+  // (0,0) hoặc gần 0 — thường là dữ liệu thiếu, marker không nên vẽ
+  if (Math.abs(lat) < 1e-6 && Math.abs(lng) < 1e-6) return false;
+  return true;
+}
 
 type Props = {
   initialRegion?: Region;
@@ -51,6 +61,7 @@ export function RoomMapPinsView({ initialRegion = DEFAULT_REGION }: Props) {
   const [previewPost, setPreviewPost] = useState<PostResponse | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const previewFetchSeqRef = useRef(0);
+  const [showUserLocation, setShowUserLocation] = useState(false);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const regionRef = useRef<Region>(initialRegion);
@@ -59,8 +70,15 @@ export function RoomMapPinsView({ initialRegion = DEFAULT_REGION }: Props) {
 
   const mapProvider = useMemo(() => getNativeMapProvider(), []);
 
-  const visiblePins = useMemo(() => pins.slice(0, MAX_VISIBLE_PINS), [pins]);
-  const hiddenCount = Math.max(0, pins.length - visiblePins.length);
+  const pinsOnMap = useMemo(
+    () => pins.filter((p) => hasRenderableCoordinates(p.lat, p.lng)),
+    [pins],
+  );
+  const visiblePins = useMemo(
+    () => pinsOnMap.slice(0, MAX_VISIBLE_PINS),
+    [pinsOnMap],
+  );
+  const hiddenCount = Math.max(0, pinsOnMap.length - visiblePins.length);
 
   const runDebouncedFetch = useCallback(
     (region: Region) => {
@@ -113,6 +131,17 @@ export function RoomMapPinsView({ initialRegion = DEFAULT_REGION }: Props) {
     };
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (!cancelled) setShowUserLocation(status === Location.PermissionStatus.GRANTED);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const onRegionChangeComplete = useCallback(
     (region: Region) => {
       regionRef.current = region;
@@ -144,7 +173,7 @@ export function RoomMapPinsView({ initialRegion = DEFAULT_REGION }: Props) {
       try {
         const post = await postService.getPostById(pin.id);
         if (seq !== previewFetchSeqRef.current) return;
-        setPreviewPost(post);
+        setPreviewPost(mergeMapPinIntoPostPreview(post, pin));
       } catch (e) {
         if (seq !== previewFetchSeqRef.current) return;
         const msg =
@@ -185,6 +214,14 @@ export function RoomMapPinsView({ initialRegion = DEFAULT_REGION }: Props) {
 
   const sheetVisible = selectedPinId !== null;
 
+  const directionsTarget = useMemo(() => {
+    if (selectedPinId == null) return null;
+    const p = pinsOnMap.find((x) => x.id === selectedPinId);
+    return p && hasRenderableCoordinates(p.lat, p.lng)
+      ? { lat: p.lat, lng: p.lng }
+      : null;
+  }, [selectedPinId, pinsOnMap]);
+
   if (Platform.OS === "web") {
     return (
       <View style={[styles.webFallback, { backgroundColor: color.backgroundSecondary }]}>
@@ -209,6 +246,8 @@ export function RoomMapPinsView({ initialRegion = DEFAULT_REGION }: Props) {
         rotateEnabled={false}
         pitchEnabled={false}
         mapType="standard"
+        showsUserLocation={showUserLocation}
+        showsMyLocationButton={false}
       >
         {visiblePins.map((pin) => (
           <RoomMapPin
@@ -232,13 +271,20 @@ export function RoomMapPinsView({ initialRegion = DEFAULT_REGION }: Props) {
             </ThemedText>
           </View>
         )}
-        {!loading && visiblePins.length > 0 && (
+        {!loading && pinsOnMap.length > 0 && (
           <View style={[styles.pill, { backgroundColor: color.card, borderColor: color.border }]}>
             <ThemedText style={[styles.pillText, { color: color.text }]}>
-              {t("map.pinCount", { count: visiblePins.length })}
+              {t("map.pinCount", { count: pinsOnMap.length })}
               {hiddenCount > 0
                 ? ` · ${t("map.moreHidden", { count: hiddenCount })}`
                 : ""}
+            </ThemedText>
+          </View>
+        )}
+        {!loading && !error && pins.length > 0 && pinsOnMap.length === 0 && (
+          <View style={[styles.pill, { backgroundColor: color.card, borderColor: color.border }]}>
+            <ThemedText style={[styles.pillText, { color: color.textSecondary }]}>
+              {t("map.invalidCoordsHint", { count: pins.length })}
             </ThemedText>
           </View>
         )}
@@ -288,6 +334,7 @@ export function RoomMapPinsView({ initialRegion = DEFAULT_REGION }: Props) {
         visible={sheetVisible}
         post={previewPost}
         loading={previewLoading}
+        directionsTarget={directionsTarget}
         onClose={handleCloseSheet}
         onViewDetails={handleViewDetails}
       />

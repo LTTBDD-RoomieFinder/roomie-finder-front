@@ -98,8 +98,12 @@
     "androidNoGoogleKeyHint": "Google Maps API key missing: Android tiles may be limited. Set EXPO_PUBLIC_GOOGLE_MAPS_API_KEY and rebuild native.",
     "iosAppleMapsNote": "iOS uses Apple Maps — no Google API key required.",
     "emptyHint": "No pins in this area. Try panning/zooming, or check PUBLISHED posts with ACTIVE rooms and valid coordinates.",
+    "invalidCoordsHint": "{{count}} listings returned but none have valid map coordinates (check address lat/lng in backend).",
     "openRoomFailed": "Could not open room details from this post.",
     "viewRoomDetail": "View full details",
+    "openDirections": "Directions",
+    "directionsNoCoords": "This listing has no coordinates for navigation.",
+    "directionsOpenFailed": "Could not open Google Maps.",
     "previewLoading": "Loading room…",
     "tapPinHint": "Tap a pin to preview the room"
   },
@@ -200,7 +204,9 @@
       "roomType": "Room type",
       "description": "Description",
       "tenantRequirement": "Tenant preference",
-      "amenities": "Amenities"
+      "amenities": "Amenities",
+      "host": "Host",
+      "hostLoading": "Loading…"
     },
     "form": {
       "basicSection": "Basics",
@@ -632,6 +638,19 @@
     "NO_FREQUENT_GUESTS": "No frequent guests",
     "errors": {
       "11001": "One or more deal-breaker types are invalid."
+    }
+  },
+  "publicUser": {
+    "title": "Member profile",
+    "reviewsSection": "Reviews",
+    "reviewCount": "{{count}} reviews",
+    "noReviews": "No reviews yet.",
+    "loadError": "Could not load this profile.",
+    "invalidUser": "Invalid member.",
+    "openProfileA11y": "View poster profile and reviews",
+    "reviewContext": {
+      "ROOMMATE_EXPERIENCE": "Roommate experience",
+      "LANDLORD_EXPERIENCE": "Landlord experience"
     }
   },
   "adminVerify": {

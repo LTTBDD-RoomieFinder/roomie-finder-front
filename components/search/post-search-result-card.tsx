@@ -4,10 +4,10 @@ import { Image } from "expo-image";
 import { Feather, Ionicons } from "@expo/vector-icons"; 
 
 import { ThemedText } from "@/components/themed-text";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useLanguage } from "@/hooks/use-language";
 import { RoomResponse } from "@/data/response";
-import { useProfileAvatarStore } from "@/stores/useProfileAvatarStore";
 import { formatDate } from "@/utils/format-post";
 
 export type PostSearchAuthor = {
@@ -39,9 +39,6 @@ export function PostSearchResultCard({ post, onPress }: Props) {
   const { color } = useAppTheme();
   const { t, locale } = useLanguage();
 
-  // Avatar cache — fetch if not yet resolved
-  const { cache, fetchAvatar } = useProfileAvatarStore();
-
   if (!post) return null;
 
   const { title, content, createdAt, room } = post;
@@ -52,17 +49,6 @@ export function PostSearchResultCard({ post, onPress }: Props) {
     author?.fullName?.trim() ||
     author?.username?.trim() ||
     t("postSearch.anonymous");
-  const avatarLetter = authorName.trim().charAt(0).toUpperCase();
-
-  // Kick off background fetch for the author (if we have their id)
-  const authorIdKey = author?.id != null ? String(author.id) : null;
-  if (authorIdKey && !(authorIdKey in cache)) fetchAvatar(authorIdKey);
-
-  // Priority: cache → author.avatarUrl from search payload → null
-  const resolvedAvatar =
-    (authorIdKey ? cache[authorIdKey] : undefined) ??
-    author?.avatarUrl ??
-    null;
   const thumb = room?.imageUrls?.[0];
   const loc = locale === "vi" ? "vi-VN" : "en-US";
   const priceDisplay = room?.price
@@ -83,20 +69,13 @@ export function PostSearchResultCard({ post, onPress }: Props) {
       ]}
     >
       <View style={styles.topRow}>
-        {resolvedAvatar ? (
-          <Image
-            source={{ uri: resolvedAvatar }}
-            style={styles.avatar}
-            contentFit="cover"
-            transition={150}
-          />
-        ) : (
-          <View style={[styles.avatar, { backgroundColor: color.primary + "1A" }]}>
-            <ThemedText style={{ fontWeight: "800", color: color.primary, fontSize: 16 }}>
-              {avatarLetter}
-            </ThemedText>
-          </View>
-        )}
+        <UserAvatar
+          userId={author?.id}
+          hintUrl={author?.avatarUrl}
+          name={authorName}
+          size={48}
+          style={styles.avatar}
+        />
         
         <View style={styles.authorInfo}>
           <ThemedText type="defaultSemiBold" numberOfLines={1} style={{ fontSize: 15 }}>

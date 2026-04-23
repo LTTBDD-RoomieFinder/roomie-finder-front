@@ -14,6 +14,8 @@ export type VerificationResponse = {
   userId: number;
   status: VerificationStatus;
   documentNumberMasked: string | null;
+  /** Present when API returns full number (e.g. admin detail). */
+  documentNumber?: string | null;
   reviewNote: string | null;
   verifiedAt: string | null;
   expiresAt: string | null;

@@ -1,6 +1,10 @@
 import { verificationApi } from "@/apis/verification-api";
 import type { SubmitVerificationRequest } from "@/data/request";
 import type { VerificationResponse } from "@/types/reputation";
+import {
+  extractVerificationList,
+  normalizeVerificationResponse,
+} from "@/utils/normalize-verification";
 
 /**
  * Axios interceptor already strips the outer axios wrapper (returns response.data).
@@ -30,22 +34,25 @@ function unwrapRaw(res: unknown): unknown {
 
 export const verificationService = {
   async submit(body: SubmitVerificationRequest): Promise<VerificationResponse> {
-    return unwrap<VerificationResponse>(await verificationApi.submit(body));
+    const raw = unwrap<unknown>(await verificationApi.submit(body));
+    return normalizeVerificationResponse(raw);
   },
 
   async getMyStatus(): Promise<VerificationResponse> {
-    return unwrap<VerificationResponse>(await verificationApi.getMyStatus());
+    const raw = unwrap<unknown>(await verificationApi.getMyStatus());
+    return normalizeVerificationResponse(raw);
   },
 
-  /** Returns the raw payload — caller (AdminVerificationsScreen) normalises to array. */
-  async adminList(status?: string): Promise<unknown> {
-    return unwrapRaw(await verificationApi.adminList(status));
+  async adminList(status?: string): Promise<VerificationResponse[]> {
+    const raw = unwrapRaw(await verificationApi.adminList(status));
+    return extractVerificationList(raw);
   },
 
   async adminReview(
     id: number,
     body: { status: "VERIFIED" | "REJECTED"; reviewNote?: string | null }
   ): Promise<VerificationResponse> {
-    return unwrap<VerificationResponse>(await verificationApi.adminReview(id, body));
+    const raw = unwrap<unknown>(await verificationApi.adminReview(id, body));
+    return normalizeVerificationResponse(raw);
   },
 };

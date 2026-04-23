@@ -16,6 +16,7 @@ import { VerificationStatusChip } from "@/components/reputation/verification-sta
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useLanguage } from "@/hooks/use-language";
+import { imageService } from "@/services/image-service";
 import { verificationService } from "@/services/verification-service";
 import { VerificationStatus } from "@/types/enums";
 import type { VerificationResponse } from "@/types/reputation";
@@ -121,11 +122,18 @@ export function VerificationSection({ onVerificationSubmitted }: Props) {
     if (!validate()) return;
     setSubmitting(true);
     try {
+      const [frontUrl, selfieUrl] = await Promise.all([
+        imageService.uploadToCloudinary(images.front),
+        imageService.uploadToCloudinary(images.selfie),
+      ]);
+      const backUrl = images.back
+        ? await imageService.uploadToCloudinary(images.back)
+        : undefined;
       const res = await verificationService.submit({
         documentNumber: documentNumber.trim(),
-        documentImageUrl: images.front,
-        documentBackImageUrl: images.back || undefined,
-        selfieImageUrl: images.selfie,
+        documentImageUrl: frontUrl,
+        documentBackImageUrl: backUrl || undefined,
+        selfieImageUrl: selfieUrl,
       });
       setVerification(res);
       setFormOpen(false);

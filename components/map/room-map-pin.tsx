@@ -1,11 +1,15 @@
-import React, { memo, useCallback } from "react";
+import React, { memo, useCallback, useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { Marker } from "react-native-maps";
+import { Image } from "expo-image";
 
 import type { MapPinGeoItem } from "@/data/response";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import type { LocaleCode } from "@/lib/i18n-core";
 import type { TranslateFn } from "@/utils/format-room";
+
+const PIN_SIZE = 44;
+const PIN_RADIUS = 12;
 
 type Props = {
   pin: MapPinGeoItem;
@@ -33,12 +37,27 @@ function RoomMapPinInner({ pin, isSelected, locale, onPress }: Props) {
   const { color } = useAppTheme();
   const label = shortPrice(pin.price, locale);
 
+  /**
+   * Custom marker + remote image: `tracksViewChanges={false}` often chụp bitmap
+   * trước khi ảnh tải → chấm “biến mất”. Bật tạm sau khi đổi pin/ảnh rồi tắt.
+   */
+  const [tracksViewChanges, setTracksViewChanges] = useState(true);
+  useEffect(() => {
+    setTracksViewChanges(true);
+    const t = setTimeout(() => setTracksViewChanges(false), 900);
+    return () => clearTimeout(t);
+  }, [pin.id, pin.thumbnailUrl]);
+
   const handlePress = useCallback(() => onPress(pin), [onPress, pin]);
+
+  const imageSource = pin.thumbnailUrl?.trim()
+    ? { uri: pin.thumbnailUrl.trim() }
+    : require("@/assets/images/placeholder.png");
 
   return (
     <Marker
       coordinate={{ latitude: pin.lat, longitude: pin.lng }}
-      tracksViewChanges={false}
+      tracksViewChanges={tracksViewChanges || isSelected}
       onPress={handlePress}
       anchor={{ x: 0.5, y: 1 }}
       zIndex={isSelected ? 999 : 1}
@@ -46,24 +65,43 @@ function RoomMapPinInner({ pin, isSelected, locale, onPress }: Props) {
       <View style={styles.wrap}>
         <View
           style={[
-            styles.bubble,
-            isSelected
-              ? { backgroundColor: color.primary, borderColor: color.primary, ...styles.bubbleActive }
-              : { backgroundColor: color.background, borderColor: color.border },
+            styles.card,
+            isSelected ? styles.cardSelected : null,
+            {
+              borderColor: isSelected ? color.primary : "#ffffff",
+              shadowColor: isSelected ? color.primary : "#000",
+            },
           ]}
         >
-          <Text
-            style={[styles.label, { color: isSelected ? "#fff" : color.text }]}
-            numberOfLines={1}
+          <Image
+            source={imageSource}
+            style={styles.pinPhoto}
+            contentFit="cover"
+            transition={150}
+            onLoadEnd={() => {
+              setTracksViewChanges(true);
+              setTimeout(() => setTracksViewChanges(false), 400);
+            }}
+          />
+          <View
+            style={[
+              styles.pricePill,
+              {
+                backgroundColor: isSelected ? color.primary : "rgba(0,0,0,0.78)",
+              },
+            ]}
           >
-            {label}
-          </Text>
+            <Text style={styles.priceText} numberOfLines={1}>
+              {label}
+            </Text>
+          </View>
         </View>
-        {/* Tail */}
         <View
           style={[
             styles.tail,
-            { borderTopColor: isSelected ? color.primary : color.border },
+            {
+              borderTopColor: isSelected ? color.primary : "#fff",
+            },
           ]}
         />
       </View>
@@ -77,40 +115,49 @@ const styles = StyleSheet.create({
   wrap: {
     alignItems: "center",
   },
-  bubble: {
-    paddingHorizontal: 10,
+  card: {
+    width: PIN_SIZE,
+    borderRadius: PIN_RADIUS,
+    borderWidth: 2,
+    backgroundColor: "#fff",
+    overflow: "hidden",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.35,
+    shadowRadius: 5,
+    elevation: 6,
+  },
+  cardSelected: {
+    transform: [{ scale: 1.08 }],
+    shadowOpacity: 0.45,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  pinPhoto: {
+    width: PIN_SIZE,
+    height: PIN_SIZE,
+    backgroundColor: "#e8e8e8",
+  },
+  pricePill: {
+    width: PIN_SIZE,
+    paddingHorizontal: 6,
     paddingVertical: 5,
-    borderRadius: 20,
-    borderWidth: 1.5,
-    minWidth: 48,
     alignItems: "center",
-    // iOS shadow
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.18,
-    shadowRadius: 4,
-    // Android elevation
-    elevation: 4,
+    justifyContent: "center",
   },
-  bubbleActive: {
-    shadowOpacity: 0.32,
-    shadowRadius: 6,
-    elevation: 8,
-    transform: [{ scale: 1.1 }],
-  },
-  label: {
-    fontSize: 12,
-    fontWeight: "700",
+  priceText: {
+    color: "#fff",
+    fontSize: 11,
+    fontWeight: "800",
     letterSpacing: -0.2,
   },
   tail: {
     width: 0,
     height: 0,
-    borderLeftWidth: 5,
-    borderRightWidth: 5,
-    borderTopWidth: 6,
+    borderLeftWidth: 6,
+    borderRightWidth: 6,
+    borderTopWidth: 7,
     borderLeftColor: "transparent",
     borderRightColor: "transparent",
-    marginTop: -1,
+    marginTop: -2,
   },
 });

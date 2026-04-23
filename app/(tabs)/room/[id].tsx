@@ -1,5 +1,5 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
@@ -13,12 +13,15 @@ import {
 import { ProfileMatchSection } from "@/components/matching/profile-match-section";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { RoomResponse } from "@/data/response";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useLanguage } from "@/hooks/use-language";
 import { genderReqLabelKey, roomTypeLabelKey } from "@/lib/i18n-labels";
+import { profileApi } from "@/apis/profile";
 import { roomService } from "@/services/room-service";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { useProfileAvatarStore } from "@/stores/useProfileAvatarStore";
 import { GenderRequirement, RoomType } from "@/types/enums";
 import { formatRoomAddress, formatRoomPrice } from "@/utils/format-room";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
@@ -35,6 +38,10 @@ export default function RoomDetailScreen() {
 
   const [room, setRoom] = useState<RoomResponse | null>(null);
   const [loading, setLoading] = useState(false);
+  const [hostName, setHostName] = useState("");
+  const [hostAvatarHint, setHostAvatarHint] = useState<string | null>(null);
+  const [hostLoading, setHostLoading] = useState(false);
+  const applyHint = useProfileAvatarStore((s) => s.applyHint);
 
   const roomId = Number(Array.isArray(id) ? id[0] : id);
   const isValidRoomId = Number.isFinite(roomId) && roomId > 0;
@@ -60,6 +67,52 @@ export default function RoomDetailScreen() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const ownerId = room?.ownerId;
+    if (ownerId == null || !Number.isFinite(Number(ownerId))) {
+      setHostName("");
+      setHostAvatarHint(null);
+      setHostLoading(false);
+      return;
+    }
+    const idKey = String(ownerId);
+    let cancelled = false;
+    setHostLoading(true);
+    setHostName("");
+    setHostAvatarHint(null);
+    profileApi
+      .getUserProfile(idKey)
+      .then((res: unknown) => {
+        if (cancelled) return;
+        const body = res as Record<string, unknown>;
+        const data = (body?.data ?? body) as Record<string, unknown>;
+        const name =
+          (typeof data.fullName === "string" && data.fullName.trim()) ||
+          (typeof data.full_name === "string" && data.full_name.trim()) ||
+          (typeof data.username === "string" && data.username.trim()) ||
+          (typeof data.user_name === "string" && data.user_name.trim()) ||
+          "";
+        setHostName(name);
+        const av =
+          typeof data.avatarUrl === "string"
+            ? data.avatarUrl.trim() || null
+            : typeof data.avatar_url === "string"
+              ? data.avatar_url.trim() || null
+              : null;
+        setHostAvatarHint(av);
+        applyHint(idKey, av);
+      })
+      .catch(() => {
+        if (!cancelled) setHostName("");
+      })
+      .finally(() => {
+        if (!cancelled) setHostLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [room?.ownerId, applyHint]);
 
   const handleBack = () => {
     if (from === 'home') {
@@ -170,6 +223,29 @@ export default function RoomDetailScreen() {
             <ThemedText style={[styles.price, { color: color.primary }]}>
               {formatRoomPrice(room.price, t, locale)}
             </ThemedText>
+          </View>
+
+          <View
+            style={[
+              styles.hostRow,
+              { backgroundColor: color.card, borderColor: color.border },
+            ]}
+          >
+            <UserAvatar
+              userId={room.ownerId}
+              hintUrl={hostAvatarHint}
+              name={hostName}
+              size={52}
+              style={styles.hostAvatar}
+            />
+            <View style={{ flex: 1 }}>
+              <ThemedText style={[styles.hostLabel, { color: color.textSecondary }]}>
+                {t("room.detail.host")}
+              </ThemedText>
+              <ThemedText type="defaultSemiBold" style={{ color: color.text }} numberOfLines={1}>
+                {hostLoading ? t("room.detail.hostLoading") : hostName || "—"}
+              </ThemedText>
+            </View>
           </View>
 
           <View style={styles.matchSection}>
@@ -318,6 +394,27 @@ const styles = StyleSheet.create({
 
   titleSection: {
     gap: 8,
+  },
+
+  hostRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    padding: 14,
+    borderRadius: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  hostAvatar: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+  },
+  hostLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    marginBottom: 2,
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
   },
 
   title: {

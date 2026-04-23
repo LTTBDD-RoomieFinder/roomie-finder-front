@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { RoomResponse } from "@/data/response";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useLanguage } from "@/hooks/use-language";
@@ -136,8 +137,11 @@ export function CreatePostModal({ visible, onClose, onSuccess }: Props) {
           >
             <View style={styles.profileSection}>
               <View style={[styles.avatar, { backgroundColor: color.backgroundSecondary }]}>
-                <Image
-                  source={require("@/assets/images/default-avatar.png")}
+                <UserAvatar
+                  userId={user?.id}
+                  hintUrl={user?.avatarUrl}
+                  name={user?.fullName || user?.username}
+                  size={52}
                   style={styles.avatarImg}
                 />
               </View>
