@@ -59,7 +59,10 @@ const refreshAxios = axios.create({
   timeout: 15000,
 });
 
-type RefreshSubscriber = (token: string) => void;
+type RefreshSubscriber = {
+  onSuccess: (token: string) => void;
+  onError: (error: unknown) => void;
+};
 
 let isRefreshing = false;
 let subscribers: RefreshSubscriber[] = [];
@@ -69,7 +72,12 @@ const subscribeTokenRefresh = (cb: RefreshSubscriber) => {
 };
 
 const onRefreshed = (newToken: string) => {
-  subscribers.forEach((cb) => cb(newToken));
+  subscribers.forEach(({ onSuccess }) => onSuccess(newToken));
+  subscribers = [];
+};
+
+const onRefreshFailed = (error: unknown) => {
+  subscribers.forEach(({ onError }) => onError(error));
   subscribers = [];
 };
 
@@ -106,13 +114,18 @@ axiosRequest.interceptors.response.use(
       originalRequest._retry = true;
 
       return new Promise((resolve, reject) => {
-        subscribeTokenRefresh((newToken: string) => {
-          originalRequest.headers = {
-            ...originalRequest.headers,
-            Authorization: `Bearer ${newToken}`,
-          };
+        subscribeTokenRefresh({
+          onSuccess: (newToken: string) => {
+            originalRequest.headers = {
+              ...originalRequest.headers,
+              Authorization: `Bearer ${newToken}`,
+            };
 
-          resolve(axiosRequest(originalRequest));
+            resolve(axiosRequest(originalRequest));
+          },
+          onError: (refreshError: unknown) => {
+            reject(refreshError);
+          },
         });
 
         if (!isRefreshing) {
@@ -139,7 +152,9 @@ axiosRequest.interceptors.response.use(
             } catch {
               await clearTokens();
               useAuthStore.getState().logout();
-              reject("Session expired");
+              const sessionExpiredError = "Session expired";
+              onRefreshFailed(sessionExpiredError);
+              reject(sessionExpiredError);
             } finally {
               isRefreshing = false;
             }

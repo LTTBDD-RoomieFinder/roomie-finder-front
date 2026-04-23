@@ -74,6 +74,7 @@
   },
   "home": {
     "title": "Roomie Finder",
+    "subtitle": "Find your perfect roommate",
     "searchA11y": "Search",
     "myPostsA11y": "My posts",
     "deletePostTitle": "Delete post",
@@ -633,6 +634,7 @@
   },
   "adminVerify": {
     "title": "Verification Management",
+    "subtitle": "Review & approve user identities",
     "filterAll": "All",
     "filterPending": "Pending",
     "filterVerified": "Verified",

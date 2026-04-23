@@ -74,6 +74,7 @@
   },
   "home": {
     "title": "Roomie Finder",
+    "subtitle": "Tìm bạn cùng phòng lý tưởng",
     "searchA11y": "Tìm kiếm",
     "myPostsA11y": "Bài đăng của tôi",
     "deletePostTitle": "Xoá bài đăng",
@@ -633,6 +634,7 @@
   },
   "adminVerify": {
     "title": "Quản lý xác thực",
+    "subtitle": "Duyệt và xác minh danh tính",
     "filterAll": "Tất cả",
     "filterPending": "Chờ duyệt",
     "filterVerified": "Đã duyệt",

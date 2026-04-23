@@ -77,7 +77,7 @@ function useIsAdmin(): boolean {
 
 // ═════════════════════════════════════════════════════════════════════════════
 export default function AdminVerificationsScreen() {
-  const { color, scheme, radius } = useAppTheme();
+  const { color, scheme } = useAppTheme();
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
   const isDark = scheme === "dark";
@@ -89,7 +89,7 @@ export default function AdminVerificationsScreen() {
   }, [isAdmin]);
 
   // ── State ──────────────────────────────────────────────────────────────────
-  const [filter, setFilter] = useState<StatusFilter>("PENDING");
+  const [filter, setFilter] = useState<StatusFilter>("PENDING" as StatusFilter);
   const [items, setItems] = useState<VerificationResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -252,31 +252,34 @@ export default function AdminVerificationsScreen() {
   return (
     <View style={[s.root, { backgroundColor: color.background }]}>
       {/* ─── Header ─────────────────────────────────────────────── */}
-      <View style={[s.header, { paddingTop: insets.top, backgroundColor: color.primary }]}>
-        <View style={s.headerRow}>
+      <View style={[s.header, { backgroundColor: color.primary }]}>
+        <View style={s.headerContent}>
           <Pressable
-            style={({ pressed }) => [s.headerBtn, pressed && { opacity: 0.7 }]}
+            style={({ pressed }) => [s.headerBackBtn, pressed && { opacity: 0.7 }]}
             onPress={() => router.back()}
             hitSlop={12}
           >
-            <Ionicons name="arrow-back" size={22} color="#fff" />
+            <Ionicons name="arrow-back" size={22} color={color.primaryText} />
           </Pressable>
-
-          <View style={{ flex: 1 }}>
-            <ThemedText style={s.headerTitle}>{t("adminVerify.title")}</ThemedText>
-            <ThemedText style={s.headerSub}>
+          <View style={[s.headerIconWrap, { backgroundColor: "rgba(255,255,255,0.2)" }]}>
+            <Ionicons name="shield-checkmark" size={28} color={color.primaryText} />
+          </View>
+          <View style={s.headerTextWrap}>
+            <ThemedText style={[s.headerTitle, { color: color.primaryText }]}>
+              {t("adminVerify.title")}
+            </ThemedText>
+            <ThemedText style={[s.headerSub, { color: color.primaryText, opacity: 0.9 }]}>
               {items.length > 0
                 ? `${items.length} ${t("adminVerify.filterAll").toLowerCase()}`
-                : ""}
+                : t("adminVerify.subtitle")}
             </ThemedText>
           </View>
-
           <Pressable
-            style={({ pressed }) => [s.headerBtn, pressed && { opacity: 0.7 }]}
+            style={({ pressed }) => [s.headerBackBtn, pressed && { opacity: 0.7 }]}
             onPress={() => fetchList(filter, true)}
             hitSlop={12}
           >
-            <Ionicons name="refresh" size={20} color="#fff" />
+            <Ionicons name="refresh" size={20} color={color.primaryText} />
           </Pressable>
         </View>
       </View>
@@ -639,12 +642,37 @@ function ImageCard({
 const s = StyleSheet.create({
   root: { flex: 1 },
 
-  // Header
-  header: { paddingBottom: 16 },
-  headerRow: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingTop: 12, gap: 12 },
-  headerBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.18)", alignItems: "center", justifyContent: "center" },
-  headerTitle: { fontSize: 20, fontWeight: "800", color: "#fff", letterSpacing: -0.3 },
-  headerSub: { fontSize: 13, color: "rgba(255,255,255,0.7)", marginTop: 1 },
+  // Header — synced with Profile / Chats / Requests / Map pattern
+  header: {
+    height: 100,
+    marginTop: 40,
+    justifyContent: "flex-end",
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+  },
+  headerContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+  },
+  headerBackBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(255,255,255,0.18)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerIconWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerTextWrap: { flex: 1 },
+  headerTitle: { fontSize: 24, fontWeight: "700", letterSpacing: 0.3 },
+  headerSub: { fontSize: 14, marginTop: 4, lineHeight: 20 },
 
   // Tabs
   tabBar: { borderBottomWidth: StyleSheet.hairlineWidth, paddingVertical: 10 },

@@ -2,13 +2,13 @@ import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import { Alert, Pressable, StyleSheet, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context"; // Thêm để xử lý tai thỏ chuẩn xác
 
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { CreatePostModal } from "@/components/home/create-post-modal";
 import { EditPostModal } from "@/components/home/edit-post-modal";
 import { HomeSearchOverlay } from "@/components/home/home-search-overlay";
+import { IconSymbol } from "@/components/ui/icon-symbol";
 import { MyPostsSheet } from "@/components/home/my-posts-sheet";
 import { PostEntry } from "@/components/home/post-entry";
 import { PostList } from "@/components/home/post-list";
@@ -20,10 +20,9 @@ import { syncTabBadgesToStore } from "@/services/tab-badge-service";
 import { useAuthStore } from "@/stores/useAuthStore";
 
 export default function HomeScreen() {
-  const { color, radius } = useAppTheme();
+  const { color } = useAppTheme();
   const { t } = useLanguage();
   const user = useAuthStore((state) => state.user);
-  const insets = useSafeAreaInsets(); // Lấy thông số vùng an toàn của màn hình
 
   const [posts, setPosts] = useState<PostResponse[]>([]);
   const [loading, setLoading] = useState(false);
@@ -88,49 +87,41 @@ export default function HomeScreen() {
 
   return (
     <ThemedView style={styles.root}>
-      {/* Header: icon 3 gạch + icon search sát nhau */}
-      <View 
-        style={[
-          styles.header, 
-          { paddingTop: Math.max(insets.top, 16) + 12 } // Cách top an toàn + padding
-        ]}
-      >
-        <View style={styles.headerRow}>
+      <View style={[styles.header, { backgroundColor: color.primary }]}>
+        <View style={styles.headerContent}>
+          <View style={[styles.headerIconWrap, { backgroundColor: "rgba(255,255,255,0.2)" }]}>
+            <IconSymbol name="house.fill" size={28} color={color.primaryText} />
+          </View>
+          <View style={styles.headerTextWrap}>
+            <ThemedText style={[styles.headerTitle, { color: color.primaryText }]}>
+              {t("home.title")}
+            </ThemedText>
+            <ThemedText style={[styles.headerSubtitle, { color: color.primaryText, opacity: 0.9 }]}>
+              {t("home.subtitle")}
+            </ThemedText>
+          </View>
           <Pressable
             onPress={() => setSearchVisible(true)}
             style={({ pressed }) => [
-              styles.iconButton,
-              {
-                backgroundColor: pressed ? color.border : color.backgroundSecondary,
-                borderRadius: radius.md,
-              },
+              styles.headerActionBtn,
+              { backgroundColor: pressed ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.18)" },
             ]}
             accessibilityRole="button"
             accessibilityLabel={t("home.searchA11y")}
           >
-            <Ionicons name="search" size={22} color={color.text} />
+            <Ionicons name="search" size={20} color={color.primaryText} />
           </Pressable>
-
-          <ThemedText type="title" style={[styles.headerTitle, { color: color.primary }]}>
-            {t("home.title")}
-          </ThemedText>
-
-          <View style={styles.headerRight}>
-            <Pressable
-              onPress={() => setMyPostsVisible(true)}
-              style={({ pressed }) => [
-                styles.iconButton,
-                {
-                  backgroundColor: pressed ? color.border : color.backgroundSecondary,
-                  borderRadius: radius.md,
-                },
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel={t("home.myPostsA11y")}
-            >
-              <Ionicons name="list" size={22} color={color.text} />
-            </Pressable>
-          </View>
+          <Pressable
+            onPress={() => setMyPostsVisible(true)}
+            style={({ pressed }) => [
+              styles.headerActionBtn,
+              { backgroundColor: pressed ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.18)" },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={t("home.myPostsA11y")}
+          >
+            <Ionicons name="list" size={20} color={color.primaryText} />
+          </Pressable>
         </View>
       </View>
 
@@ -178,31 +169,41 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-  },
+  root: { flex: 1 },
   header: {
-    paddingHorizontal: 16,
-    paddingBottom: 12, // Tạo khoảng cách với PostEntry ở dưới
-    gap: 12,
+    height: 100,
+    marginTop: 40,
+    justifyContent: "flex-end",
+    paddingHorizontal: 20,
+    paddingVertical: 20,
   },
-  headerRow: {
+  headerContent: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    gap: 14,
   },
+  headerIconWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerTextWrap: { flex: 1 },
   headerTitle: {
-    fontSize: 26,
-    fontWeight: "bold",
+    fontSize: 24,
+    fontWeight: "700",
+    letterSpacing: 0.3,
   },
-  headerRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12, // Khoảng cách đều giữa các nút
+  headerSubtitle: {
+    fontSize: 14,
+    marginTop: 4,
+    lineHeight: 20,
   },
-  iconButton: {
-    width: 44,
-    height: 44,
+  headerActionBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
   },
