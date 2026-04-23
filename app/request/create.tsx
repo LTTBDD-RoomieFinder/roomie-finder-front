@@ -1,3 +1,4 @@
+import { useFocusEffect } from "@react-navigation/native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -78,6 +79,14 @@ export default function CreateRequestScreen() {
       router.replace("/(tabs)/requests");
     }
   }, [rawReceiverId, receiverId, router]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (hasPostContext && !Number.isNaN(receiverId)) {
+        refreshElig();
+      }
+    }, [hasPostContext, receiverId, refreshElig]),
+  );
 
   const handleSubmit = useCallback(async () => {
     if (Number.isNaN(receiverId)) return;

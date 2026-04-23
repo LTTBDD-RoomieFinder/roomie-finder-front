@@ -9,7 +9,7 @@ import { ThemedText } from "@/components/themed-text";
 import { PostResponse } from "@/data/response";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useLanguage } from "@/hooks/use-language";
-import { usePostsJoinEligibility } from "@/hooks/use-posts-join-eligibility";
+import type { PostJoinEligibility } from "@/types/post-join-eligibility";
 import { formatDate } from "@/utils/format-post";
 import { formatRoomPrice } from "@/utils/format-room";
 
@@ -18,24 +18,27 @@ type Props = {
   currentUserId?: number | string;
   onEdit?: (post: PostResponse) => void;
   onDelete?: (post: PostResponse) => void;
+  /** Batch từ PostList — tránh N request và refetch khi quay lại feed. */
+  eligibility?: PostJoinEligibility;
+  eligibilityLoading?: boolean;
+  eligibilityError?: boolean;
+  onRetryEligibility?: () => void;
 };
 
-export function PostCard({ post, currentUserId, onEdit, onDelete }: Props) {
+export function PostCard({
+  post,
+  currentUserId,
+  onEdit,
+  onDelete,
+  eligibility: elig,
+  eligibilityLoading: eligLoading,
+  eligibilityError: eligError,
+  onRetryEligibility: refreshElig,
+}: Props) {
   const { color } = useAppTheme();
   const { t, locale } = useLanguage();
   const { width } = useWindowDimensions();
   const isOwner = currentUserId !== undefined && String(post.user.id) === String(currentUserId);
-  const myUserIdNumber =
-    currentUserId === undefined ? undefined : Number(currentUserId);
-
-  // Eligibility cho icon request chat (xếp hàng khi full).
-  const {
-    eligibilityByPostId,
-    loading: eligLoading,
-    error: eligError,
-    refresh: refreshElig,
-  } = usePostsJoinEligibility([post.id], Boolean(myUserIdNumber && !isOwner));
-  const elig = eligibilityByPostId[post.id];
 
   return (
     <View style={[styles.card]}>
