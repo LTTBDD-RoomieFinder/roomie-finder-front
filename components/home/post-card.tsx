@@ -6,6 +6,7 @@ import { router } from "expo-router";
 
 import { PostRequestChatIcon } from "@/components/post/post-request-chat-icon";
 import { ThemedText } from "@/components/themed-text";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { PostResponse } from "@/data/response";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useLanguage } from "@/hooks/use-language";
@@ -45,14 +46,16 @@ export function PostCard({ post, currentUserId, onEdit, onDelete, scoreInfo }: P
   return (
     <View style={[styles.card]}>
       <View style={styles.header}>
-        <Image
-          source={require("@/assets/images/default-avatar.png")}
+        <UserAvatar
+          userId={post.user.id}
+          hintUrl={post.user.avatarUrl}
+          name={post.user.fullName || post.user.username}
+          size={44}
           style={[styles.avatar, { backgroundColor: color.backgroundSecondary }]}
-          contentFit="cover"
         />
         <View style={{ flex: 1 }}>
           <ThemedText type="defaultSemiBold" style={styles.userName}>
-            {post.user.username}
+            {post.user.fullName || post.user.username}
           </ThemedText>
           <View style={styles.metaRow}>
             <ThemedText style={[styles.metaText, { color: color.textSecondary }]}>

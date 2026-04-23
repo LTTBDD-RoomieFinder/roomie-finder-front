@@ -1,12 +1,12 @@
 import type { Region } from "react-native-maps";
 
-import type { MapPinsBBoxRequest } from "@/data/request";
+import type { MapPinRequest } from "@/data/request";
 
 /**
  * Spring `MapPinRequest`: minLat, maxLat, minLng, maxLng — camelCase, @NotNull.
  * Luôn đảm bảo min ≤ max để `BETWEEN` trên backend không rỗng do đảo min/max.
  */
-export function regionToMapPinsQuery(region: Region): MapPinsBBoxRequest {
+export function regionToMapPinsQuery(region: Region): MapPinRequest {
   const halfLat = Math.max(region.latitudeDelta / 2, 1e-8);
   const halfLng = Math.max(region.longitudeDelta / 2, 1e-8);
 

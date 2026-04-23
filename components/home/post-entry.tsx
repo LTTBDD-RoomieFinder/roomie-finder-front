@@ -1,10 +1,10 @@
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useLanguage } from "@/hooks/use-language";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { Ionicons } from "@expo/vector-icons";
-import { Image } from "expo-image";
 import React from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
@@ -21,10 +21,12 @@ export function PostEntry({ onPress }: Props) {
   return (
     <ThemedView style={styles.container}>
       <View style={styles.topRow}>
-        <Image
-          source={require("@/assets/images/default-avatar.png")}
-          style={styles.avatar}
-          contentFit="cover"
+        <UserAvatar
+          userId={user?.id}
+          hintUrl={user?.avatarUrl}
+          name={user?.fullName || user?.username || firstName}
+          size={40}
+          style={[styles.avatar, { backgroundColor: color.backgroundSecondary }]}
         />
         <Pressable
           style={({ pressed }) => [

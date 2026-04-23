@@ -35,16 +35,18 @@ import { SettingsModal } from "@/components/settings/settings-modal";
 import ConfirmModal from "@/components/ui/confirm-modal";
 import DirtyLeaveModal from "@/components/ui/dirty-leave-modal";
 import { Tag } from "@/types/Tag";
-import { useFocusEffect } from "expo-router";
 import { useNavigation } from "@react-navigation/native";
 
-import { TrustScoreBadge } from "@/components/reputation/trust-score-badge";
+import { DealBreakerSection } from "@/components/profile/deal-breaker-section";
+import { TrustScoreSection } from "@/components/profile/trust-score-section";
+import { VerificationSection } from "@/components/profile/verification-section";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useLanguage } from "@/hooks/use-language";
-import { trustService } from "@/services/trust-service";
-import type { TrustScoreResponse } from "@/types/reputation";
+import { useAuthStore } from "@/stores/useAuthStore";
+import { useProfileAvatarStore } from "@/stores/useProfileAvatarStore";
 import { profileTabGuard } from "@/utils/profile-tab-guard";
+import { router } from "expo-router";
 
 type FormValues = {
   fullName: string;
@@ -104,6 +106,10 @@ export default function ProfileScreen() {
   const navigation = useNavigation();
   const { color, scheme, radius } = useAppTheme();
   const { t } = useLanguage();
+  const authUser = useAuthStore((s) => s.user);
+  const isAdmin = authUser?.roles?.includes("ADMIN") ?? false;
+  const setAvatarInCache = useProfileAvatarStore((s) => s.setAvatar);
+  const refreshAvatar = useProfileAvatarStore((s) => s.fetchAvatar);
 
   const [loading, setLoading] = useState(true);
   const [isCreated, setIsCreated] = useState(true);
@@ -120,10 +126,8 @@ export default function ProfileScreen() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const pendingNavRef = useRef<"home" | "map" | "room" | "requests" | "chats" | null>(null);
 
-  const [trustScore, setTrustScore] = useState<TrustScoreResponse | null>(null);
-  const [trustLoading, setTrustLoading] = useState(false);
-  const [trustError, setTrustError] = useState<string | null>(null);
-  const [recalcBusy, setRecalcBusy] = useState(false);
+  /** Bump to tell safety-center sections to re-fetch after profile save. */
+  const [safetyRefreshKey, setSafetyRefreshKey] = useState(0);
 
   const {
     control,
@@ -527,26 +531,16 @@ export default function ProfileScreen() {
       setProfile(p);
       setIsCreated(true);
       populateForm(p);
+      // Pre-populate the shared avatar cache with own profile avatar
+      if (authUser?.id) {
+        setAvatarInCache(authUser.id, p.avatarUrl ?? null);
+      }
     } catch {
       setIsCreated(false);
     } finally {
       setLoading(false);
     }
-  }, [populateForm]);
-
-  const fetchTrust = useCallback(async () => {
-    setTrustLoading(true);
-    setTrustError(null);
-    try {
-      const data = await trustService.getMine();
-      setTrustScore(data);
-    } catch (e) {
-      setTrustScore(null);
-      setTrustError(typeof e === "string" ? e : t("trust.loadError"));
-    } finally {
-      setTrustLoading(false);
-    }
-  }, [t]);
+  }, [authUser?.id, populateForm, setAvatarInCache]);
 
   const fetchTags = useCallback(async () => {
     try {
@@ -562,20 +556,6 @@ export default function ProfileScreen() {
     fetchTags();
     locationService.getCities().then(setCities);
   }, [fetchProfile, fetchTags]);
-
-  useEffect(() => {
-    if (!loading) {
-      void fetchTrust();
-    }
-  }, [loading, fetchTrust]);
-
-  useFocusEffect(
-    useCallback(() => {
-      if (!loading) {
-        void fetchTrust();
-      }
-    }, [loading, fetchTrust])
-  );
 
   useEffect(() => {
     if (cityId) {
@@ -638,9 +618,16 @@ export default function ProfileScreen() {
         Alert.alert(t("profile.savedSuccess"));
       }
 
+      if (authUser?.id) {
+        const nextAvatar = merged.avatarUrl?.trim() || null;
+        setAvatarInCache(authUser.id, nextAvatar);
+        refreshAvatar(authUser.id, { force: true });
+      }
+
       reset(merged);
+      setSafetyRefreshKey((k) => k + 1);
     },
-    [images, isCreated, reset, t]
+    [authUser?.id, images, isCreated, refreshAvatar, reset, setAvatarInCache, t]
   );
 
   const onSubmit = async (data: FormValues) => {
@@ -697,23 +684,6 @@ export default function ProfileScreen() {
     setLeaveModalVisible(false);
   }, []);
 
-  const handleRecalculateTrust = useCallback(async () => {
-    setRecalcBusy(true);
-    try {
-      const data = await trustService.recalculate();
-      setTrustScore(data);
-      setTrustError(null);
-      Alert.alert(t("common.success"), t("trust.recalculateSuccess"));
-    } catch (e) {
-      Alert.alert(
-        t("common.error"),
-        typeof e === "string" ? e : t("trust.loadError")
-      );
-    } finally {
-      setRecalcBusy(false);
-    }
-  }, [t]);
-
   if (loading) {
     return <ActivityIndicator style={{ marginTop: 50 }} color={color.primary} />;
   }
@@ -749,38 +719,53 @@ export default function ProfileScreen() {
         </View>
       </View>
       <ScrollView contentContainerStyle={styles.container}>
-        <View style={styles.card}>
-          <View style={styles.sectionHeader}>
-            <View style={styles.sectionIcon}>
-              <IconSymbol name="checkmark.seal.fill" size={18} color={color.primary} />
-            </View>
-            <ThemedText style={styles.sectionTitle}>{t("trust.sectionTitle")}</ThemedText>
-          </View>
-          {trustLoading ? (
-            <ActivityIndicator color={color.primary} style={{ paddingVertical: 12 }} />
-          ) : trustError ? (
-            <ThemedText style={{ color: color.error, fontSize: 14 }}>{trustError}</ThemedText>
-          ) : trustScore ? (
-            <>
-              <TrustScoreBadge trust={trustScore} compact={false} />
-              <TouchableOpacity
-                style={[styles.saveBtn, { marginTop: 12, marginBottom: 0 }]}
-                onPress={handleRecalculateTrust}
-                disabled={recalcBusy}
-                activeOpacity={recalcBusy ? 1 : 0.7}
-              >
-                <ThemedText style={styles.saveText}>
-                  {recalcBusy ? t("common.loading") : t("trust.recalculate")}
-                </ThemedText>
-              </TouchableOpacity>
-            </>
-          ) : (
-            <ThemedText style={{ color: color.textSecondary, fontSize: 14 }}>
-              {t("trust.loadError")}
-            </ThemedText>
-          )}
-        </View>
+        {/* ── Safety Center ───────────────────────────────────────── */}
+        <TrustScoreSection refreshKey={safetyRefreshKey} />
+        <VerificationSection onVerificationSubmitted={() => setSafetyRefreshKey((k) => k + 1)} />
+        <DealBreakerSection />
 
+        {/* ── Admin Panel (only for ADMIN role) ─────────────────── */}
+        {isAdmin && (
+          <TouchableOpacity
+            activeOpacity={0.82}
+            onPress={() => router.push("/admin/verifications")}
+            style={[
+              styles.card,
+              {
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 14,
+                borderWidth: 1.5,
+                borderColor: "#f59e0b",
+                backgroundColor: isDark ? "#2a2a1f" : "#fffbe6",
+              },
+            ]}
+          >
+            <View
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                backgroundColor: "#f59e0b22",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <IconSymbol name="shield.fill" size={20} color="#f59e0b" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <ThemedText style={{ fontWeight: "700", fontSize: 15, color: "#92400e" }}>
+                {t("adminVerify.adminPanelBtn")}
+              </ThemedText>
+              <ThemedText style={{ fontSize: 13, color: "#b45309", marginTop: 2 }}>
+                {t("adminVerify.adminPanelVerify")}
+              </ThemedText>
+            </View>
+            <IconSymbol name="chevron.right" size={16} color="#b45309" />
+          </TouchableOpacity>
+        )}
+
+        {/* ── Profile form ──────────────────────────────────────── */}
         <View style={styles.card}>
           <View style={styles.sectionHeader}>
             <View style={styles.sectionIcon}>

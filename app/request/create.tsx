@@ -14,6 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useLanguage } from "@/hooks/use-language";
 import { useCreateRequest } from "@/hooks/use-create-request";
@@ -125,9 +126,13 @@ export default function CreateRequestScreen() {
           <View style={styles.content}>
             {/* Thẻ người nhận */}
             <View style={[styles.receiverCard, { backgroundColor: color.primary + "10", borderColor: color.primary + "25" }]}>
-              <View style={[styles.avatarWrap, { backgroundColor: color.primary + "20" }]}>
-                <IconSymbol name="person.fill" size={28} color={color.primary} />
-              </View>
+              <UserAvatar
+                userId={receiverId}
+                hintUrl={receiver?.avatarUrl}
+                name={displayName}
+                size={52}
+                style={styles.avatarWrap}
+              />
               <View style={styles.receiverInfo}>
                 <ThemedText style={[styles.receiverLabel, { color: color.text, opacity: 0.55 }]}>
                   {t("request.sendTo")}

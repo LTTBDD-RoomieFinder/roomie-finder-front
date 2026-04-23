@@ -13,6 +13,7 @@ export type UserResponse = {
   email: string;
   fullName: string;
   roles: string[];
+  avatarUrl?: string | null;
 };
 
 /** Chat room created when request is ACCEPTED; matches backend ChatRoomResponse. */

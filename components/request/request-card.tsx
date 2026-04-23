@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import {
   REQUEST_REJECT_COOLDOWN_DAYS,
   REQUEST_STATUS_COLOR,
@@ -55,14 +56,13 @@ export function RequestCard({
     <>
       <View style={styles.main}>
         <View style={styles.row}>
-          <View
-            style={[
-              styles.avatarPlaceholder,
-              { backgroundColor: color.primary + "18" },
-            ]}
-          >
-            <IconSymbol name="person.fill" size={24} color={color.primary} />
-          </View>
+          <UserAvatar
+            userId={otherUser?.id}
+            hintUrl={otherUser?.avatarUrl}
+            name={displayName}
+            size={46}
+            style={{ marginRight: 12, flexShrink: 0 }}
+          />
           <View style={styles.body}>
             <ThemedText
               style={[
@@ -223,15 +223,6 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     alignItems: "center",
-  },
-  avatarPlaceholder: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
-    flexShrink: 0,
   },
   body: {
     flex: 1,

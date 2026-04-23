@@ -18,6 +18,7 @@ import { ChatInput, ChatMembershipNotice, MessageBubble } from "@/components/cha
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useLanguage } from "@/hooks/use-language";
 import { useChatMessages } from "@/hooks/use-chat-messages";
@@ -33,6 +34,29 @@ import {
   getMembershipNoticeModel,
   parseMemberKickedUserId,
 } from "@/utils/chat-system-message";
+
+function ChatMemberAvatarTile({
+  userId,
+  apiAvatarUrl,
+  displayName,
+  borderColor,
+}: {
+  userId: number;
+  apiAvatarUrl?: string | null;
+  displayName: string;
+  borderColor: string;
+}) {
+  return (
+    <UserAvatar
+      userId={userId}
+      hintUrl={apiAvatarUrl}
+      name={displayName}
+      size={38}
+      borderColor={borderColor}
+      style={styles.modalMemberAvatar}
+    />
+  );
+}
 
 export default function ChatRoomScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -461,11 +485,7 @@ export default function ChatRoomScreen() {
                       const isMe =
                         myUserId != null && Number(m.id) === myUserId;
 
-                      const initial = (
-                        m.fullName?.trim()?.[0] ??
-                        m.username?.trim()?.[0] ??
-                        "?"
-                      ).toUpperCase();
+                      const displayName = m.fullName || m.username || "";
                       return (
                         <View
                           key={m.id}
@@ -474,24 +494,12 @@ export default function ChatRoomScreen() {
                             { borderColor: color.border + "30" },
                           ]}
                         >
-                          <View
-                            style={[
-                              styles.modalMemberAvatar,
-                              {
-                                backgroundColor: color.primary + "18",
-                                borderColor: color.primary + "25",
-                              },
-                            ]}
-                          >
-                            <ThemedText
-                              style={[
-                                styles.modalMemberInitial,
-                                { color: color.primary },
-                              ]}
-                            >
-                              {initial}
-                            </ThemedText>
-                          </View>
+                          <ChatMemberAvatarTile
+                            userId={Number(m.id)}
+                            apiAvatarUrl={m.avatarUrl}
+                            displayName={displayName}
+                            borderColor={color.primary + "25"}
+                          />
                           <View style={{ flex: 1 }}>
                             <ThemedText
                               style={[
@@ -768,7 +776,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  modalMemberInitial: { fontSize: 13, fontWeight: "900" },
   modalMemberName: { fontSize: 14, fontWeight: "800" },
   modalMemberSub: { fontSize: 12, marginTop: 2 },
   modalActionBtn: {

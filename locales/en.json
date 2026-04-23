@@ -74,6 +74,7 @@
   },
   "home": {
     "title": "Roomie Finder",
+    "subtitle": "Find your perfect roommate",
     "searchA11y": "Search",
     "myPostsA11y": "My posts",
     "feedTab": "Feed",
@@ -97,7 +98,14 @@
     "androidNoGoogleKeyHint": "Google Maps API key missing: Android tiles may be limited. Set EXPO_PUBLIC_GOOGLE_MAPS_API_KEY and rebuild native.",
     "iosAppleMapsNote": "iOS uses Apple Maps — no Google API key required.",
     "emptyHint": "No pins in this area. Try panning/zooming, or check PUBLISHED posts with ACTIVE rooms and valid coordinates.",
-    "openRoomFailed": "Could not open room details from this post."
+    "invalidCoordsHint": "{{count}} listings returned but none have valid map coordinates (check address lat/lng in backend).",
+    "openRoomFailed": "Could not open room details from this post.",
+    "viewRoomDetail": "View full details",
+    "openDirections": "Directions",
+    "directionsNoCoords": "This listing has no coordinates for navigation.",
+    "directionsOpenFailed": "Could not open Google Maps.",
+    "previewLoading": "Loading room…",
+    "tapPinHint": "Tap a pin to preview the room"
   },
   "post": {
     "status": {
@@ -196,7 +204,9 @@
       "roomType": "Room type",
       "description": "Description",
       "tenantRequirement": "Tenant preference",
-      "amenities": "Amenities"
+      "amenities": "Amenities",
+      "host": "Host",
+      "hostLoading": "Loading…"
     },
     "form": {
       "basicSection": "Basics",
@@ -363,6 +373,7 @@
     "noResultsHint": "Try different keywords or adjust filters.",
     "loadMore": "Load more",
     "seeAll": "See all results",
+    "searchError": "Search failed. Please check your filters and try again.",
     "amenityChip": "Amenities ({{count}})",
     "priceChip": "{{min}}–{{max}} M",
     "filter": {
@@ -628,5 +639,56 @@
     "errors": {
       "11001": "One or more deal-breaker types are invalid."
     }
+  },
+  "publicUser": {
+    "title": "Member profile",
+    "reviewsSection": "Reviews",
+    "reviewCount": "{{count}} reviews",
+    "noReviews": "No reviews yet.",
+    "loadError": "Could not load this profile.",
+    "invalidUser": "Invalid member.",
+    "openProfileA11y": "View poster profile and reviews",
+    "reviewContext": {
+      "ROOMMATE_EXPERIENCE": "Roommate experience",
+      "LANDLORD_EXPERIENCE": "Landlord experience"
+    }
+  },
+  "adminVerify": {
+    "title": "Verification Management",
+    "subtitle": "Review & approve user identities",
+    "filterAll": "All",
+    "filterPending": "Pending",
+    "filterVerified": "Verified",
+    "filterRejected": "Rejected",
+    "empty": "No verifications found",
+    "noDocNum": "No document number",
+    "detailTitle": "Verification Detail",
+    "fieldId": "Verification ID",
+    "fieldUserId": "User ID",
+    "fieldDocNum": "Document No.",
+    "fieldStatus": "Status",
+    "fieldSubmitted": "Submitted at",
+    "fieldVerifiedAt": "Verified at",
+    "previousNote": "Previous review note",
+    "imagesTitle": "Documents",
+    "imgFront": "Front",
+    "imgBack": "Back",
+    "imgSelfie": "Selfie",
+    "actionTitle": "Review action",
+    "approve": "Approve",
+    "reject": "Reject",
+    "confirmApprove": "Confirm Approve",
+    "confirmReject": "Confirm Reject",
+    "approveNoteLabel": "Add a note (optional)",
+    "rejectNoteLabel": "Reason for rejection (required)",
+    "notePlaceholderApprove": "Optional note for user…",
+    "notePlaceholderReject": "Enter reason for rejection…",
+    "noteRequired": "Note required",
+    "noteRequiredMsg": "Please enter a reason when rejecting.",
+    "approvedMsg": "Verification approved successfully.",
+    "rejectedMsg": "Verification rejected.",
+    "reviewFailed": "Failed to submit review. Please try again.",
+    "adminPanelBtn": "Admin Panel",
+    "adminPanelVerify": "Review pending verifications"
   }
 }

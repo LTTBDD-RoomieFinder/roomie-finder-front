@@ -74,6 +74,7 @@
   },
   "home": {
     "title": "Roomie Finder",
+    "subtitle": "Tìm bạn cùng phòng lý tưởng",
     "searchA11y": "Tìm kiếm",
     "myPostsA11y": "Bài đăng của tôi",
     "feedTab": "Bảng tin",
@@ -86,7 +87,7 @@
   },
   "map": {
     "title": "Bản đồ phòng",
-    "subtitle": "Kéo bản đồ để tải phòng trong khung nhìn — tối ưu cho nhiều người dùng.",
+    "subtitle": "Kéo bản đồ để tải phòng trong khung nhìn.",
     "loadingPins": "Đang cập nhật ghim…",
     "openRoom": "Xem phòng",
     "loadPinsError": "Không tải được ghim bản đồ.",
@@ -97,7 +98,14 @@
     "androidNoGoogleKeyHint": "Chưa cấu hình Google Maps API key: bản đồ Android có thể hiển thị hạn chế. Thêm EXPO_PUBLIC_GOOGLE_MAPS_API_KEY và build lại native.",
     "iosAppleMapsNote": "iOS dùng Apple Maps — không cần API key Google.",
     "emptyHint": "Không có ghim trong vùng này. Thử zoom/kéo map hoặc kiểm tra bài PUBLISHED + phòng ACTIVE + địa chỉ có tọa độ.",
-    "openRoomFailed": "Không mở được chi tiết phòng từ bài đăng."
+    "invalidCoordsHint": "API trả về {{count}} bài nhưng không có tọa độ hợp lệ để ghim (kiểm tra lat/lng địa chỉ ở backend).",
+    "openRoomFailed": "Không mở được chi tiết phòng từ bài đăng.",
+    "viewRoomDetail": "Xem chi tiết đầy đủ",
+    "openDirections": "Chỉ đường",
+    "directionsNoCoords": "Bài đăng không có tọa độ để chỉ đường.",
+    "directionsOpenFailed": "Không mở được Google Maps.",
+    "previewLoading": "Đang tải phòng…",
+    "tapPinHint": "Nhấn vào ghim để xem trước phòng"
   },
   "post": {
     "status": {
@@ -196,7 +204,9 @@
       "roomType": "Loại phòng",
       "description": "Mô tả chi tiết",
       "tenantRequirement": "Yêu cầu người ở",
-      "amenities": "Tiện ích nổi bật"
+      "amenities": "Tiện ích nổi bật",
+      "host": "Chủ phòng",
+      "hostLoading": "Đang tải…"
     },
     "form": {
       "basicSection": "Thông tin cơ bản",
@@ -252,7 +262,7 @@
     "incomingTab": "Nhận được ({{count}})",
     "outgoingTab": "Đã gửi ({{count}})",
     "headerTitle": "Lời mời kết bạn phòng",
-    "headerSubtitle": "Chấp nhận để tạo phòng chat riêng, thảo luận giá cả & nội quy",
+    "headerSubtitle": "Chấp nhận để tạo phòng chat riêng",
     "emptyIncomingTitle": "Chưa có lời mời nào",
     "emptyOutgoingTitle": "Bạn chưa gửi lời mời nào",
     "emptyIncomingSub": "Khi ai đó gửi lời mời kết bạn phòng cho bạn, chúng sẽ xuất hiện tại đây.",
@@ -363,6 +373,7 @@
     "noResultsHint": "Thử đổi từ khóa hoặc mở bộ lọc để tìm chính xác hơn.",
     "loadMore": "Tải thêm",
     "seeAll": "Xem tất cả kết quả",
+    "searchError": "Tìm kiếm thất bại. Vui lòng kiểm tra bộ lọc và thử lại.",
     "amenityChip": "Tiện ích ({{count}})",
     "priceChip": "{{min}}–{{max}}tr",
     "filter": {
@@ -628,5 +639,56 @@
     "errors": {
       "11001": "Một hoặc nhiều điều kiện không hợp lệ."
     }
+  },
+  "publicUser": {
+    "title": "Hồ sơ thành viên",
+    "reviewsSection": "Đánh giá",
+    "reviewCount": "{{count}} đánh giá",
+    "noReviews": "Chưa có đánh giá nào.",
+    "loadError": "Không tải được hồ sơ này.",
+    "invalidUser": "Thành viên không hợp lệ.",
+    "openProfileA11y": "Xem hồ sơ và đánh giá người đăng",
+    "reviewContext": {
+      "ROOMMATE_EXPERIENCE": "Trải nghiệm ở ghép",
+      "LANDLORD_EXPERIENCE": "Trải nghiệm chủ nhà / cho thuê"
+    }
+  },
+  "adminVerify": {
+    "title": "Quản lý xác thực",
+    "subtitle": "Duyệt và xác minh danh tính",
+    "filterAll": "Tất cả",
+    "filterPending": "Chờ duyệt",
+    "filterVerified": "Đã duyệt",
+    "filterRejected": "Từ chối",
+    "empty": "Không có yêu cầu nào",
+    "noDocNum": "Chưa có số CCCD",
+    "detailTitle": "Chi tiết xác thực",
+    "fieldId": "Mã xác thực",
+    "fieldUserId": "Mã người dùng",
+    "fieldDocNum": "Số CCCD",
+    "fieldStatus": "Trạng thái",
+    "fieldSubmitted": "Ngày gửi",
+    "fieldVerifiedAt": "Ngày duyệt",
+    "previousNote": "Ghi chú trước đó",
+    "imagesTitle": "Hình ảnh giấy tờ",
+    "imgFront": "Mặt trước",
+    "imgBack": "Mặt sau",
+    "imgSelfie": "Ảnh selfie",
+    "actionTitle": "Hành động",
+    "approve": "Duyệt",
+    "reject": "Từ chối",
+    "confirmApprove": "Xác nhận duyệt",
+    "confirmReject": "Xác nhận từ chối",
+    "approveNoteLabel": "Thêm ghi chú (tuỳ chọn)",
+    "rejectNoteLabel": "Lý do từ chối (bắt buộc)",
+    "notePlaceholderApprove": "Ghi chú cho người dùng…",
+    "notePlaceholderReject": "Nhập lý do từ chối…",
+    "noteRequired": "Thiếu lý do",
+    "noteRequiredMsg": "Vui lòng nhập lý do khi từ chối.",
+    "approvedMsg": "Đã duyệt xác thực thành công.",
+    "rejectedMsg": "Đã từ chối xác thực.",
+    "reviewFailed": "Không thể gửi kết quả duyệt. Vui lòng thử lại.",
+    "adminPanelBtn": "Admin Panel",
+    "adminPanelVerify": "Duyệt xác thực CCCD đang chờ"
   }
 }
