@@ -21,6 +21,14 @@ type Props = {
   currentUserId?: number | string;
   onEdit?: (post: PostResponse) => void;
   onDelete?: (post: PostResponse) => void;
+  scoresByPostId?: Record<
+    number,
+    {
+      totalScore: number;
+      profileAvgScore: number;
+      roomScore: number;
+    }
+  >;
 };
 
 export function PostList({
@@ -31,6 +39,7 @@ export function PostList({
   currentUserId,
   onEdit,
   onDelete,
+  scoresByPostId,
 }: Props) {
   const { color } = useAppTheme();
   const { t } = useLanguage();
@@ -62,6 +71,7 @@ export function PostList({
           currentUserId={currentUserId}
           onEdit={onEdit}
           onDelete={onDelete}
+          scoreInfo={scoresByPostId?.[item.id]}
         />
       )}
       ItemSeparatorComponent={() => <View style={{ height: 8, backgroundColor: color.backgroundSecondary }} />}

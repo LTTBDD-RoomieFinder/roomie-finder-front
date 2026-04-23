@@ -18,9 +18,14 @@ type Props = {
   currentUserId?: number | string;
   onEdit?: (post: PostResponse) => void;
   onDelete?: (post: PostResponse) => void;
+  scoreInfo?: {
+    totalScore: number;
+    profileAvgScore: number;
+    roomScore: number;
+  };
 };
 
-export function PostCard({ post, currentUserId, onEdit, onDelete }: Props) {
+export function PostCard({ post, currentUserId, onEdit, onDelete, scoreInfo }: Props) {
   const { color } = useAppTheme();
   const { t, locale } = useLanguage();
   const { width } = useWindowDimensions();
@@ -86,6 +91,18 @@ export function PostCard({ post, currentUserId, onEdit, onDelete }: Props) {
           </View>
         )}
       </View>
+      {scoreInfo ? (
+        <View style={styles.scoreRow}>
+          <View style={[styles.scoreChip, { backgroundColor: color.backgroundSecondary }]}>
+            <ThemedText style={[styles.scoreText, { color: color.tint }]}>
+              Match {Math.round(scoreInfo.totalScore)}%
+            </ThemedText>
+          </View>
+          <ThemedText style={{ color: color.textSecondary, fontSize: 12 }}>
+            Profile {Math.round(scoreInfo.profileAvgScore)}% · Room {Math.round(scoreInfo.roomScore)}%
+          </ThemedText>
+        </View>
+      ) : null}
 
       {/* Content */}
       <View>
@@ -295,6 +312,22 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 11,
     fontWeight: "600",
+  },
+  scoreRow: {
+    paddingHorizontal: 16,
+    marginBottom: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  scoreChip: {
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  scoreText: {
+    fontSize: 12,
+    fontWeight: "700",
   },
   title: {
     paddingHorizontal: 16,

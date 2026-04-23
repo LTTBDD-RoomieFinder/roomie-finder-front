@@ -76,6 +76,8 @@
     "title": "Roomie Finder",
     "searchA11y": "Tìm kiếm",
     "myPostsA11y": "Bài đăng của tôi",
+    "feedTab": "Bảng tin",
+    "recommendedTab": "Đề xuất",
     "deletePostTitle": "Xoá bài đăng",
     "deletePostMessage": "Bạn có chắc muốn xoá \"{{title}}\" không?",
     "deleteFailed": "Không thể xoá bài đăng.",
