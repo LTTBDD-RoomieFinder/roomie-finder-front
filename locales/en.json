@@ -77,6 +77,8 @@
     "subtitle": "Find your perfect roommate",
     "searchA11y": "Search",
     "myPostsA11y": "My posts",
+    "feedTab": "Feed",
+    "recommendedTab": "Recommended",
     "deletePostTitle": "Delete post",
     "deletePostMessage": "Are you sure you want to delete \"{{title}}\"?",
     "deleteFailed": "Could not delete the post.",

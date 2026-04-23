@@ -16,6 +16,10 @@ import { PostResponse } from "@/data/response";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useLanguage } from "@/hooks/use-language";
 import { postService } from "@/services/post-service";
+import {
+  RecommendedPostResponse,
+  postSearchService,
+} from "@/services/post-search-service";
 import { syncTabBadgesToStore } from "@/services/tab-badge-service";
 import { useAuthStore } from "@/stores/useAuthStore";
 
@@ -25,8 +29,12 @@ export default function HomeScreen() {
   const user = useAuthStore((state) => state.user);
 
   const [posts, setPosts] = useState<PostResponse[]>([]);
+  const [recommendedScores, setRecommendedScores] = useState<
+    Record<number, { totalScore: number; profileAvgScore: number; roomScore: number }>
+  >({});
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [activeTab, setActiveTab] = useState<"feed" | "recommended">("feed");
 
   const [isCreatePostVisible, setCreatePostVisible] = useState(false);
   const [isMyPostsVisible, setMyPostsVisible] = useState(false);
@@ -47,9 +55,73 @@ export default function HomeScreen() {
     }
   }, []);
 
+  const toFeedPost = useCallback((item: RecommendedPostResponse): PostResponse => {
+    const post = item.post;
+    const displayName =
+      post.author?.fullName ||
+      post.author?.username ||
+      post.user?.fullName ||
+      post.user?.username ||
+      t("postSearch.anonymous");
+    const displayUserId =
+      post.author?.id ??
+      (typeof post.user?.id === "number" ? post.user.id : undefined);
+
+    return {
+      id: post.id,
+      title: post.title,
+      content: post.content,
+      status: post.status as any,
+      viewCount: post.viewCount,
+      expirationDate: null,
+      createdAt: post.createdAt,
+      updatedAt: post.updatedAt,
+      room: post.room,
+      user: {
+        id: String(displayUserId ?? ""),
+        username: displayName,
+        email: "",
+        fullName: displayName,
+        roles: [],
+      },
+    };
+  }, [t]);
+
+  const fetchRecommendedPosts = useCallback(async (showLoadingSpinner = true) => {
+    try {
+      if (showLoadingSpinner) setLoading(true);
+      const res = await postSearchService.getRecommendedPosts({ size: 20 });
+      const items = res?.data ?? [];
+      const mappedPosts = items.map(toFeedPost);
+      const scores = items.reduce<
+        Record<number, { totalScore: number; profileAvgScore: number; roomScore: number }>
+      >((acc, item) => {
+        if (item.post?.id !== undefined && item.post?.id !== null) {
+          acc[item.post.id] = {
+            totalScore: item.totalScore,
+            profileAvgScore: item.profileAvgScore,
+            roomScore: item.roomScore,
+          };
+        }
+        return acc;
+      }, {});
+      setRecommendedScores(scores);
+      setPosts(mappedPosts);
+    } catch (e) {
+      console.error("Failed to fetch recommended posts", e);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [toFeedPost]);
+
   useEffect(() => {
+    if (activeTab === "recommended") {
+      fetchRecommendedPosts();
+      return;
+    }
     fetchPosts();
-  }, [fetchPosts]);
+  }, [activeTab, fetchPosts, fetchRecommendedPosts]);
 
   useFocusEffect(
     useCallback(() => {
@@ -60,6 +132,10 @@ export default function HomeScreen() {
   const handleRefresh = () => {
     setRefreshing(true);
     void syncTabBadgesToStore();
+    if (activeTab === "recommended") {
+      fetchRecommendedPosts(false);
+      return;
+    }
     fetchPosts(false);
   };
 
@@ -128,6 +204,57 @@ export default function HomeScreen() {
       <View style={{ flex: 1, backgroundColor: color.background }}>
         {/* Vùng bấm để tạo bài viết */}
         <PostEntry onPress={() => setCreatePostVisible(true)} />
+        <View
+          style={{
+            flexDirection: "row",
+            paddingHorizontal: 16,
+            paddingBottom: 10,
+            gap: 8,
+          }}
+        >
+          <Pressable
+            onPress={() => setActiveTab("feed")}
+            style={({ pressed }) => [
+              styles.tabBtn,
+              {
+                backgroundColor:
+                  activeTab === "feed"
+                    ? color.primary
+                    : pressed
+                    ? color.border
+                    : color.backgroundSecondary,
+              },
+            ]}
+          >
+            <ThemedText
+              type="defaultSemiBold"
+              style={{ color: activeTab === "feed" ? color.primaryText : color.text }}
+            >
+              {t("home.feedTab")}
+            </ThemedText>
+          </Pressable>
+          <Pressable
+            onPress={() => setActiveTab("recommended")}
+            style={({ pressed }) => [
+              styles.tabBtn,
+              {
+                backgroundColor:
+                  activeTab === "recommended"
+                    ? color.primary
+                    : pressed
+                    ? color.border
+                    : color.backgroundSecondary,
+              },
+            ]}
+          >
+            <ThemedText
+              type="defaultSemiBold"
+              style={{ color: activeTab === "recommended" ? color.primaryText : color.text }}
+            >
+              {t("home.recommendedTab")}
+            </ThemedText>
+          </Pressable>
+        </View>
         <View style={{ height: 8, backgroundColor: color.backgroundSecondary }} />
 
         {/* Danh sách bài viết */}
@@ -139,6 +266,7 @@ export default function HomeScreen() {
           currentUserId={user?.id}
           onEdit={(post) => setEditingPost(post)}
           onDelete={handleDeleteFromFeed}
+          scoresByPostId={activeTab === "recommended" ? recommendedScores : undefined}
         />
       </View>
 
@@ -206,5 +334,10 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
+  },
+  tabBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
   },
 });
