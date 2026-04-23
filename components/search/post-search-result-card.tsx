@@ -4,15 +4,18 @@ import { Image } from "expo-image";
 import { Feather, Ionicons } from "@expo/vector-icons"; 
 
 import { ThemedText } from "@/components/themed-text";
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useLanguage } from "@/hooks/use-language";
 import { RoomResponse } from "@/data/response";
 import { formatDate } from "@/utils/format-post";
 
 export type PostSearchAuthor = {
-  id?: number;
-  fullName: string;
+  id?: number | string;
+  fullName?: string | null;
+  username?: string | null;
   phoneNumber?: string;
+  avatarUrl?: string | null;
 };
 
 export type PostSearchResult = {
@@ -20,8 +23,11 @@ export type PostSearchResult = {
   title: string;
   content: string;
   createdAt: string;
-  room?: RoomResponse; 
+  room?: RoomResponse;
+  /** Normalised by postSearchService from `user` field. */
   author?: PostSearchAuthor;
+  /** Raw field from backend — used as fallback if normalisation missed. */
+  user?: PostSearchAuthor;
 };
 
 type Props = {
@@ -35,10 +41,14 @@ export function PostSearchResultCard({ post, onPress }: Props) {
 
   if (!post) return null;
 
-  const { title, content, createdAt, room, author } = post;
-  
-  const authorName = author?.fullName || t("postSearch.anonymous");
-  const avatarLetter = authorName.trim().charAt(0).toUpperCase();
+  const { title, content, createdAt, room } = post;
+
+  // author is normalised by postSearchService; fall back to raw user field
+  const author = post.author ?? post.user;
+  const authorName =
+    author?.fullName?.trim() ||
+    author?.username?.trim() ||
+    t("postSearch.anonymous");
   const thumb = room?.imageUrls?.[0];
   const loc = locale === "vi" ? "vi-VN" : "en-US";
   const priceDisplay = room?.price
@@ -59,11 +69,13 @@ export function PostSearchResultCard({ post, onPress }: Props) {
       ]}
     >
       <View style={styles.topRow}>
-        <View style={[styles.avatar, { backgroundColor: color.primary + "1A" }]}> 
-          <ThemedText style={{ fontWeight: "800", color: color.primary, fontSize: 16 }}>
-            {avatarLetter}
-          </ThemedText>
-        </View>
+        <UserAvatar
+          userId={author?.id}
+          hintUrl={author?.avatarUrl}
+          name={authorName}
+          size={48}
+          style={styles.avatar}
+        />
         
         <View style={styles.authorInfo}>
           <ThemedText type="defaultSemiBold" numberOfLines={1} style={{ fontSize: 15 }}>

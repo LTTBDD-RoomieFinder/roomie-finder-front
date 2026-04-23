@@ -93,13 +93,19 @@ export type PostSearchRequest = {
   size?: number;
 };
 
-/** Bounding box cho `GET /search/map-pins`. */
+/**
+ * Bounding box cho map pins — khớp backend `MapPinRequest`
+ * (`minLat`, `maxLat`, `minLng`, `maxLng`, validation `@NotNull`).
+ */
 export type MapPinsBBoxRequest = {
   minLat: number;
   maxLat: number;
   minLng: number;
   maxLng: number;
 };
+
+/** Alias tên giống Spring bean `MapPinRequest`. */
+export type MapPinRequest = MapPinsBBoxRequest;
 
 export interface BaseProfileRequest {
   fullName: string;

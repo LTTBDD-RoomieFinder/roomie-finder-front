@@ -16,9 +16,18 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     googleMapsApiKey,
   };
 
+  const plugins = [...((config.plugins ?? []) as NonNullable<ExpoConfig["plugins"]>), [
+    "expo-location",
+    {
+      locationWhenInUsePermission:
+        "Roomie Finder cần vị trí của bạn để hiển thị trên bản đồ và mở chỉ đường trên Google Maps.",
+    },
+  ] as const];
+
   return {
     ...config,
     extra,
+    plugins,
     android: {
       ...android,
       // HTTP API (EXPO_PUBLIC_API_URL) — without this, Android blocks cleartext and axios reports ERR_NETWORK.

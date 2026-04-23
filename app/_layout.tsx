@@ -120,6 +120,7 @@ function RootLayoutInner() {
     const inChat = seg.some((s) => s === "chat" || s.startsWith("chat"));
     const inRequest = seg.some((s) => s === "request" || s.startsWith("request"));
     const inPost = seg.some((s) => s === "post" || s.startsWith("post"));
+    const inUser = seg.some((s) => s === "user" || s.startsWith("user"));
 
     if (!isAuthenticated && !inAuthGroup) {
       router.replace("/(auth)/login");
@@ -148,7 +149,7 @@ function RootLayoutInner() {
         <Stack.Screen name="request" />
         <Stack.Screen name="chat/[id]" />
         <Stack.Screen name="post" />
-        <Stack.Screen name="profile" />
+        <Stack.Screen name="user/[id]" />
       </Stack>
       <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
     </ThemeProvider>

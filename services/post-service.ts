@@ -2,6 +2,10 @@ import { postApi } from "@/apis/post-api";
 import { PostCreateRequest, PostUpdateRequest } from "@/data/request";
 import { PostResponse } from "@/data/response";
 import type { PostJoinEligibility } from "@/types/post-join-eligibility";
+import {
+  normalizePostResponse,
+  unwrapPostPayload,
+} from "@/utils/normalize-post";
 
 function unwrapData<T>(res: unknown): T {
   if (res !== null && typeof res === "object" && "data" in res) {
@@ -10,25 +14,31 @@ function unwrapData<T>(res: unknown): T {
   return res as T;
 }
 
+function normalizePostFromApi(res: unknown): PostResponse {
+  return normalizePostResponse(unwrapPostPayload(res));
+}
+
 export const postService = {
   async createPost(body: PostCreateRequest): Promise<PostResponse> {
     const res = await postApi.createPost(body);
-    return (res as any).data as PostResponse;
+    return normalizePostFromApi(res);
   },
 
   async getAllPosts(): Promise<PostResponse[]> {
     const res = await postApi.getAllPosts();
-    return (res as any).data as PostResponse[];
+    const raw = unwrapPostPayload(res);
+    if (!Array.isArray(raw)) return [];
+    return raw.map((p) => normalizePostResponse(p));
   },
 
   async getPostById(id: number): Promise<PostResponse> {
     const res = await postApi.getPostById(id);
-    return (res as any).data as PostResponse;
+    return normalizePostFromApi(res);
   },
 
   async updatePost(id: number, body: PostUpdateRequest): Promise<PostResponse> {
     const res = await postApi.updatePost(id, body);
-    return (res as any).data as PostResponse;
+    return normalizePostFromApi(res);
   },
 
   async deletePost(id: number): Promise<void> {
@@ -37,7 +47,9 @@ export const postService = {
 
   async getMyPosts(): Promise<PostResponse[]> {
     const res = await postApi.getMyPosts();
-    return (res as any).data as PostResponse[];
+    const raw = unwrapPostPayload(res);
+    if (!Array.isArray(raw)) return [];
+    return raw.map((p) => normalizePostResponse(p));
   },
 
   async getJoinChatEligibilityBatch(

@@ -2,15 +2,15 @@ import axiosRequest from "@/config/axios";
 import { CreateProfileRequest, UpdateProfileRequest } from "@/data/request";
 
 export const profileApi = {
-  getProfile: () => {
-    return axiosRequest.get("/me/profile");
-  },
+  getProfile: () => axiosRequest.get("/me/profile"),
 
-  createProfile: (data: CreateProfileRequest) => {
-    return axiosRequest.post("/me/profile", data);
-  },
+  createProfile: (data: CreateProfileRequest) =>
+    axiosRequest.post("/me/profile", data),
 
-  updateProfile: (data: UpdateProfileRequest) => {
-    return axiosRequest.put("/me/profile", data);
-  },
+  updateProfile: (data: UpdateProfileRequest) =>
+    axiosRequest.put("/me/profile", data),
+
+  /** Public endpoint — returns another user's profile (avatarUrl, fullName…). */
+  getUserProfile: (userId: string | number) =>
+    axiosRequest.get(`/users/${userId}/profile`),
 };

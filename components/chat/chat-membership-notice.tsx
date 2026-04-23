@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from "react-native";
 
+import { UserAvatar } from "@/components/ui/user-avatar";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useLanguage } from "@/hooks/use-language";
 import type { MembershipNoticeModel } from "@/utils/chat-system-message";
@@ -7,12 +8,6 @@ import type { MembershipNoticeModel } from "@/utils/chat-system-message";
 type Props = {
   model: MembershipNoticeModel;
 };
-
-function initialFromName(name: string): string {
-  const t = name.trim();
-  if (!t) return "?";
-  return t[0]!.toUpperCase();
-}
 
 /** Centered pill: avatar + bold name + action (leave / kick / join), not a chat bubble. */
 export function ChatMembershipNotice({ model }: Props) {
@@ -38,19 +33,13 @@ export function ChatMembershipNotice({ model }: Props) {
           },
         ]}
       >
-        <View
-          style={[
-            styles.avatar,
-            {
-              backgroundColor: color.primary + "18",
-              borderColor: color.primary + "30",
-            },
-          ]}
-        >
-          <Text style={[styles.avatarLetter, { color: color.primary }]}>
-            {initialFromName(displayName)}
-          </Text>
-        </View>
+        <UserAvatar
+          userId={model.subjectUserId}
+          name={displayName}
+          size={28}
+          borderColor={color.primary + "30"}
+          style={styles.avatar}
+        />
         <View style={styles.textBlock}>
           <Text
             style={[styles.bodyText, { color: color.text }]}
@@ -87,16 +76,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   avatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
     borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  avatarLetter: {
-    fontSize: 12,
-    fontWeight: "800",
   },
   textBlock: {
     flexGrow: 0,
