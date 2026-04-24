@@ -13,6 +13,7 @@ import { PostResponse } from "@/data/response";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useLanguage } from "@/hooks/use-language";
 import { usePostsJoinEligibility } from "@/hooks/use-posts-join-eligibility";
+import { postStatusLabelKey } from "@/lib/i18n-labels";
 import { formatDate } from "@/utils/format-post";
 import { ReportTargetType } from "@/types/enums";
 import { formatRoomPrice } from "@/utils/format-room";
@@ -22,15 +23,10 @@ type Props = {
   currentUserId?: number | string;
   onEdit?: (post: PostResponse) => void;
   onDelete?: (post: PostResponse) => void;
-  scoreInfo?: {
-    totalScore: number;
-    profileAvgScore: number;
-    roomScore: number;
-  };
 };
 
-export function PostCard({ post, currentUserId, onEdit, onDelete, scoreInfo }: Props) {
-  const { color } = useAppTheme();
+export function PostCard({ post, currentUserId, onEdit, onDelete }: Props) {
+  const { color, radius } = useAppTheme();
   const { t, locale } = useLanguage();
   const { width } = useWindowDimensions();
   const isOwner = currentUserId !== undefined && String(post.user.id) === String(currentUserId);
@@ -51,81 +47,114 @@ export function PostCard({ post, currentUserId, onEdit, onDelete, scoreInfo }: P
     <View style={[styles.card]}>
       <View style={styles.header}>
         <Pressable
-          style={({ pressed }) => [{ flexDirection: "row", flex: 1, opacity: pressed ? 0.85 : 1 }]}
-          onPress={() =>
+          style={({ pressed }) => [
+            {
+              flexDirection: "row",
+              flex: 1,
+              minWidth: 0,
+              alignItems: "center",
+              opacity: pressed ? 0.85 : 1,
+            },
+          ]}
+          onPress={() => {
+            const uid = String(post.user.id ?? "").trim();
+            if (!uid) return;
             router.push({
               pathname: "/user/[id]",
-              params: { id: String(post.user.id) },
-            })
-          }
+              params: { id: uid },
+            });
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={t("postCard.openPosterProfileA11y", {
+            name: post.user.fullName || post.user.username,
+          })}
         >
           <UserAvatar
             userId={post.user.id}
             hintUrl={post.user.avatarUrl}
             name={post.user.fullName || post.user.username}
-            size={44}
+            size={52}
             style={[styles.avatar, { backgroundColor: color.backgroundSecondary }]}
           />
-          <View style={{ flex: 1 }}>
-            <ThemedText type="defaultSemiBold" style={styles.userName}>
+          <View style={styles.nameBlock}>
+            <ThemedText type="defaultSemiBold" style={styles.userName} numberOfLines={1}>
               {post.user.fullName || post.user.username}
             </ThemedText>
-            <View style={styles.metaRow}>
-              <ThemedText style={[styles.metaText, { color: color.textSecondary }]}>
-                {formatDate(post.createdAt)}
-              </ThemedText>
-              <ThemedText style={{ color: color.textSecondary, fontSize: 12, marginHorizontal: 4 }}>·</ThemedText>
-              <Ionicons
-                name={post.status === "PUBLISHED" ? "earth" : post.status === "DRAFT" ? "document-text" : "eye-off"}
-                size={12}
-                color={color.textSecondary}
-              />
-            </View>
           </View>
         </Pressable>
+      </View>
 
-        {!isOwner ? (
-          <ReportTriggerButton
-            onPress={() => {
-              if (currentUserId === undefined || currentUserId === null || currentUserId === "") {
-                Alert.alert(t("report.loginRequiredTitle"), t("report.loginRequiredMsg"), [
-                  { text: t("common.cancel"), style: "cancel" },
-                  {
-                    text: t("publicUser.writeReview.loginCta"),
-                    onPress: () => router.push("/(auth)/login" as Href),
-                  },
-                ]);
-                return;
-              }
-              setReportOpen(true);
-            }}
-            accessibilityLabel={t("report.a11yOpen")}
-          />
-        ) : null}
-
-        {/* Owner actions menu */}
-        {isOwner && (
-          <View style={styles.ownerActions}>
-            <Pressable
-              style={({ pressed }) => [
-                styles.actionBtn,
-                { backgroundColor: pressed ? color.backgroundSecondary : "transparent" },
-              ]}
-              onPress={() => onEdit?.(post)}
-            >
-              <Ionicons name="pencil-outline" size={18} color={color.textSecondary} />
-            </Pressable>
-            <Pressable
-              style={({ pressed }) => [
-                styles.actionBtn,
-                { backgroundColor: pressed ? color.backgroundSecondary : "transparent" },
-              ]}
-              onPress={() => onDelete?.(post)}
-            >
-              <Ionicons name="trash-outline" size={18} color={color.error} />
-            </Pressable>
+      {/* Một hàng: ngày + trạng thái bài (công khai/bản nháp…) | báo cáo hoặc sửa/xóa */}
+      <View style={styles.postToolbar}>
+        <View style={styles.postToolbarLeft}>
+          <ThemedText style={[styles.metaText, { color: color.textSecondary }]}>
+            {formatDate(post.createdAt)}
+          </ThemedText>
+          <View
+            style={[
+              styles.statusPill,
+              { backgroundColor: color.backgroundSecondary, borderColor: color.border + "80" },
+            ]}
+          >
+            <Ionicons
+              name={post.status === "PUBLISHED" ? "earth" : post.status === "DRAFT" ? "document-text" : "eye-off"}
+              size={14}
+              color={color.textSecondary}
+            />
+            <ThemedText style={[styles.statusPillText, { color: color.textSecondary }]} numberOfLines={1}>
+              {t(postStatusLabelKey(post.status))}
+            </ThemedText>
           </View>
-        )}
+        </View>
+        <View style={styles.postToolbarRight}>
+          {isOwner ? (
+            <>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.ownerActionPill,
+                  {
+                    backgroundColor: pressed ? color.backgroundSecondary : color.card,
+                    borderColor: color.border,
+                  },
+                ]}
+                onPress={() => onEdit?.(post)}
+                accessibilityLabel={t("postCard.a11yEditPost")}
+              >
+                <Ionicons name="create-outline" size={20} color={color.primary} />
+              </Pressable>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.ownerActionPill,
+                  {
+                    backgroundColor: pressed ? color.error + "18" : color.card,
+                    borderColor: color.error + "50",
+                  },
+                ]}
+                onPress={() => onDelete?.(post)}
+                accessibilityLabel={t("postCard.a11yDeletePost")}
+              >
+                <Ionicons name="trash-outline" size={20} color={color.error} />
+              </Pressable>
+            </>
+          ) : (
+            <ReportTriggerButton
+              onPress={() => {
+                if (currentUserId === undefined || currentUserId === null || currentUserId === "") {
+                  Alert.alert(t("report.loginRequiredTitle"), t("report.loginRequiredMsg"), [
+                    { text: t("common.cancel"), style: "cancel" },
+                    {
+                      text: t("publicUser.writeReview.loginCta"),
+                      onPress: () => router.push("/(auth)/login" as Href),
+                    },
+                  ]);
+                  return;
+                }
+                setReportOpen(true);
+              }}
+              accessibilityLabel={t("report.a11yOpen")}
+            />
+          )}
+        </View>
       </View>
 
       <SubmitReportModal
@@ -136,22 +165,12 @@ export function PostCard({ post, currentUserId, onEdit, onDelete, scoreInfo }: P
         contextLabel={post.title}
       />
 
-      {scoreInfo ? (
-        <View style={styles.scoreRow}>
-          <View style={[styles.scoreChip, { backgroundColor: color.backgroundSecondary }]}>
-            <ThemedText style={[styles.scoreText, { color: color.tint }]}>
-              Match {Math.round(scoreInfo.totalScore)}%
-            </ThemedText>
-          </View>
-          <ThemedText style={{ color: color.textSecondary, fontSize: 12 }}>
-            Profile {Math.round(scoreInfo.profileAvgScore)}% · Room {Math.round(scoreInfo.roomScore)}%
-          </ThemedText>
-        </View>
-      ) : null}
-
-      {/* Content */}
       <View>
-        <ThemedText type="defaultSemiBold" style={styles.title}>
+        <ThemedText
+          type="defaultSemiBold"
+          style={[styles.title, { color: color.text, paddingHorizontal: 16 }]}
+          numberOfLines={4}
+        >
           {post.title}
         </ThemedText>
         <ThemedText style={[styles.content, { color: color.text }]} numberOfLines={5}>
@@ -159,7 +178,9 @@ export function PostCard({ post, currentUserId, onEdit, onDelete, scoreInfo }: P
         </ThemedText>
       </View>
 
-      <PostPosterReviews posterUserId={String(post.user.id)} />
+      {String(post.user.id ?? "").trim() !== "" ? (
+        <PostPosterReviews posterUserId={String(post.user.id).trim()} />
+      ) : null}
 
       {post.room && (
         <View style={[styles.roomAttachment, { backgroundColor: color.backgroundSecondary }]}>
@@ -209,16 +230,15 @@ export function PostCard({ post, currentUserId, onEdit, onDelete, scoreInfo }: P
             </View>
 
             {!isOwner ? (
-              <View style={styles.roomActionsRow}>
+              <View style={styles.roomCtaRow}>
                 <Pressable
                   style={({ pressed }) => [
-                    styles.viewMoreBtn,
+                    styles.btnPrimaryCta,
                     {
-                      backgroundColor: pressed
-                        ? color.border
-                        : color.background,
-                      borderColor: color.border,
-                      flex: 1,
+                      backgroundColor: color.primary,
+                      borderRadius: radius.md,
+                      opacity: pressed ? 0.9 : 1,
+                      shadowColor: color.primary,
                     },
                   ]}
                   onPress={() =>
@@ -228,14 +248,14 @@ export function PostCard({ post, currentUserId, onEdit, onDelete, scoreInfo }: P
                     })
                   }
                 >
+                  <Ionicons name="home-outline" size={20} color={color.primaryText} />
                   <ThemedText
-                    style={[styles.viewMoreText, { color: color.tint }]}
+                    style={[styles.btnPrimaryCtaText, { color: color.primaryText }]}
+                    numberOfLines={1}
                   >
                     {t("postCard.viewRoom")}
                   </ThemedText>
                 </Pressable>
-
-                {/* Nút request chat nhỏ (xếp hàng khi full). */}
                 <PostRequestChatIcon
                   post={post}
                   currentUserId={currentUserId}
@@ -243,17 +263,19 @@ export function PostCard({ post, currentUserId, onEdit, onDelete, scoreInfo }: P
                   eligibilityLoading={eligLoading}
                   eligibilityError={eligError}
                   onRetryEligibility={refreshElig}
+                  variant="bar"
                 />
               </View>
             ) : (
               <Pressable
                 style={({ pressed }) => [
-                  styles.viewMoreBtn,
+                  styles.btnPrimaryCta,
+                  styles.btnPrimaryCtaFull,
                   {
-                    backgroundColor: pressed
-                      ? color.border
-                      : color.background,
-                    borderColor: color.border,
+                    backgroundColor: color.primary,
+                    borderRadius: radius.md,
+                    opacity: pressed ? 0.9 : 1,
+                    shadowColor: color.primary,
                   },
                 ]}
                 onPress={() =>
@@ -263,8 +285,9 @@ export function PostCard({ post, currentUserId, onEdit, onDelete, scoreInfo }: P
                   })
                 }
               >
+                <Ionicons name="home-outline" size={20} color={color.primaryText} />
                 <ThemedText
-                  style={[styles.viewMoreText, { color: color.tint }]}
+                  style={[styles.btnPrimaryCtaText, { color: color.primaryText }]}
                 >
                   {t("postCard.viewRoom")}
                 </ThemedText>
@@ -312,12 +335,54 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
+    marginBottom: 4,
+  },
+  postToolbar: {
+    paddingHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
     marginBottom: 10,
   },
+  postToolbarLeft: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  postToolbarRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flexShrink: 0,
+  },
+  statusPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+    flexShrink: 1,
+    maxWidth: "100%",
+  },
+  statusPillText: {
+    fontSize: 12,
+    fontWeight: "700",
+    flexShrink: 1,
+  },
+  nameBlock: {
+    flex: 1,
+    minWidth: 0,
+  },
   avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -325,21 +390,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
   },
-  metaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 2,
-  },
   metaText: {
     fontSize: 12,
-  },
-  ownerActions: {
-    flexDirection: "row",
-    gap: 4,
-  },
-  actionBtn: {
-    padding: 6,
-    borderRadius: 8,
   },
   statusBadge: {
     flexDirection: "row",
@@ -360,27 +412,11 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "600",
   },
-  scoreRow: {
-    paddingHorizontal: 16,
-    marginBottom: 10,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  scoreChip: {
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  scoreText: {
-    fontSize: 12,
-    fontWeight: "700",
-  },
   title: {
-    paddingHorizontal: 16,
+    minWidth: 0,
     fontSize: 16,
-    marginBottom: 6,
     lineHeight: 22,
+    marginBottom: 6,
   },
   content: {
     paddingHorizontal: 16,
@@ -433,25 +469,42 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 4,
     marginTop: 2,
-    marginBottom: 4,
+    marginBottom: 2,
   },
-  viewMoreBtn: {
-    marginTop: 8,
-    paddingVertical: 10,
-    borderRadius: 8,
+  roomCtaRow: {
+    marginTop: 12,
+    flexDirection: "row",
+    alignItems: "stretch",
+    gap: 10,
+  },
+  btnPrimaryCta: {
+    flex: 1,
+    minHeight: 50,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.22,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  btnPrimaryCtaFull: {
+    alignSelf: "stretch",
+  },
+  btnPrimaryCtaText: {
+    fontSize: 15,
+    fontWeight: "800",
+  },
+  ownerActionPill: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     borderWidth: StyleSheet.hairlineWidth,
     alignItems: "center",
     justifyContent: "center",
-  },
-  roomActionsRow: {
-    marginTop: 8,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  viewMoreText: {
-    fontWeight: "600",
-    fontSize: 14,
   },
   detailHint: {
     flexDirection: "row",

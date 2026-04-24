@@ -1,13 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
-import {
-  FlatList,
-  Modal,
-  Platform,
-  Pressable,
-  StyleSheet,
-  View,
-} from "react-native";
+import { FlatList, Modal, Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 
@@ -45,7 +38,7 @@ function StarRowBig({
         <Ionicons
           key={i}
           name={i <= r ? "star" : "star-outline"}
-          size={22}
+          size={24}
           color={i <= r ? activeColor : mutedColor}
         />
       ))}
@@ -84,20 +77,20 @@ export function ReviewsDetailModal({
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle="pageSheet"
+      presentationStyle="fullScreen"
+      statusBarTranslucent
       onRequestClose={onClose}
     >
       <View
         style={[
           styles.root,
-          { backgroundColor: color.background, paddingTop: insets.top > 0 ? 0 : 12 },
+          { backgroundColor: color.background, paddingTop: insets.top },
         ]}
       >
         <View
           style={[
             styles.topBar,
             { borderBottomColor: color.border + "80" },
-            Platform.OS === "android" && { paddingTop: Math.max(insets.top, 8) },
           ]}
         >
           <Pressable onPress={onClose} style={styles.topBarBtn} hitSlop={12} accessibilityRole="button">
@@ -106,7 +99,7 @@ export function ReviewsDetailModal({
           <ThemedText
             type="defaultSemiBold"
             style={[styles.topTitle, { color: color.text }]}
-            numberOfLines={1}
+            numberOfLines={2}
           >
             {headerTitle}
           </ThemedText>
@@ -114,11 +107,13 @@ export function ReviewsDetailModal({
         </View>
 
         <FlatList
+          style={styles.list}
           data={reviews}
           keyExtractor={(r) => String(r.id)}
+          removeClippedSubviews={false}
           contentContainerStyle={[
             styles.listContent,
-            { paddingBottom: insets.bottom + 24 },
+            { paddingBottom: insets.bottom + 32, flexGrow: 1 },
           ]}
           ListHeaderComponent={
             <View
@@ -128,9 +123,9 @@ export function ReviewsDetailModal({
               ]}
             >
               <View style={[styles.iconCircle, { backgroundColor: color.primary + "16" }]}>
-                <Ionicons name="shield-checkmark" size={28} color={color.primary} />
+                <Ionicons name="shield-checkmark" size={32} color={color.primary} />
               </View>
-              <ThemedText style={[styles.lead, { color: color.textSecondary }]}>
+              <ThemedText style={[styles.lead, { color: color.text }]}>
                 {t("review.modalLead")}
               </ThemedText>
               {total > 0 ? (
@@ -151,7 +146,7 @@ export function ReviewsDetailModal({
             </View>
           }
           renderItem={({ item }) => (
-            <ReviewListItem item={item} t={t} locale={locale} variant="compact" />
+            <ReviewListItem item={item} t={t} locale={locale} variant="default" />
           )}
           ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
           ListEmptyComponent={null}
@@ -199,45 +194,53 @@ export function ReviewsDetailModal({
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  list: { flex: 1 },
   topBar: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 6,
-    paddingBottom: 12,
+    paddingBottom: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  topBarBtn: { width: 44, height: 40, alignItems: "center", justifyContent: "center" },
-  topTitle: { flex: 1, textAlign: "center", fontSize: 17 },
-  listContent: { padding: 16, paddingTop: 12, gap: 0 },
+  topBarBtn: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
+  topTitle: { flex: 1, textAlign: "center", fontSize: 19, fontWeight: "700" },
+  listContent: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8, gap: 0 },
   hero: {
     borderWidth: StyleSheet.hairlineWidth,
-    padding: 20,
-    marginBottom: 16,
+    paddingVertical: 22,
+    paddingHorizontal: 16,
+    marginBottom: 18,
     alignItems: "center",
   },
   iconCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 12,
+    marginBottom: 14,
   },
-  lead: { fontSize: 14, lineHeight: 20, textAlign: "center", marginBottom: 16 },
-  scoreBlock: { flexDirection: "row", alignItems: "center", gap: 16 },
-  bigScore: { fontSize: 40, fontWeight: "800" },
-  scoreRight: { gap: 6 },
-  starsRow: { flexDirection: "row", gap: 3 },
-  reviewCount: { fontSize: 14, fontWeight: "600" },
-  empty: { fontSize: 15 },
-  footer: { borderTopWidth: StyleSheet.hairlineWidth, paddingHorizontal: 16, paddingTop: 12 },
+  lead: {
+    fontSize: 16,
+    lineHeight: 25,
+    textAlign: "center",
+    marginBottom: 18,
+    alignSelf: "stretch",
+  },
+  scoreBlock: { flexDirection: "row", alignItems: "center", gap: 18 },
+  bigScore: { fontSize: 44, fontWeight: "800" },
+  scoreRight: { gap: 8 },
+  starsRow: { flexDirection: "row", gap: 4 },
+  reviewCount: { fontSize: 16, fontWeight: "600" },
+  empty: { fontSize: 16, lineHeight: 24 },
+  footer: { borderTopWidth: StyleSheet.hairlineWidth, paddingHorizontal: 20, paddingTop: 14 },
   profileBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
-    paddingVertical: 14,
+    gap: 10,
+    paddingVertical: 16,
     borderWidth: StyleSheet.hairlineWidth,
   },
-  profileBtnText: { flex: 1, fontSize: 16, fontWeight: "800" },
+  profileBtnText: { flex: 1, fontSize: 17, fontWeight: "800" },
 });

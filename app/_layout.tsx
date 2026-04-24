@@ -7,6 +7,7 @@ import * as Notifications from "expo-notifications";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useMemo, useRef } from "react";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
 
 import { AppThemeProvider } from "@/contexts/app-theme-context";
@@ -23,6 +24,7 @@ import { useNotificationStore } from "@/stores/use-notification-store";
 import { useRequestListRealtimeStore } from "@/stores/use-request-list-realtime-store";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { isRequestNotificationType } from "@/utils/notification-helpers";
+import { scheduleLocalNotificationIfPermitted } from "@/utils/notification-permissions";
 
 // Cấu hình hiển thị thông báo khi app đang mở (foreground)
 Notifications.setNotificationHandler({
@@ -82,18 +84,6 @@ function RootLayoutInner() {
     null,
   );
 
-  // Xin quyền thông báo khi đăng nhập
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    const requestPermissions = async () => {
-      const { status } = await Notifications.getPermissionsAsync();
-      if (status !== "granted") {
-        await Notifications.requestPermissionsAsync();
-      }
-    };
-    requestPermissions();
-  }, [isAuthenticated]);
-
   // Khi bấm vào thông báo → điều hướng đến phòng chat tương ứng
   useEffect(() => {
     const subscription = Notifications.addNotificationResponseReceivedListener(
@@ -133,8 +123,8 @@ function RootLayoutInner() {
         void syncTabBadgesToStore();
       }, 1200);
 
-      // 🔔 Gửi thông báo đẩy cho yêu cầu mới
-      Notifications.scheduleNotificationAsync({
+      // 🔔 Thông báo local khi user đã cấp quyền
+      void scheduleLocalNotificationIfPermitted({
         content: {
           title: notif.title || "📋 Yêu cầu mới",
           body: notif.content || "Bạn có một thông báo yêu cầu mới.",
@@ -153,7 +143,7 @@ function RootLayoutInner() {
           useActiveChatStore.getState().activeChatRoomId;
 
         if (chatRoomId == null || activeChatRoomId !== chatRoomId) {
-          Notifications.scheduleNotificationAsync({
+          void scheduleLocalNotificationIfPermitted({
             content: {
               title: notif.title || "💬 Tin nhắn mới",
               body: notif.content || "Bạn có tin nhắn mới.",
@@ -166,7 +156,7 @@ function RootLayoutInner() {
     }
   });
 
-  // Upload FCM token to backend so we can push when app is background/killed.
+  // Xin quyền thông báo (iOS/Android) + token FCM/APNs + làm mới khi bật quyền từ Cài đặt
   useFcmToken();
 
   useTabBadgeSync();
@@ -188,7 +178,6 @@ function RootLayoutInner() {
     // Expo-router segments may vary by anchor/navigation; be tolerant.
     const inChat = seg.some((s) => s === "chat" || s.startsWith("chat"));
     const inRequest = seg.some((s) => s === "request" || s.startsWith("request"));
-    const inPost = seg.some((s) => s === "post" || s.startsWith("post"));
     const inUser = seg.some((s) => s === "user" || s.startsWith("user"));
     const inAdmin = seg.some((s) => s === "admin" || s.startsWith("admin"));
     const inSearch = seg.some((s) => s === "search" || s.startsWith("search"));
@@ -209,7 +198,6 @@ function RootLayoutInner() {
       !inAuthGroup &&
       !inChat &&
       !inRequest &&
-      !inPost &&
       !inUser &&
       !inAdmin &&
       !inSearch
@@ -223,18 +211,19 @@ function RootLayoutInner() {
   }
 
   return (
-    <ThemeProvider value={navigationTheme}>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="(auth)" />
-        <Stack.Screen name="request" />
-        <Stack.Screen name="chat/[id]" />
-        <Stack.Screen name="post" />
-        <Stack.Screen name="user/[id]" />
-        <Stack.Screen name="admin" />
-        <Stack.Screen name="search" />
-      </Stack>
-      <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
-    </ThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider value={navigationTheme}>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="(auth)" />
+          <Stack.Screen name="request" />
+          <Stack.Screen name="chat/[id]" />
+          <Stack.Screen name="user/[id]" />
+          <Stack.Screen name="admin" />
+          <Stack.Screen name="search" />
+        </Stack>
+        <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }

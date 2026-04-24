@@ -8,10 +8,15 @@ import {
   View,
 } from "react-native";
 import MapView, { type Region } from "react-native-maps";
+import { BlurView } from "expo-blur";
 import { isAxiosError } from "axios";
 import * as Location from "expo-location";
 import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { MapRadarCircles } from "@/components/map/map-radar-circles";
+import { MapScanSweepOverlay } from "@/components/map/map-scan-sweep-overlay";
 import { RoomMapPin } from "@/components/map/room-map-pin";
 import { RoomPreviewSheet } from "@/components/map/room-preview-sheet";
 import { ThemedText } from "@/components/themed-text";
@@ -35,6 +40,27 @@ const DEFAULT_REGION: Region = {
 const MAX_VISIBLE_PINS = 220;
 const DEBOUNCE_MS = 420;
 
+const NEARBY_DELTA = 0.028;
+
+function parseHexToRgb(hex: string): { r: number; g: number; b: number } {
+  const h = hex.replace("#", "").trim();
+  if (h.length === 6) {
+    return {
+      r: parseInt(h.slice(0, 2), 16),
+      g: parseInt(h.slice(2, 4), 16),
+      b: parseInt(h.slice(4, 6), 16),
+    };
+  }
+  if (h.length === 3) {
+    return {
+      r: parseInt(h[0] + h[0], 16),
+      g: parseInt(h[1] + h[1], 16),
+      b: parseInt(h[2] + h[2], 16),
+    };
+  }
+  return { r: 99, g: 102, b: 241 };
+}
+
 function hasRenderableCoordinates(lat: number, lng: number): boolean {
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return false;
   if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return false;
@@ -49,8 +75,11 @@ type Props = {
 
 export function RoomMapPinsView({ initialRegion = DEFAULT_REGION }: Props) {
   const router = useRouter();
-  const { color } = useAppTheme();
+  const { color, scheme } = useAppTheme();
+  const insets = useSafeAreaInsets();
   const { t, locale } = useLanguage();
+  const mapRef = useRef<MapView | null>(null);
+  const primaryRgb = useMemo(() => parseHexToRgb(color.primary), [color.primary]);
 
   const [pins, setPins] = useState<MapPinGeoItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -62,6 +91,11 @@ export function RoomMapPinsView({ initialRegion = DEFAULT_REGION }: Props) {
   const [previewLoading, setPreviewLoading] = useState(false);
   const previewFetchSeqRef = useRef(0);
   const [showUserLocation, setShowUserLocation] = useState(false);
+  const [scanMode, setScanMode] = useState(false);
+  const [scanCenter, setScanCenter] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const regionRef = useRef<Region>(initialRegion);
@@ -212,6 +246,76 @@ export function RoomMapPinsView({ initialRegion = DEFAULT_REGION }: Props) {
     runDebouncedFetch(regionRef.current);
   }, [runDebouncedFetch]);
 
+  const ensureLocationPermission = useCallback(async (): Promise<boolean> => {
+    const { status } = await Location.getForegroundPermissionsAsync();
+    if (status === Location.PermissionStatus.GRANTED) return true;
+    const { status: next } = await Location.requestForegroundPermissionsAsync();
+    if (next === Location.PermissionStatus.GRANTED) {
+      setShowUserLocation(true);
+      return true;
+    }
+    Alert.alert(
+      t("map.locationPermissionTitle"),
+      t("map.locationPermissionBody"),
+    );
+    return false;
+  }, [t]);
+
+  const centerOnUser = useCallback(async () => {
+    const ok = await ensureLocationPermission();
+    if (!ok) return;
+    setShowUserLocation(true);
+    try {
+      const loc = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      const lat = loc.coords.latitude;
+      const lng = loc.coords.longitude;
+      const region: Region = {
+        latitude: lat,
+        longitude: lng,
+        latitudeDelta: NEARBY_DELTA,
+        longitudeDelta: NEARBY_DELTA,
+      };
+      regionRef.current = region;
+      mapRef.current?.animateToRegion(region, 600);
+      runDebouncedFetch(region);
+    } catch {
+      Alert.alert(t("common.error"), t("map.locationError"));
+    }
+  }, [ensureLocationPermission, runDebouncedFetch, t]);
+
+  const toggleScanMode = useCallback(async () => {
+    if (scanMode) {
+      setScanMode(false);
+      setScanCenter(null);
+      return;
+    }
+    const ok = await ensureLocationPermission();
+    if (!ok) return;
+    setShowUserLocation(true);
+    try {
+      const loc = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      const lat = loc.coords.latitude;
+      const lng = loc.coords.longitude;
+      setScanCenter({ latitude: lat, longitude: lng });
+      setScanMode(true);
+      const region: Region = {
+        latitude: lat,
+        longitude: lng,
+        latitudeDelta: NEARBY_DELTA,
+        longitudeDelta: NEARBY_DELTA,
+      };
+      regionRef.current = region;
+      mapRef.current?.animateToRegion(region, 700);
+      runDebouncedFetch(region);
+    } catch {
+      Alert.alert(t("common.error"), t("map.locationError"));
+    }
+  }, [ensureLocationPermission, runDebouncedFetch, scanMode, t]);
+
   const sheetVisible = selectedPinId !== null;
 
   const directionsTarget = useMemo(() => {
@@ -234,9 +338,39 @@ export function RoomMapPinsView({ initialRegion = DEFAULT_REGION }: Props) {
 
   const showAndroidNoKeyHint = Platform.OS === "android" && !mapUsesGoogleOnAndroid();
 
+  const PillWrap = useCallback(
+    ({ children }: { children: React.ReactNode }) => {
+      if (Platform.OS === "ios") {
+        return (
+          <View style={[styles.pillBlurRing, { borderColor: color.border + "4D" }]}>
+            <BlurView
+              intensity={50}
+              tint={scheme === "dark" ? "dark" : "light"}
+              style={styles.pillBlurInner}
+            >
+              {children}
+            </BlurView>
+          </View>
+        );
+      }
+      return (
+        <View
+          style={[
+            styles.pillBlurRing,
+            { backgroundColor: color.card + "F2", borderColor: color.border + "80" },
+          ]}
+        >
+          {children}
+        </View>
+      );
+    },
+    [color.card, color.border, scheme],
+  );
+
   return (
     <View style={styles.root} accessibilityLabel={t("map.a11yMapArea")}>
       <MapView
+        ref={mapRef}
         style={StyleSheet.absoluteFill}
         provider={mapProvider}
         initialRegion={initialRegion}
@@ -249,6 +383,13 @@ export function RoomMapPinsView({ initialRegion = DEFAULT_REGION }: Props) {
         showsUserLocation={showUserLocation}
         showsMyLocationButton={false}
       >
+        {scanMode && scanCenter ? (
+          <MapRadarCircles
+            center={scanCenter}
+            active={scanMode}
+            primaryHex={color.primary}
+          />
+        ) : null}
         {visiblePins.map((pin) => (
           <RoomMapPin
             key={pin.id}
@@ -261,39 +402,51 @@ export function RoomMapPinsView({ initialRegion = DEFAULT_REGION }: Props) {
         ))}
       </MapView>
 
-      {/* ── Status pills ────────────────────────────────────────────── */}
+      {scanMode ? (
+        <MapScanSweepOverlay visible={scanMode} colorRgb={primaryRgb} />
+      ) : null}
+
+      {/* ── Status pills (glass) ─────────────────────────────────── */}
       <View style={[styles.topBar, { pointerEvents: "box-none" }]}>
         {loading && (
-          <View style={[styles.pill, { backgroundColor: color.card, borderColor: color.border }]}>
+          <PillWrap>
+            <View style={styles.pillRow}>
             <ActivityIndicator size="small" color={color.primary} />
             <ThemedText style={[styles.pillText, { color: color.textSecondary }]}>
               {t("map.loadingPins")}
             </ThemedText>
-          </View>
+            </View>
+          </PillWrap>
         )}
         {!loading && pinsOnMap.length > 0 && (
-          <View style={[styles.pill, { backgroundColor: color.card, borderColor: color.border }]}>
+          <PillWrap>
+            <View style={styles.pillRow}>
             <ThemedText style={[styles.pillText, { color: color.text }]}>
               {t("map.pinCount", { count: pinsOnMap.length })}
               {hiddenCount > 0
                 ? ` · ${t("map.moreHidden", { count: hiddenCount })}`
                 : ""}
             </ThemedText>
-          </View>
+            </View>
+          </PillWrap>
         )}
         {!loading && !error && pins.length > 0 && pinsOnMap.length === 0 && (
-          <View style={[styles.pill, { backgroundColor: color.card, borderColor: color.border }]}>
+          <PillWrap>
+            <View style={styles.pillRow}>
             <ThemedText style={[styles.pillText, { color: color.textSecondary }]}>
               {t("map.invalidCoordsHint", { count: pins.length })}
             </ThemedText>
-          </View>
+            </View>
+          </PillWrap>
         )}
         {!loading && !error && pins.length === 0 && (
-          <View style={[styles.pill, { backgroundColor: color.card, borderColor: color.border }]}>
+          <PillWrap>
+            <View style={styles.pillRow}>
             <ThemedText style={[styles.pillText, { color: color.textSecondary }]}>
               {t("map.emptyHint")}
             </ThemedText>
-          </View>
+            </View>
+          </PillWrap>
         )}
       </View>
 
@@ -313,21 +466,116 @@ export function RoomMapPinsView({ initialRegion = DEFAULT_REGION }: Props) {
         </Pressable>
       )}
 
-      {showAndroidNoKeyHint && (
-        <View style={[styles.hintBanner, { backgroundColor: color.card, borderColor: color.border }]}>
-          <ThemedText style={[styles.hintText, { color: color.textSecondary }]}>
-            {t("map.androidNoGoogleKeyHint")}
-          </ThemedText>
-        </View>
-      )}
+      {!sheetVisible ? (
+        <View
+          style={[styles.bottomStack, { paddingBottom: insets.bottom + 8, zIndex: 2 }]}
+          pointerEvents="box-none"
+        >
+          {showAndroidNoKeyHint && (
+            <View
+              style={[
+                styles.androidKeyBanner,
+                { backgroundColor: color.card, borderColor: color.border },
+              ]}
+            >
+              <ThemedText style={[styles.hintText, { color: color.textSecondary }]}>
+                {t("map.androidNoGoogleKeyHint")}
+              </ThemedText>
+            </View>
+          )}
 
-      {Platform.OS === "ios" && !sheetVisible && (
-        <View style={[styles.footerNote, { backgroundColor: color.card, borderColor: color.border }]}>
-          <ThemedText style={[styles.footerNoteText, { color: color.textSecondary }]}>
-            {t("map.iosAppleMapsNote")}
-          </ThemedText>
+          <View style={styles.bottomRow} pointerEvents="box-none">
+            <View style={styles.bottomLeft} pointerEvents="box-none">
+              {scanMode ? (
+                <View
+                  style={[
+                    styles.subtlePill,
+                    {
+                      backgroundColor: color.card + "F5",
+                      borderColor: color.border + "60",
+                    },
+                  ]}
+                >
+                  <ThemedText
+                    style={[styles.scanTitle, { color: color.text }]}
+                    numberOfLines={2}
+                  >
+                    {t("map.scanningNearby")}
+                  </ThemedText>
+                </View>
+              ) : (
+                <>
+                  <View
+                    style={[
+                      styles.subtlePill,
+                      {
+                        backgroundColor: color.card + "F2",
+                        borderColor: color.border + "55",
+                      },
+                    ]}
+                  >
+                    <Ionicons name="hand-left-outline" size={16} color={color.primary} />
+                    <ThemedText
+                      style={[styles.tapText, { color: color.textSecondary }]}
+                      numberOfLines={2}
+                    >
+                      {t("map.tapPinHint")}
+                    </ThemedText>
+                  </View>
+                  {Platform.OS === "ios" && (
+                    <ThemedText
+                      style={[styles.iosMapNote, { color: color.textSecondary }]}
+                      numberOfLines={2}
+                    >
+                      {t("map.iosAppleMapsNote")}
+                    </ThemedText>
+                  )}
+                </>
+              )}
+            </View>
+
+            <View style={styles.fabCol}>
+              <Pressable
+                onPress={() => void centerOnUser()}
+                style={({ pressed }) => [
+                  styles.fab,
+                  {
+                    backgroundColor: color.card,
+                    borderColor: color.border + "99",
+                    opacity: pressed ? 0.88 : 1,
+                    shadowColor: color.text,
+                  },
+                ]}
+                accessibilityLabel={t("map.locateA11y")}
+                hitSlop={6}
+              >
+                <Ionicons name="navigate" size={22} color={color.primary} />
+              </Pressable>
+              <Pressable
+                onPress={() => void toggleScanMode()}
+                style={({ pressed }) => [
+                  styles.fab,
+                  {
+                    backgroundColor: scanMode ? color.primary : color.card,
+                    borderColor: scanMode ? color.primary : color.border + "99",
+                    opacity: pressed ? 0.9 : 1,
+                    shadowColor: scanMode ? color.primary : color.text,
+                    shadowOpacity: scanMode ? 0.45 : 0.12,
+                  },
+                ]}
+                accessibilityLabel={t("map.scanA11y")}
+                hitSlop={6}
+              >
+                <Ionicons
+                  name="pulse"
+                  size={24}
+                  color={scanMode ? color.primaryText : color.primary}
+                />
+              </Pressable>
+            </View>
+          </View>
         </View>
-      )}
+      ) : null}
 
       {/* ── Room preview sheet ─────────────────────────────────────── */}
       <RoomPreviewSheet
@@ -359,64 +607,125 @@ const styles = StyleSheet.create({
   },
   topBar: {
     position: "absolute",
-    top: 10,
+    top: 8,
     left: 12,
     right: 12,
+    zIndex: 2,
     alignItems: "center",
     gap: 8,
   },
-  pill: {
+  pillBlurRing: {
+    maxWidth: "100%",
+    borderRadius: 22,
+    overflow: "hidden",
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  pillBlurInner: {
+    borderRadius: 22,
+    overflow: "hidden",
+  },
+  pillRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 999,
-    borderWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     maxWidth: "100%",
   },
   pillText: {
     fontSize: 13,
     flexShrink: 1,
   },
+  bottomStack: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 10,
+    gap: 6,
+  },
+  androidKeyBanner: {
+    width: "100%",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  bottomRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+    width: "100%",
+    gap: 10,
+  },
+  bottomLeft: {
+    flex: 1,
+    minWidth: 0,
+    gap: 4,
+    justifyContent: "flex-end",
+  },
+  subtlePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    alignSelf: "stretch",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  scanTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    lineHeight: 18,
+  },
+  tapText: {
+    fontSize: 12,
+    fontWeight: "600",
+    lineHeight: 16,
+    flexGrow: 1,
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  iosMapNote: {
+    fontSize: 10,
+    lineHeight: 14,
+    fontWeight: "500",
+  },
+  fabCol: {
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: 10,
+    flexShrink: 0,
+    paddingBottom: 2,
+  },
+  fab: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: StyleSheet.hairlineWidth,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 6,
+  },
   errorBanner: {
     position: "absolute",
-    top: 58,
-    left: 16,
-    right: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
+    top: 64,
+    left: 12,
+    right: 12,
+    zIndex: 3,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     borderRadius: 12,
     borderWidth: StyleSheet.hairlineWidth,
     alignItems: "center",
-  },
-  hintBanner: {
-    position: "absolute",
-    bottom: 52,
-    left: 14,
-    right: 14,
-    padding: 12,
-    borderRadius: 14,
-    borderWidth: StyleSheet.hairlineWidth,
   },
   hintText: {
     fontSize: 12,
     lineHeight: 17,
     textAlign: "center",
-  },
-  footerNote: {
-    position: "absolute",
-    bottom: 12,
-    left: 14,
-    right: 14,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  footerNoteText: {
-    fontSize: 11,
-    textAlign: "center",
-    lineHeight: 15,
   },
 });

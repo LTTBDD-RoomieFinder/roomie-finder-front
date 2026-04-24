@@ -35,6 +35,7 @@ import {
   getMembershipNoticeModel,
   parseMemberKickedUserId,
 } from "@/utils/chat-system-message";
+import { displayNameForUser } from "@/utils/normalize-user";
 
 function ChatMemberAvatarTile({
   userId,
@@ -114,10 +115,18 @@ export default function ChatRoomScreen() {
     if (!chatRoomDetails?.members) return map;
     for (const m of chatRoomDetails.members) {
       const key = Number(m.id);
-      map.set(key, m.fullName || m.username);
+      map.set(key, displayNameForUser(m, t("common.user")));
     }
     return map;
-  }, [chatRoomDetails?.members]);
+  }, [chatRoomDetails?.members, t]);
+
+  const headerPeerLine = useMemo(() => {
+    if (!chatRoomDetails?.members || myUserId == null) return null;
+    if (chatRoomDetails.members.length !== 2) return null;
+    const other = chatRoomDetails.members.find((m) => Number(m.id) !== myUserId);
+    if (!other) return null;
+    return displayNameForUser(other, t("common.user"));
+  }, [chatRoomDetails?.members, myUserId, t]);
 
   const createdAtLabel = useMemo(() => {
     if (!chatRoomDetails?.createdAt) return "";
@@ -407,8 +416,13 @@ export default function ChatRoomScreen() {
                 : t("chat.roomFallback", { id: chatRoomId })}
             </ThemedText>
 
-            <ThemedText style={[styles.headerSub, { color: color.icon }]}>
-              {t("chat.headerSubtitle")}
+            <ThemedText
+              style={[styles.headerSub, { color: color.icon }]}
+              numberOfLines={1}
+            >
+              {headerPeerLine
+                ? t("chat.headerWithPeer", { name: headerPeerLine })
+                : t("chat.headerSubtitle")}
             </ThemedText>
           </View>
 
@@ -494,7 +508,7 @@ export default function ChatRoomScreen() {
                       const isMe =
                         myUserId != null && Number(m.id) === myUserId;
 
-                      const displayName = m.fullName || m.username || "";
+                      const displayName = displayNameForUser(m, t("common.user"));
                       return (
                         <View
                           key={m.id}
@@ -517,7 +531,7 @@ export default function ChatRoomScreen() {
                               ]}
                               numberOfLines={1}
                             >
-                              {m.fullName || m.username}
+                              {displayNameForUser(m, t("common.user"))}
                             </ThemedText>
                             <ThemedText
                               style={[

@@ -17,6 +17,16 @@ import {
   humanizeLoginHandle,
   isNumericUserIdParam,
 } from "@/utils/display-name";
+import {
+  normalizeProfileFromServer,
+  parsePublicUserProfileFromApi,
+  type PublicUserFields,
+  unwrapApiPayload,
+} from "@/utils/normalize-profile-api";
+import {
+  EMPTY_REVIEW_SUMMARY,
+  translateApiRejection,
+} from "@/utils/translate-api-error";
 import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { ReportTriggerButton, SubmitReportModal } from "@/components/report/submit-report-modal";
@@ -32,31 +42,7 @@ import { useProfileAvatarStore } from "@/stores/useProfileAvatarStore";
 import { ReportTargetType } from "@/types/enums";
 import type { ReviewSummaryResponse } from "@/types/reputation";
 
-type PublicProfile = {
-  fullName: string;
-  username: string;
-  avatarUrl: string | null;
-};
-
-function parsePublicProfile(res: unknown): PublicProfile {
-  const body = res as Record<string, unknown>;
-  const data = (body?.data ?? body) as Record<string, unknown>;
-  const fullName =
-    (typeof data.fullName === "string" && data.fullName.trim()) ||
-    (typeof data.full_name === "string" && data.full_name.trim()) ||
-    "";
-  const username =
-    (typeof data.username === "string" && data.username.trim()) ||
-    (typeof data.user_name === "string" && data.user_name.trim()) ||
-    "";
-  const avatarUrl =
-    typeof data.avatarUrl === "string" && data.avatarUrl.trim()
-      ? data.avatarUrl.trim()
-      : typeof data.avatar_url === "string" && data.avatar_url.trim()
-        ? data.avatar_url.trim()
-        : null;
-  return { fullName, username, avatarUrl };
-}
+type PublicProfile = PublicUserFields;
 
 function StarRow({
   rating,
@@ -115,23 +101,56 @@ export default function PublicUserProfileScreen() {
     }
     setLoading(true);
     setError(null);
+    const viewingSelf =
+      authUser != null && String(authUser.id).trim() === userIdKey;
+
     try {
-      const [profRes, reviewSummary] = await Promise.all([
-        profileApi.getUserProfile(userIdKey),
-        reviewService.getSummaryByUserId(userIdKey),
-      ]);
-      const p = parsePublicProfile(profRes);
+      let p: PublicProfile;
+
+      if (viewingSelf) {
+        try {
+          const profRes = await profileApi.getProfile();
+          const raw = normalizeProfileFromServer(unwrapApiPayload(profRes));
+          if (raw) {
+            p = {
+              fullName: raw.fullName || "",
+              username: (authUser.username || "").trim(),
+              avatarUrl: raw.avatarUrl ? raw.avatarUrl.trim() : null,
+            };
+          } else {
+            const pub = await profileApi.getUserProfile(userIdKey);
+            p = parsePublicUserProfileFromApi(pub);
+          }
+        } catch {
+          const pub = await profileApi.getUserProfile(userIdKey);
+          p = parsePublicUserProfileFromApi(pub);
+        }
+      } else {
+        const profRes = await profileApi.getUserProfile(userIdKey);
+        p = parsePublicUserProfileFromApi(profRes);
+      }
+
       setProfile(p);
-      setSummary(reviewSummary);
       setAvatarCache(userIdKey, p.avatarUrl);
+
+      if (isNumericUserIdParam(userIdKey)) {
+        try {
+          const reviewSummary = await reviewService.getSummaryByUserId(userIdKey);
+          setSummary(reviewSummary);
+        } catch {
+          setSummary(EMPTY_REVIEW_SUMMARY);
+        }
+      } else {
+        setSummary(EMPTY_REVIEW_SUMMARY);
+      }
     } catch (e) {
       setProfile(null);
       setSummary(null);
-      setError(typeof e === "string" ? e : t("publicUser.loadError"));
+      setError(translateApiRejection(e, t));
     } finally {
       setLoading(false);
     }
-  }, [idValid, userIdKey, setAvatarCache, t]);
+  }, [idValid, userIdKey, setAvatarCache, t, authUser]);
 
   useEffect(() => {
     void load();
@@ -398,7 +417,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
   },
-  scrollContent: { padding: 16, paddingBottom: 40 },
+  scrollContent: { padding: 20, paddingBottom: 48 },
   hero: {
     alignItems: "center",
     paddingVertical: 24,
@@ -434,20 +453,20 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 6,
   },
-  sectionTitle: { fontSize: 18, fontWeight: "800", marginBottom: 12 },
-  reviewsSectionLead: { fontSize: 14, lineHeight: 20, marginBottom: 14 },
+  sectionTitle: { fontSize: 20, fontWeight: "800", marginBottom: 12 },
+  reviewsSectionLead: { fontSize: 16, lineHeight: 24, marginBottom: 16 },
   reviewsExpandBtn: { flexDirection: "row", alignItems: "center", gap: 4 },
-  reviewsExpandText: { fontSize: 13, fontWeight: "800" },
+  reviewsExpandText: { fontSize: 15, fontWeight: "800" },
   writeCta: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 18,
     borderWidth: StyleSheet.hairlineWidth,
-    marginBottom: 14,
+    marginBottom: 16,
   },
-  writeCtaText: { flex: 1, fontSize: 15, fontWeight: "800" },
+  writeCtaText: { flex: 1, fontSize: 16, fontWeight: "800" },
   reviewList: { gap: 12 },
   starRow: { flexDirection: "row", gap: 2, alignItems: "center" },
 });

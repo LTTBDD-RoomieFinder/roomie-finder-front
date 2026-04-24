@@ -1,0 +1,7 @@
+{
+  "name": "react-native-css-interop",
+  "version": "0.0.0-shim",
+  "private": true,
+  "description": "Shim: NativeWind was removed; old transforms may still import this. Forwards to react/jsx-runtime.",
+  "main": "index.js"
+}

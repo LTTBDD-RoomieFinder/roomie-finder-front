@@ -47,6 +47,26 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="discover"
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            const state = navigation.getState();
+            const current = state.routes[state.index];
+            if (current.name === "profile" && profileTabGuard.isDirty()) {
+              e.preventDefault();
+              profileTabGuard.requestNavigation("discover");
+            }
+          },
+        })}
+        options={{
+          title: t("tabs.discover"),
+          tabBarLabel: t("tabs.discover"),
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={28} name="heart.fill" color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="map"
         listeners={({ navigation }) => ({
           tabPress: (e) => {

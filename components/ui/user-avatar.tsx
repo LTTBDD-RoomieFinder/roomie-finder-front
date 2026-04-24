@@ -36,12 +36,14 @@ export function UserAvatar({
         source={{ uri }}
         style={[
           dim,
+          { overflow: "hidden" },
           borderColor ? { borderWidth: StyleSheet.hairlineWidth, borderColor } : null,
           style as StyleProp<ImageStyle>,
         ]}
         contentFit="cover"
         transition={150}
         cachePolicy="memory-disk"
+        recyclingKey={String(uri)}
       />
     );
   }

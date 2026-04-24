@@ -20,6 +20,7 @@ import { useLanguage } from "@/hooks/use-language";
 import { useCreateRequest } from "@/hooks/use-create-request";
 import { usePostsJoinEligibility } from "@/hooks/use-posts-join-eligibility";
 import type { UserResponse } from "@/types/request";
+import { displayNameForUser, normalizeUserFromApi } from "@/utils/normalize-user";
 
 type CreateRequestParams = {
   receiverId: string;
@@ -61,15 +62,16 @@ export default function CreateRequestScreen() {
   const receiver: UserResponse | null = params.receiver
     ? (() => {
         try {
-          return JSON.parse(params.receiver!) as UserResponse;
+          return normalizeUserFromApi(JSON.parse(params.receiver!));
         } catch {
           return null;
         }
       })()
     : null;
 
-  const displayName =
-    receiver?.fullName || receiver?.username || t("request.card.fallbackName");
+  const displayName = receiver
+    ? displayNameForUser(receiver, t("request.card.fallbackName"))
+    : t("request.card.fallbackName");
 
   useEffect(() => {
     // expo-router có thể render 1 frame đầu khi params chưa kịp load => rawReceiverId === undefined.

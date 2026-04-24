@@ -9,12 +9,13 @@ import {
   View,
 } from "react-native";
 
+import { ThemedText } from "@/components/themed-text";
 import type { PostResponse } from "@/data/response";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useLanguage } from "@/hooks/use-language";
 import type { PostJoinEligibility } from "@/types/post-join-eligibility";
 
-const HIT = 36;
+const HIT = 40;
 
 type Props = {
   post: PostResponse;
@@ -23,9 +24,13 @@ type Props = {
   eligibilityLoading: boolean;
   eligibilityError: boolean;
   onRetryEligibility?: () => void;
+  /**
+   * `bar`: cùng hàng với nút "Xem phòng" — cao, có viền + chữ.
+   * `icon`: hành cũ (chỉ icon tròn).
+   */
+  variant?: "icon" | "bar";
 };
 
-/** Icon nhỏ: mời vào nhóm chat (chi tiết bài đăng). */
 export function PostRequestChatIcon({
   post,
   currentUserId,
@@ -33,9 +38,11 @@ export function PostRequestChatIcon({
   eligibilityLoading,
   eligibilityError,
   onRetryEligibility,
+  variant = "icon",
 }: Props) {
   const { color } = useAppTheme();
   const { t } = useLanguage();
+  const isBar = variant === "bar";
   const isOwner =
     currentUserId !== undefined &&
     String(post.user.id) === String(currentUserId);
@@ -61,25 +68,49 @@ export function PostRequestChatIcon({
   }, [eligibility, t]);
 
   const onAlreadyRequestedPress = useCallback(() => {
-    Alert.alert(t("request.postIcon.alreadyTitle"), t("request.postIcon.alreadyMessage"));
+    Alert.alert(
+      t("request.postIcon.alreadyTitle"),
+      t("request.postIcon.alreadyMessage"),
+    );
   }, [t]);
 
   if (isOwner) {
-    return <View style={styles.placeholder} />;
+    return isBar ? <View style={styles.barSpacer} /> : <View style={styles.placeholder} />;
   }
+
+  const labelStyle = (c: string) => [
+    styles.barLabel,
+    { color: c },
+  ];
 
   if (currentUserId === undefined) {
     return (
       <Pressable
         onPress={() => router.push("/(auth)/login")}
         style={({ pressed }) => [
-          styles.btn,
-          { backgroundColor: pressed ? color.tint + "18" : "transparent" },
+          isBar ? styles.bar : styles.btn,
+          isBar
+            ? {
+                borderColor: color.primary,
+                backgroundColor: pressed
+                  ? color.primary + "22"
+                  : color.primary + "12",
+              }
+            : { backgroundColor: pressed ? color.tint + "18" : "transparent" },
         ]}
-        hitSlop={8}
+        hitSlop={isBar ? 0 : 8}
         accessibilityLabel={t("request.postIcon.loginA11y")}
       >
-        <Ionicons name="chatbubble-ellipses-outline" size={22} color={color.tint} />
+        <Ionicons
+          name="chatbubble-ellipses-outline"
+          size={isBar ? 20 : 22}
+          color={color.primary}
+        />
+        {isBar ? (
+          <ThemedText style={labelStyle(color.primary)} numberOfLines={1}>
+            {t("postCard.chatLoginCta")}
+          </ThemedText>
+        ) : null}
       </Pressable>
     );
   }
@@ -89,44 +120,91 @@ export function PostRequestChatIcon({
       <Pressable
         onPress={onRetryEligibility}
         style={({ pressed }) => [
-          styles.btn,
-          { backgroundColor: pressed ? color.error + "18" : "transparent" },
+          isBar ? styles.bar : styles.btn,
+          isBar
+            ? {
+                borderColor: color.error,
+                backgroundColor: pressed ? color.error + "18" : color.error + "0D",
+              }
+            : { backgroundColor: pressed ? color.error + "18" : "transparent" },
         ]}
-        hitSlop={8}
+        hitSlop={isBar ? 0 : 8}
         accessibilityLabel={t("request.postIcon.retryA11y")}
       >
-        <Ionicons name="refresh-outline" size={22} color={color.error} />
+        <Ionicons
+          name="refresh-outline"
+          size={isBar ? 20 : 22}
+          color={color.error}
+        />
+        {isBar ? (
+          <ThemedText style={labelStyle(color.error)} numberOfLines={1}>
+            {t("postCard.chatRetryCta")}
+          </ThemedText>
+        ) : null}
       </Pressable>
     );
   }
 
   if (eligibilityLoading || eligibility === undefined) {
     return (
-      <View style={styles.btn} accessibilityLabel={t("request.postIcon.checkingA11y")}>
-        <ActivityIndicator size="small" color={color.tint} />
+      <View
+        style={[
+          isBar ? styles.bar : styles.btn,
+          isBar
+            ? { borderColor: color.border, backgroundColor: color.card }
+            : null,
+        ]}
+        accessibilityLabel={t("request.postIcon.checkingA11y")}
+      >
+        <ActivityIndicator size="small" color={color.primary} />
+        {isBar ? (
+          <ThemedText
+            style={[styles.barLabel, { color: color.textSecondary }]}
+            numberOfLines={1}
+          >
+            {t("postCard.chatChecking")}
+          </ThemedText>
+        ) : null}
       </View>
     );
   }
 
-  // Part 1: Khi full thì vẫn cho phép tạo request (xếp hàng),
-  // nên chỉ “chặn” khi ALREADY_REQUESTED/OWN_POST/POST_NOT_FOUND.
   const canQueue =
-    eligibility.disabledReason === "CHAT_ROOM_FULL" && !eligibility.canRequestJoinChatRoom;
+    eligibility.disabledReason === "CHAT_ROOM_FULL" &&
+    !eligibility.canRequestJoinChatRoom;
 
   if (eligibility.canRequestJoinChatRoom || canQueue) {
     return (
       <Pressable
         onPress={goCreate}
         style={({ pressed }) => [
-          styles.btn,
-          { backgroundColor: pressed ? color.tint + "28" : color.tint + "14" },
+          isBar ? styles.bar : styles.btn,
+          isBar
+            ? {
+                borderColor: color.primary,
+                backgroundColor: pressed
+                  ? color.primary + "24"
+                  : color.primary + "14",
+              }
+            : { backgroundColor: pressed ? color.tint + "28" : color.tint + "14" },
         ]}
-        hitSlop={8}
+        hitSlop={isBar ? 0 : 8}
         accessibilityLabel={
           canQueue ? t("request.postIcon.queueA11y") : t("request.postIcon.sendA11y")
         }
       >
-        <Ionicons name="chatbubbles-outline" size={21} color={color.tint} />
+        <Ionicons
+          name="chatbubbles-outline"
+          size={isBar ? 20 : 21}
+          color={color.primary}
+        />
+        {isBar ? (
+          <ThemedText style={labelStyle(color.primary)} numberOfLines={1}>
+            {canQueue
+              ? t("postCard.requestQueueCta")
+              : t("postCard.requestCta")}
+          </ThemedText>
+        ) : null}
       </Pressable>
     );
   }
@@ -135,16 +213,32 @@ export function PostRequestChatIcon({
     return (
       <Pressable
         onPress={onAlreadyRequestedPress}
-        style={styles.btn}
-        hitSlop={8}
+        style={[
+          isBar ? styles.bar : styles.btn,
+          isBar
+            ? {
+                borderColor: color.border,
+                backgroundColor: color.backgroundSecondary,
+              }
+            : null,
+        ]}
+        hitSlop={isBar ? 0 : 8}
         accessibilityLabel={t("request.postIcon.sentA11y")}
       >
         <Ionicons
           name="checkmark-circle-outline"
-          size={20}
+          size={isBar ? 20 : 20}
           color={color.textSecondary}
-          style={{ opacity: 0.6 }}
+          style={isBar ? undefined : { opacity: 0.6 }}
         />
+        {isBar ? (
+          <ThemedText
+            style={[styles.barLabel, { color: color.textSecondary }]}
+            numberOfLines={1}
+          >
+            {t("postCard.requestSentCta")}
+          </ThemedText>
+        ) : null}
       </Pressable>
     );
   }
@@ -152,16 +246,29 @@ export function PostRequestChatIcon({
   return (
     <Pressable
       onPress={onFullPress}
-      style={styles.btn}
-      hitSlop={8}
+      style={[
+        isBar ? styles.bar : styles.btn,
+        isBar
+          ? { borderColor: color.border, backgroundColor: color.backgroundSecondary }
+          : null,
+      ]}
+      hitSlop={isBar ? 0 : 8}
       accessibilityLabel={t("request.postIcon.fullA11y")}
     >
       <Ionicons
         name="chatbubbles-outline"
-        size={20}
+        size={isBar ? 20 : 20}
         color={color.textSecondary}
-        style={{ opacity: 0.45 }}
+        style={isBar ? { opacity: 0.7 } : { opacity: 0.45 }}
       />
+      {isBar ? (
+        <ThemedText
+          style={[styles.barLabel, { color: color.textSecondary }]}
+          numberOfLines={1}
+        >
+          {t("postCard.chatFullCta")}
+        </ThemedText>
+      ) : null}
     </Pressable>
   );
 }
@@ -173,6 +280,25 @@ const styles = StyleSheet.create({
     borderRadius: HIT / 2,
     alignItems: "center",
     justifyContent: "center",
+  },
+  bar: {
+    flex: 1,
+    minHeight: 50,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingHorizontal: 10,
+  },
+  barSpacer: {
+    flex: 1,
+  },
+  barLabel: {
+    fontSize: 14,
+    fontWeight: "700",
+    flexShrink: 1,
   },
   placeholder: {
     width: HIT,

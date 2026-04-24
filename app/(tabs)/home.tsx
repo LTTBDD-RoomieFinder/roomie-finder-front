@@ -1,9 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
-import { Alert, Pressable, StyleSheet, View } from "react-native";
+import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 
-import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { CreatePostModal } from "@/components/home/create-post-modal";
 import { EditPostModal } from "@/components/home/edit-post-modal";
@@ -14,6 +13,7 @@ import { PostEntry } from "@/components/home/post-entry";
 import { PostList } from "@/components/home/post-list";
 import { profileApi } from "@/apis/profile";
 import { PostResponse } from "@/data/response";
+import { normalizeRoom } from "@/utils/normalize-post";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useLanguage } from "@/hooks/use-language";
 import { postService } from "@/services/post-service";
@@ -25,14 +25,11 @@ import { syncTabBadgesToStore } from "@/services/tab-badge-service";
 import { useAuthStore } from "@/stores/useAuthStore";
 
 export default function HomeScreen() {
-  const { color } = useAppTheme();
+  const { color, radius } = useAppTheme();
   const { t } = useLanguage();
   const user = useAuthStore((state) => state.user);
 
   const [posts, setPosts] = useState<PostResponse[]>([]);
-  const [recommendedScores, setRecommendedScores] = useState<
-    Record<number, { totalScore: number; profileAvgScore: number; roomScore: number }>
-  >({});
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<"feed" | "recommended">("feed");
@@ -50,7 +47,15 @@ export default function HomeScreen() {
       // Hiển thị bài mới nhất lên đầu
       setPosts([...data].reverse());
     } catch (e) {
-      console.error("Failed to fetch posts", e);
+      const msg = typeof e === "string" ? e : String(e);
+      if (__DEV__ && /cannot reach server|ERR_NETWORK|Network Error/i.test(msg)) {
+        console.warn(
+          "Failed to fetch posts (check backend + EXPO_PUBLIC_API_URL):",
+          msg.length > 220 ? `${msg.slice(0, 220)}…` : msg,
+        );
+      } else {
+        console.error("Failed to fetch posts", e);
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -65,9 +70,17 @@ export default function HomeScreen() {
       post.user?.fullName ||
       post.user?.username ||
       t("postSearch.anonymous");
+    const aid = post.author?.id;
+    const uid = post.user?.id;
+    const displayUserIdRaw = aid ?? uid;
     const displayUserId =
-      post.author?.id ??
-      (typeof post.user?.id === "number" ? post.user.id : undefined);
+      displayUserIdRaw != null && String(displayUserIdRaw).trim() !== ""
+        ? String(displayUserIdRaw).trim()
+        : undefined;
+    const posterAvatar =
+      post.author?.avatarUrl ??
+      post.user?.avatarUrl ??
+      null;
 
     return {
       id: post.id,
@@ -78,13 +91,14 @@ export default function HomeScreen() {
       expirationDate: null,
       createdAt: post.createdAt,
       updatedAt: post.updatedAt,
-      room: post.room,
+      room: normalizeRoom((post as { room?: unknown }).room ?? null),
       user: {
         id: String(displayUserId ?? ""),
         username: displayName,
         email: "",
         fullName: displayName,
         roles: [],
+        avatarUrl: posterAvatar,
       },
     };
   }, [t]);
@@ -92,25 +106,19 @@ export default function HomeScreen() {
   const fetchRecommendedPosts = useCallback(async (showLoadingSpinner = true) => {
     try {
       if (showLoadingSpinner) setLoading(true);
-      const res = await postSearchService.getRecommendedPosts({ size: 20 });
+      const res = await postSearchService.getRecommendedPosts({ size: 50 });
       const items = res?.data ?? [];
-      const mappedPosts = items.map(toFeedPost);
-      const scores = items.reduce<
-        Record<number, { totalScore: number; profileAvgScore: number; roomScore: number }>
-      >((acc, item) => {
-        if (item.post?.id !== undefined && item.post?.id !== null) {
-          acc[item.post.id] = {
-            totalScore: item.totalScore,
-            profileAvgScore: item.profileAvgScore,
-            roomScore: item.roomScore,
-          };
-        }
-        return acc;
-      }, {});
-      setRecommendedScores(scores);
-      setPosts(mappedPosts);
+      setPosts(items.map(toFeedPost));
     } catch (e) {
-      console.error("Failed to fetch recommended posts", e);
+      const msg = typeof e === "string" ? e : String(e);
+      if (__DEV__ && /cannot reach server|ERR_NETWORK|Network Error/i.test(msg)) {
+        console.warn(
+          "Failed to fetch recommended posts (check backend + EXPO_PUBLIC_API_URL):",
+          msg.length > 220 ? `${msg.slice(0, 220)}…` : msg,
+        );
+      } else {
+        console.error("Failed to fetch recommended posts", e);
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -131,13 +139,25 @@ export default function HomeScreen() {
     checkProfileAvailability();
   }, [checkProfileAvailability]);
 
+  /**
+   * Bảng tin: tải từ effect khi ở tab "Feed".
+   * Tab "Đề xuất" chỉ tải khi user bấm (segment / nút header / pull-to-refresh) — gọi thẳng `fetchRecommendedPosts`.
+   */
   useEffect(() => {
     if (canUseRecommended && activeTab === "recommended") {
-      fetchRecommendedPosts();
       return;
     }
-    fetchPosts();
-  }, [activeTab, canUseRecommended, fetchPosts, fetchRecommendedPosts]);
+    void fetchPosts();
+  }, [activeTab, canUseRecommended, fetchPosts]);
+
+  const goRecommended = useCallback(() => {
+    if (!canUseRecommended) {
+      void checkProfileAvailability();
+      return;
+    }
+    setActiveTab("recommended");
+    void fetchRecommendedPosts(true);
+  }, [canUseRecommended, checkProfileAvailability, fetchRecommendedPosts]);
 
   useFocusEffect(
     useCallback(() => {
@@ -183,38 +203,48 @@ export default function HomeScreen() {
       <View style={[styles.header, { backgroundColor: color.primary }]}>
         <View style={styles.headerContent}>
           <View style={[styles.headerIconWrap, { backgroundColor: "rgba(255,255,255,0.2)" }]}>
-            <IconSymbol name="house.fill" size={28} color={color.primaryText} />
+            <IconSymbol name="house.fill" size={24} color={color.primaryText} />
           </View>
           <View style={styles.headerTextWrap}>
-            <ThemedText style={[styles.headerTitle, { color: color.primaryText }]}>
+            <Text
+              style={[styles.headerTitle, { color: color.primaryText }]}
+              numberOfLines={2}
+              ellipsizeMode="clip"
+            >
               {t("home.title")}
-            </ThemedText>
-            <ThemedText style={[styles.headerSubtitle, { color: color.primaryText, opacity: 0.9 }]}>
+            </Text>
+            <Text
+              style={[styles.headerSubtitle, { color: color.primaryText, opacity: 0.95 }]}
+              numberOfLines={3}
+              ellipsizeMode="clip"
+            >
               {t("home.subtitle")}
-            </ThemedText>
+            </Text>
           </View>
-          <Pressable
-            onPress={() => setSearchVisible(true)}
-            style={({ pressed }) => [
-              styles.headerActionBtn,
-              { backgroundColor: pressed ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.18)" },
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel={t("home.searchA11y")}
-          >
-            <Ionicons name="search" size={20} color={color.primaryText} />
-          </Pressable>
-          <Pressable
-            onPress={() => setMyPostsVisible(true)}
-            style={({ pressed }) => [
-              styles.headerActionBtn,
-              { backgroundColor: pressed ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.18)" },
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel={t("home.myPostsA11y")}
-          >
-            <Ionicons name="list" size={20} color={color.primaryText} />
-          </Pressable>
+          <View style={styles.headerActionsRow}>
+            <Pressable
+              onPress={() => setSearchVisible(true)}
+              style={({ pressed }) => [
+                styles.headerActionBtn,
+                { backgroundColor: pressed ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.18)" },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel={t("home.searchA11y")}
+            >
+              <Ionicons name="search" size={20} color={color.primaryText} />
+            </Pressable>
+            <Pressable
+              onPress={() => setMyPostsVisible(true)}
+              style={({ pressed }) => [
+                styles.headerActionBtn,
+                { backgroundColor: pressed ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.18)" },
+              ]}
+              accessibilityRole="button"
+              accessibilityLabel={t("home.myPostsA11y")}
+            >
+              <Ionicons name="list" size={20} color={color.primaryText} />
+            </Pressable>
+          </View>
         </View>
       </View>
 
@@ -222,59 +252,93 @@ export default function HomeScreen() {
         {/* Vùng bấm để tạo bài viết */}
         <PostEntry onPress={() => setCreatePostVisible(true)} />
         {canUseRecommended ? (
-          <View
-            style={{
-              flexDirection: "row",
-              paddingHorizontal: 16,
-              paddingBottom: 10,
-              gap: 8,
-            }}
-          >
-            <Pressable
-              onPress={() => setActiveTab("feed")}
-              style={({ pressed }) => [
-                styles.tabBtn,
+          <View style={styles.segmentOuter}>
+            <View
+              style={[
+                styles.segmentTrack,
                 {
-                  backgroundColor:
-                    activeTab === "feed"
-                      ? color.primary
-                      : pressed
-                      ? color.border
-                      : color.backgroundSecondary,
+                  backgroundColor: color.backgroundSecondary,
+                  borderColor: color.border + "99",
+                  borderRadius: radius.md,
                 },
               ]}
             >
-              <ThemedText
-                type="defaultSemiBold"
-                style={{ color: activeTab === "feed" ? color.primaryText : color.text }}
+              <Pressable
+                onPress={() => setActiveTab("feed")}
+                style={({ pressed }) => {
+                  const on = activeTab === "feed";
+                  return [
+                    styles.segmentBtn,
+                    {
+                      backgroundColor: on ? color.card : "transparent",
+                      borderRadius: radius.sm,
+                      borderColor: on ? color.primary : "transparent",
+                      opacity: pressed ? 0.88 : 1,
+                    },
+                  ];
+                }}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: activeTab === "feed" }}
               >
-                {t("home.feedTab")}
-              </ThemedText>
-            </Pressable>
-            <Pressable
-              onPress={() => setActiveTab("recommended")}
-              style={({ pressed }) => [
-                styles.tabBtn,
-                {
-                  backgroundColor:
-                    activeTab === "recommended"
-                      ? color.primary
-                      : pressed
-                      ? color.border
-                      : color.backgroundSecondary,
-                },
-              ]}
-            >
-              <ThemedText
-                type="defaultSemiBold"
-                style={{ color: activeTab === "recommended" ? color.primaryText : color.text }}
+                <Ionicons
+                  name="newspaper-outline"
+                  size={18}
+                  color={activeTab === "feed" ? color.primary : color.textSecondary}
+                />
+                <Text
+                  style={[
+                    styles.segmentLabel,
+                    {
+                      color: activeTab === "feed" ? color.primary : color.text,
+                      fontWeight: activeTab === "feed" ? "800" : "600",
+                    },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {t("home.feedTab")}
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={goRecommended}
+                style={({ pressed }) => {
+                  const on = activeTab === "recommended";
+                  return [
+                    styles.segmentBtn,
+                    {
+                      backgroundColor: on ? color.card : "transparent",
+                      borderRadius: radius.sm,
+                      borderColor: on ? color.primary : "transparent",
+                      opacity: pressed ? 0.88 : 1,
+                    },
+                  ];
+                }}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: activeTab === "recommended" }}
               >
-                {t("home.recommendedTab")}
-              </ThemedText>
-            </Pressable>
+                <Ionicons
+                  name="sparkles-outline"
+                  size={18}
+                  color={
+                    activeTab === "recommended" ? color.primary : color.textSecondary
+                  }
+                />
+                <Text
+                  style={[
+                    styles.segmentLabel,
+                    {
+                      color: activeTab === "recommended" ? color.primary : color.text,
+                      fontWeight: activeTab === "recommended" ? "800" : "600",
+                    },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {t("home.recommendedTab")}
+                </Text>
+              </Pressable>
+            </View>
           </View>
         ) : null}
-        <View style={{ height: 8, backgroundColor: color.backgroundSecondary }} />
+        <View style={{ height: 6, backgroundColor: color.backgroundSecondary }} />
 
         {/* Danh sách bài viết */}
         <PostList
@@ -285,7 +349,11 @@ export default function HomeScreen() {
           currentUserId={user?.id}
           onEdit={(post) => setEditingPost(post)}
           onDelete={handleDeleteFromFeed}
-          scoresByPostId={canUseRecommended && activeTab === "recommended" ? recommendedScores : undefined}
+          emptyMessageKey={
+            activeTab === "recommended" && canUseRecommended
+              ? "home.recommendedEmpty"
+              : "post.feedEmpty"
+          }
         />
       </View>
 
@@ -293,21 +361,27 @@ export default function HomeScreen() {
       <CreatePostModal
         visible={isCreatePostVisible}
         onClose={() => setCreatePostVisible(false)}
-        onSuccess={() => fetchPosts(false)}
+        onSuccess={() => {
+          void fetchPosts(false);
+        }}
       />
 
       <EditPostModal
         visible={editingPost !== null}
         post={editingPost}
         onClose={() => setEditingPost(null)}
-        onSuccess={() => fetchPosts(false)}
+        onSuccess={() => {
+          void fetchPosts(false);
+        }}
       />
 
       <MyPostsSheet
         visible={isMyPostsVisible}
         onClose={() => setMyPostsVisible(false)}
         onEdit={(post) => setEditingPost(post)}
-        onDeleted={() => fetchPosts(false)}
+        onDeleted={() => {
+          void fetchPosts(false);
+        }}
       />
 
       <HomeSearchOverlay visible={isSearchVisible} onClose={() => setSearchVisible(false)} />
@@ -318,45 +392,83 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   header: {
-    height: 100,
     marginTop: 40,
-    justifyContent: "flex-end",
-    paddingHorizontal: 20,
-    paddingVertical: 20,
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 16,
+    minHeight: 100,
+    justifyContent: "center",
   },
   headerContent: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
+    alignItems: "flex-start",
+    gap: 10,
   },
   headerIconWrap: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: "center",
     justifyContent: "center",
+    flexShrink: 0,
+    marginTop: 2,
   },
-  headerTextWrap: { flex: 1 },
+  headerTextWrap: {
+    flex: 1,
+    minWidth: 0,
+    paddingRight: 4,
+  },
+  headerActionsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flexShrink: 0,
+    marginTop: 0,
+  },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: "700",
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
+    lineHeight: 28,
   },
   headerSubtitle: {
     fontSize: 14,
-    marginTop: 4,
+    marginTop: 6,
     lineHeight: 20,
+    fontWeight: "500",
   },
   headerActionBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
   },
-  tabBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 999,
+  segmentOuter: {
+    paddingHorizontal: 16,
+    paddingTop: 4,
+    paddingBottom: 12,
+  },
+  segmentTrack: {
+    flexDirection: "row",
+    padding: 4,
+    gap: 4,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  segmentBtn: {
+    flex: 1,
+    flexBasis: 0,
+    minHeight: 48,
+    borderWidth: 2,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
+  },
+  segmentLabel: {
+    fontSize: 14,
+    letterSpacing: 0.2,
   },
 });

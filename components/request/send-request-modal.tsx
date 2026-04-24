@@ -15,6 +15,7 @@ import { useAppTheme } from "@/hooks/use-app-theme";
 import { useLanguage } from "@/hooks/use-language";
 import { useCreateRequest } from "@/hooks/use-create-request";
 import type { UserResponse } from "@/types/request";
+import { displayNameForUser } from "@/utils/normalize-user";
 
 type SendRequestModalProps = {
   visible: boolean;
@@ -34,7 +35,7 @@ export function SendRequestModal({
 
   const { color } = useAppTheme();
   const { t } = useLanguage();
-  const displayName = receiver?.fullName || receiver?.username || t("request.card.fallbackName");
+  const displayName = displayNameForUser(receiver, t("request.card.fallbackName"));
 
   const handleClose = () => {
     setMessage("");

@@ -49,14 +49,22 @@ function extractTabBadgeCountsDeep(raw: unknown): TabBadgeCounts | null {
   return null;
 }
 
+const zeroBadges: TabBadgeCounts = {
+  requestUnreadCount: 0,
+  chatRoomsWithUnreadCount: 0,
+};
+
+/**
+ * GET /me/tab-badges — never rejects (offline, 404, 401 → zeros).
+ * Avoids unhandled rejections and spam when the endpoint is missing or the server is down.
+ */
 export async function fetchTabBadges(): Promise<TabBadgeCounts> {
-  const res = await meApi.getTabBadges();
-  return (
-    extractTabBadgeCountsDeep(res) ?? {
-      requestUnreadCount: 0,
-      chatRoomsWithUnreadCount: 0,
-    }
-  );
+  try {
+    const res = await meApi.getTabBadges();
+    return extractTabBadgeCountsDeep(res) ?? zeroBadges;
+  } catch {
+    return zeroBadges;
+  }
 }
 
 /** Single HTTP call; updates Zustand tab badge counts (used by layout, focus, websocket). */

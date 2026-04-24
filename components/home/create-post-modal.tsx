@@ -47,6 +47,9 @@ export function CreatePostModal({ visible, onClose, onSuccess }: Props) {
   const [status, setStatus] = useState<PostStatus>("PUBLISHED");
   const [isStatusPickerVisible, setStatusPickerVisible] = useState(false);
   const insets = useSafeAreaInsets();
+  const headerTop = Math.max(insets.top, 12);
+  const scrollBottomPad = Math.max(insets.bottom, 16) + 24;
+  const keyboardOffset = Platform.OS === "ios" ? insets.top : 0;
 
   const resetState = () => {
     setTitle("");
@@ -96,42 +99,70 @@ export function CreatePostModal({ visible, onClose, onSuccess }: Props) {
         <KeyboardAvoidingView
           style={styles.keyboardAvoidingView}
           behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={keyboardOffset}
         >
-          {/* Header */}
-          <View style={[
-            styles.header,
-            {
-              borderBottomColor: color.border,
-              paddingTop: Platform.OS === 'android' ? Math.max(insets.top, 12) : 12
-            }
-          ]}>
-            <Pressable onPress={handleClose} style={styles.closeButton}>
-              <Ionicons name="close" size={24} color={color.text} />
-            </Pressable>
-            <ThemedText type="subtitle" style={styles.headerTitle}>
-              {t("post.createTitle")}
-            </ThemedText>
-            <Pressable
-              onPress={handlePost}
-              disabled={!canPost}
-              style={[
-                styles.postButton,
-                {
-                  backgroundColor: canPost ? color.tint : color.placeholder,
-                  opacity: submitting ? 0.7 : 1
-                }
-              ]}
-            >
-              {submitting ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <ThemedText style={styles.postButtonText}>{t("post.publish")}</ThemedText>
-              )}
-            </Pressable>
+          {/* Header: hai cạnh cùng width → tiêu đề cân giữa */}
+          <View
+            style={[
+              styles.header,
+              {
+                borderBottomColor: color.border,
+                paddingTop: headerTop,
+                paddingBottom: 10,
+              },
+            ]}
+          >
+            <View style={styles.headerSide}>
+              <Pressable
+                onPress={handleClose}
+                style={({ pressed }) => [
+                  styles.headerIconBtn,
+                  { opacity: pressed ? 0.65 : 1 },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={t("common.close")}
+                hitSlop={8}
+              >
+                <Ionicons name="close" size={24} color={color.text} />
+              </Pressable>
+            </View>
+            <View style={styles.headerTitleWrap} pointerEvents="none">
+              <ThemedText
+                type="subtitle"
+                numberOfLines={1}
+                ellipsizeMode="tail"
+                style={[styles.headerTitle, { color: color.text }]}
+              >
+                {t("post.createTitle")}
+              </ThemedText>
+            </View>
+            <View style={[styles.headerSide, styles.headerSideEnd]}>
+              <Pressable
+                onPress={handlePost}
+                disabled={!canPost}
+                style={({ pressed }) => [
+                  styles.postButton,
+                  {
+                    backgroundColor: canPost ? color.tint : color.placeholder,
+                    opacity: submitting ? 0.7 : pressed && canPost ? 0.9 : 1,
+                  },
+                ]}
+                accessibilityRole="button"
+                accessibilityState={{ disabled: !canPost }}
+              >
+                {submitting ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <ThemedText style={styles.postButtonText} numberOfLines={1}>
+                    {t("post.publish")}
+                  </ThemedText>
+                )}
+              </Pressable>
+            </View>
           </View>
 
           <ScrollView
-            contentContainerStyle={styles.body}
+            contentContainerStyle={[styles.body, { paddingBottom: scrollBottomPad }]}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
@@ -279,15 +310,24 @@ export function CreatePostModal({ visible, onClose, onSuccess }: Props) {
                     { backgroundColor: color.backgroundSecondary, borderColor: color.border }
                   ]}
                 >
-                  <Ionicons name="add-circle-outline" size={24} color={color.tint} />
-                  <ThemedText style={{ color: color.tint, fontWeight: "600" }}>
+                  <Ionicons
+                    name="add-circle-outline"
+                    size={24}
+                    color={color.tint}
+                    style={{ flexShrink: 0 }}
+                  />
+                  <ThemedText
+                    style={{ color: color.tint, fontWeight: "600", flexShrink: 1, textAlign: "center" }}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                  >
                     {t("post.selectRoom")}
                   </ThemedText>
                 </Pressable>
               )}
             </View>
 
-            <View style={{ height: 40 }} />
+            <View style={{ height: 12 }} />
           </ScrollView>
 
           {/* {!selectedRoom && (
@@ -371,29 +411,57 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    minHeight: 48,
+    paddingHorizontal: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  closeButton: {
-    padding: 4,
+  /** Cùng minWidth — tiêu đề flex:1 ở giữa, hai nút ngang bằng theo cạnh. */
+  headerSide: {
+    minWidth: 100,
+    maxWidth: 120,
+    flexBasis: 100,
+    flexGrow: 0,
+    flexShrink: 0,
+    alignItems: "flex-start",
+    justifyContent: "center",
+  },
+  headerSideEnd: {
+    alignItems: "flex-end",
+  },
+  headerIconBtn: {
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: -4,
+  },
+  headerTitleWrap: {
+    flex: 1,
+    minWidth: 0,
+    paddingHorizontal: 4,
+    alignItems: "center",
+    justifyContent: "center",
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: "700",
+    textAlign: "center",
   },
   postButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 8,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    minHeight: 40,
+    minWidth: 88,
+    maxWidth: 112,
     borderRadius: 20,
-    minWidth: 70,
     alignItems: "center",
+    justifyContent: "center",
   },
   postButtonText: {
     color: "#fff",
     fontWeight: "700",
     fontSize: 15,
+    textAlign: "center",
   },
   body: {
     padding: 20,
@@ -469,7 +537,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    padding: 16,
+    minHeight: 52,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
     borderRadius: 16,
     borderWidth: 1,
     borderStyle: "dashed",

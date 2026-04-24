@@ -98,13 +98,22 @@ export function normalizeUser(raw: unknown): UserResponse {
   const roles = Array.isArray(rolesRaw)
     ? rolesRaw.filter((x): x is string => typeof x === "string")
     : [];
+  const avatarRaw =
+    o.avatarUrl ??
+    o.avatar_url ??
+    o.profilePictureUrl ??
+    o.profile_picture_url ??
+    o.profileImageUrl ??
+    o.profile_image_url ??
+    o.photoUrl ??
+    o.photo_url;
   return {
     id: str(o.id),
     username: str(o.username),
     email: str(o.email),
     fullName: strNull(o.fullName ?? o.full_name),
     roles,
-    avatarUrl: strNull(o.avatarUrl ?? o.avatar_url),
+    avatarUrl: strNull(avatarRaw),
   };
 }
 

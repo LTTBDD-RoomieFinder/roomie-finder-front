@@ -23,6 +23,7 @@
   },
   "tabs": {
     "home": "Home",
+    "discover": "Match",
     "map": "Map",
     "room": "Rooms",
     "requests": "Requests",
@@ -78,14 +79,19 @@
     "title": "Roomie Finder",
     "subtitle": "Find your perfect roommate",
     "searchA11y": "Search",
+    "recommendedActionA11y": "Recommended for you — load matching posts",
     "myPostsA11y": "My posts",
     "feedTab": "Feed",
     "recommendedTab": "Recommended",
+    "recommendedEmpty": "No recommendations yet.\nComplete your profile or check back later — we will show posts that match you best.",
     "deletePostTitle": "Delete post",
     "deletePostMessage": "Are you sure you want to delete \"{{title}}\"?",
     "deleteFailed": "Could not delete the post.",
     "postEntryPrompt": "What's on your mind, {{name}}?",
-    "postEntryYou": "there"
+    "postEntryYou": "there",
+    "lastPostBadge": "Your latest post",
+    "lastPostA11y": "Your latest post: {{title}}",
+    "postEntryAvatarA11y": "View your profile"
   },
   "map": {
     "title": "Room map",
@@ -97,6 +103,7 @@
     "pinCount": "{{count}} rooms on map",
     "moreHidden": "+{{count}} not shown (performance cap)",
     "a11yMapArea": "Room map",
+    "pinA11y": "Room listing, from {{price}}",
     "androidNoGoogleKeyHint": "Google Maps API key missing: Android tiles may be limited. Set EXPO_PUBLIC_GOOGLE_MAPS_API_KEY and rebuild native.",
     "iosAppleMapsNote": "iOS uses Apple Maps — no Google API key required.",
     "emptyHint": "No pins in this area. Try panning/zooming, or check PUBLISHED posts with ACTIVE rooms and valid coordinates.",
@@ -108,6 +115,12 @@
     "directionsOpenFailed": "Could not open Google Maps.",
     "previewLoading": "Loading room…",
     "tapPinHint": "Tap a pin to preview the room",
+    "locationPermissionTitle": "Location needed",
+    "locationPermissionBody": "Allow access to your location to use nearby scan and the locate button.",
+    "locationError": "Could not get your current location.",
+    "scanningNearby": "Scanning for rooms around you",
+    "locateA11y": "Center map on my location",
+    "scanA11y": "Toggle nearby scan (animated rings and refresh pins)",
     "reviewPosterCta": "Rate the poster",
     "reviewPosterLogin": "Log in to rate the poster"
   },
@@ -321,6 +334,7 @@
     "emptyTitle": "No chats yet",
     "emptySub": "Accept a roommate request to start a private chat.",
     "headerSubtitle": "Messages",
+    "headerWithPeer": "With {{name}}",
     "roomFallback": "Chat #{{id}}",
     "online": "Online",
     "connecting": "Connecting…",
@@ -421,6 +435,16 @@
     "close": "Close",
     "closeA11y": "Close"
   },
+  "smartMatch": {
+    "title": "Smart match",
+    "subtitle": "From your profile — personalized suggestions from our matching engine",
+    "empty": "No suggestions yet. Add lifestyle & preferences to your profile, or check back later.",
+    "loadError": "Could not load suggestions. Pull to retry or check your connection.",
+    "loginRequired": "Sign in to see people who match your roommate profile.",
+    "signIn": "Sign in",
+    "tagCompatibility": "Compatibility",
+    "defaultSubtitle": "Member on Roomie Finder"
+  },
   "dirtyLeave": {
     "title": "You have unsaved changes",
     "message": "What would you like to do before leaving?",
@@ -504,6 +528,16 @@
   },
   "postCard": {
     "viewRoom": "View room",
+    "requestCta": "Request chat",
+    "requestQueueCta": "Join queue",
+    "requestSentCta": "Request sent",
+    "chatLoginCta": "Log in to chat",
+    "chatRetryCta": "Retry",
+    "chatChecking": "Checking…",
+    "chatFullCta": "Room full",
+    "a11yEditPost": "Edit post",
+    "a11yDeletePost": "Delete post",
+    "openPosterProfileA11y": "View profile: {{name}}",
     "maxPeople": "Up to {{count}} people",
     "views": "{{count}} views",
     "expires": "Exp:",
@@ -517,7 +551,10 @@
     "posterOpenReviewsA11y": "View member reviews and full text",
     "posterViewProfileLink": "Open profile, verification & reports",
     "posterTrustEmptyTitle": "No community score yet",
-    "posterTrustEmptySub": "Open their profile to see verification and leave a review after you connect."
+    "posterTrustEmptySub": "Open their profile to see verification and leave a review after you connect.",
+    "posterTrustCompactTitle": "Community trust",
+    "posterTrustCompactEmpty": "No reviews yet · open profile",
+    "posterTrustEmptyA11y": "Poster trust — open profile"
   },
   "postSearch": {
     "anonymous": "Anonymous",
@@ -672,6 +709,7 @@
     "reviewCount": "{{count}} reviews",
     "noReviews": "No reviews yet.",
     "loadError": "Could not load this profile.",
+    "serverError": "The server had a problem loading this profile (500). It may be a backend issue — check API logs, or try again later.",
     "invalidUser": "Invalid member.",
     "openProfileA11y": "View poster profile and reviews",
     "reviewContext": {

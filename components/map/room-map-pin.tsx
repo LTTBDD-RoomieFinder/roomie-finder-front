@@ -1,15 +1,17 @@
 import React, { memo, useCallback, useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { Marker } from "react-native-maps";
+import { LinearGradient } from "expo-linear-gradient";
 import { Image } from "expo-image";
+import { Marker } from "react-native-maps";
 
 import type { MapPinGeoItem } from "@/data/response";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import type { LocaleCode } from "@/lib/i18n-core";
 import type { TranslateFn } from "@/utils/format-room";
 
-const PIN_SIZE = 44;
-const PIN_RADIUS = 12;
+const PIN_W = 50;
+const IMG_H = 40;
+const RADIUS = 16;
 
 type Props = {
   pin: MapPinGeoItem;
@@ -19,13 +21,13 @@ type Props = {
   onPress: (pin: MapPinGeoItem) => void;
 };
 
-/** Abbreviated price label: 3.5tr / 3.5M */
+/** Giá gọn: 3.5tr / 3.5M */
 function shortPrice(price: number, locale: LocaleCode): string {
   if (locale === "vi") {
-    if (price >= 1_000_000)
-      return `${(price / 1_000_000 % 1 === 0
-        ? price / 1_000_000
-        : (price / 1_000_000).toFixed(1))}tr`;
+    if (price >= 1_000_000) {
+      const m = price / 1_000_000;
+      return `${(m % 1 === 0 ? m : m.toFixed(1))}tr`;
+    }
     return `${(price / 1_000).toFixed(0)}k`;
   }
   if (price >= 1_000_000) return `${(price / 1_000_000).toFixed(1)}M`;
@@ -33,26 +35,26 @@ function shortPrice(price: number, locale: LocaleCode): string {
   return `${price}`;
 }
 
-function RoomMapPinInner({ pin, isSelected, locale, onPress }: Props) {
-  const { color } = useAppTheme();
+function RoomMapPinInner({ pin, isSelected, locale, onPress, t }: Props) {
+  const { color, scheme } = useAppTheme();
   const label = shortPrice(pin.price, locale);
+  const isDark = scheme === "dark";
 
-  /**
-   * Custom marker + remote image: `tracksViewChanges={false}` often chụp bitmap
-   * trước khi ảnh tải → chấm “biến mất”. Bật tạm sau khi đổi pin/ảnh rồi tắt.
-   */
   const [tracksViewChanges, setTracksViewChanges] = useState(true);
   useEffect(() => {
     setTracksViewChanges(true);
     const t = setTimeout(() => setTracksViewChanges(false), 900);
     return () => clearTimeout(t);
-  }, [pin.id, pin.thumbnailUrl]);
+  }, [pin.id, pin.thumbnailUrl, isSelected]);
 
   const handlePress = useCallback(() => onPress(pin), [onPress, pin]);
 
   const imageSource = pin.thumbnailUrl?.trim()
     ? { uri: pin.thumbnailUrl.trim() }
     : require("@/assets/images/placeholder.png");
+
+  const borderC = isSelected ? color.primary : isDark ? "rgba(255,255,255,0.92)" : "#fff";
+  const gradBottom = isDark ? "rgba(0,0,0,0.82)" : "rgba(0,0,0,0.7)";
 
   return (
     <Marker
@@ -61,46 +63,48 @@ function RoomMapPinInner({ pin, isSelected, locale, onPress }: Props) {
       onPress={handlePress}
       anchor={{ x: 0.5, y: 1 }}
       zIndex={isSelected ? 999 : 1}
+      accessibilityLabel={t("map.pinA11y", { price: label })}
     >
       <View style={styles.wrap}>
         <View
           style={[
             styles.card,
-            isSelected ? styles.cardSelected : null,
             {
-              borderColor: isSelected ? color.primary : "#ffffff",
-              shadowColor: isSelected ? color.primary : "#000",
+              width: PIN_W,
+              borderColor: borderC,
+              shadowColor: isSelected ? color.primary : "#0f172a",
             },
+            isSelected && styles.cardSelected,
           ]}
         >
-          <Image
-            source={imageSource}
-            style={styles.pinPhoto}
-            contentFit="cover"
-            transition={150}
-            onLoadEnd={() => {
-              setTracksViewChanges(true);
-              setTimeout(() => setTracksViewChanges(false), 400);
-            }}
-          />
-          <View
-            style={[
-              styles.pricePill,
-              {
-                backgroundColor: isSelected ? color.primary : "rgba(0,0,0,0.78)",
-              },
-            ]}
-          >
-            <Text style={styles.priceText} numberOfLines={1}>
-              {label}
-            </Text>
+          <View style={[styles.imageBox, { height: IMG_H, width: PIN_W }]}>
+            <Image
+              source={imageSource}
+              style={StyleSheet.absoluteFill}
+              contentFit="cover"
+              transition={150}
+              onLoadEnd={() => {
+                setTracksViewChanges(true);
+                setTimeout(() => setTracksViewChanges(false), 400);
+              }}
+            />
+            <LinearGradient
+              colors={["transparent", "rgba(0,0,0,0.15)", gradBottom]}
+              style={StyleSheet.absoluteFill}
+              pointerEvents="none"
+            />
+            <View style={styles.priceRow} pointerEvents="none">
+              <Text style={styles.priceText} numberOfLines={1}>
+                {label}
+              </Text>
+            </View>
           </View>
         </View>
         <View
           style={[
             styles.tail,
             {
-              borderTopColor: isSelected ? color.primary : "#fff",
+              borderTopColor: borderC,
             },
           ]}
         />
@@ -116,46 +120,51 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   card: {
-    width: PIN_SIZE,
-    borderRadius: PIN_RADIUS,
-    borderWidth: 2,
-    backgroundColor: "#fff",
+    borderRadius: RADIUS,
+    borderWidth: 2.5,
+    backgroundColor: "#111",
     overflow: "hidden",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.35,
-    shadowRadius: 5,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
   cardSelected: {
-    transform: [{ scale: 1.08 }],
+    transform: [{ scale: 1.06 }],
     shadowOpacity: 0.45,
-    shadowRadius: 8,
-    elevation: 10,
+    shadowRadius: 12,
+    elevation: 12,
   },
-  pinPhoto: {
-    width: PIN_SIZE,
-    height: PIN_SIZE,
-    backgroundColor: "#e8e8e8",
+  imageBox: {
+    borderTopLeftRadius: RADIUS - 2,
+    borderTopRightRadius: RADIUS - 2,
+    overflow: "hidden",
   },
-  pricePill: {
-    width: PIN_SIZE,
-    paddingHorizontal: 6,
-    paddingVertical: 5,
-    alignItems: "center",
-    justifyContent: "center",
+  priceRow: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 4,
+    paddingBottom: 4,
+    paddingTop: 2,
   },
   priceText: {
     color: "#fff",
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "800",
     letterSpacing: -0.2,
+    textAlign: "center",
+    textShadowColor: "rgba(0,0,0,0.5)",
+    textShadowOffset: { width: 0, height: 0.5 },
+    textShadowRadius: 1.5,
   },
   tail: {
     width: 0,
     height: 0,
-    borderLeftWidth: 6,
-    borderRightWidth: 6,
-    borderTopWidth: 7,
+    borderLeftWidth: 7,
+    borderRightWidth: 7,
+    borderTopWidth: 8,
     borderLeftColor: "transparent",
     borderRightColor: "transparent",
     marginTop: -2,

@@ -42,6 +42,9 @@ export function EditPostModal({ visible, post, onClose, onSuccess }: Props) {
   const [isStatusPickerVisible, setStatusPickerVisible] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const insets = useSafeAreaInsets();
+  const headerTop = Math.max(insets.top, 12);
+  const scrollBottomPad = Math.max(insets.bottom, 16) + 24;
+  const keyboardOffset = Platform.OS === "ios" ? insets.top : 0;
 
   // Sync form with post when it changes
   React.useEffect(() => {
@@ -82,44 +85,73 @@ export function EditPostModal({ visible, post, onClose, onSuccess }: Props) {
         <KeyboardAvoidingView
           style={{ flex: 1 }}
           behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={keyboardOffset}
         >
-          {/* Header */}
-          <View style={[
-            styles.header,
-            {
-              borderBottomColor: color.border,
-              paddingTop: Platform.OS === 'android' ? Math.max(insets.top, 12) : 12
-            }
-          ]}>
-            <Pressable onPress={onClose} style={styles.closeBtn}>
-              <Ionicons name="close" size={24} color={color.text} />
-            </Pressable>
-            <ThemedText type="subtitle" style={styles.headerTitle}>
-              {t("post.editTitle")}
-            </ThemedText>
-            <Pressable
-              onPress={handleSave}
-              disabled={submitting}
-              style={[
-                styles.saveBtn,
-                {
-                  backgroundColor: title.trim() ? color.tint : color.placeholder,
-                  opacity: submitting ? 0.7 : 1
-                }
-              ]}
-            >
-              {submitting ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <ThemedText type="defaultSemiBold" style={{ color: color.primaryText, fontSize: 13 }}>
-                  {t("post.save")}
-                </ThemedText>
-              )}
-            </Pressable>
+          <View
+            style={[
+              styles.header,
+              {
+                borderBottomColor: color.border,
+                paddingTop: headerTop,
+                paddingBottom: 10,
+              },
+            ]}
+          >
+            <View style={styles.headerSide}>
+              <Pressable
+                onPress={onClose}
+                style={({ pressed }) => [
+                  styles.headerIconBtn,
+                  { opacity: pressed ? 0.65 : 1 },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={t("common.close")}
+                hitSlop={8}
+              >
+                <Ionicons name="close" size={24} color={color.text} />
+              </Pressable>
+            </View>
+            <View style={styles.headerTitleWrap} pointerEvents="none">
+              <ThemedText
+                type="subtitle"
+                numberOfLines={1}
+                ellipsizeMode="tail"
+                style={[styles.headerTitle, { color: color.text }]}
+              >
+                {t("post.editTitle")}
+              </ThemedText>
+            </View>
+            <View style={[styles.headerSide, styles.headerSideEnd]}>
+              <Pressable
+                onPress={handleSave}
+                disabled={submitting}
+                style={({ pressed }) => [
+                  styles.saveBtn,
+                  {
+                    backgroundColor: title.trim() ? color.tint : color.placeholder,
+                    opacity: submitting ? 0.7 : pressed && title.trim() ? 0.9 : 1,
+                  },
+                ]}
+                accessibilityRole="button"
+                accessibilityState={{ disabled: submitting }}
+              >
+                {submitting ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <ThemedText
+                    type="defaultSemiBold"
+                    numberOfLines={1}
+                    style={styles.saveBtnText}
+                  >
+                    {t("post.save")}
+                  </ThemedText>
+                )}
+              </Pressable>
+            </View>
           </View>
 
           <ScrollView
-            contentContainerStyle={styles.body}
+            contentContainerStyle={[styles.body, { paddingBottom: scrollBottomPad }]}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
@@ -283,29 +315,55 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    minHeight: 48,
+    paddingHorizontal: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  closeBtn: {
-    padding: 4,
+  headerSide: {
+    minWidth: 100,
+    maxWidth: 120,
+    flexBasis: 100,
+    flexGrow: 0,
+    flexShrink: 0,
+    alignItems: "flex-start",
+    justifyContent: "center",
+  },
+  headerSideEnd: {
+    alignItems: "flex-end",
+  },
+  headerIconBtn: {
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: -4,
+  },
+  headerTitleWrap: {
+    flex: 1,
+    minWidth: 0,
+    paddingHorizontal: 4,
+    alignItems: "center",
+    justifyContent: "center",
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: "700",
+    textAlign: "center",
   },
   saveBtn: {
-    paddingHorizontal: 20,
-    paddingVertical: 8,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    minHeight: 40,
+    minWidth: 88,
+    maxWidth: 112,
     borderRadius: 20,
-    minWidth: 70,
     alignItems: "center",
+    justifyContent: "center",
   },
   saveBtnText: {
     color: "#fff",
-    fontWeight: "700",
     fontSize: 15,
+    textAlign: "center",
   },
   body: {
     padding: 20,

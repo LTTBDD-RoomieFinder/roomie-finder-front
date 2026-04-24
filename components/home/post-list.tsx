@@ -21,14 +21,8 @@ type Props = {
   currentUserId?: number | string;
   onEdit?: (post: PostResponse) => void;
   onDelete?: (post: PostResponse) => void;
-  scoresByPostId?: Record<
-    number,
-    {
-      totalScore: number;
-      profileAvgScore: number;
-      roomScore: number;
-    }
-  >;
+  /** i18n key for ListEmptyComponent (default `post.feedEmpty`). */
+  emptyMessageKey?: string;
 };
 
 export function PostList({
@@ -39,10 +33,12 @@ export function PostList({
   currentUserId,
   onEdit,
   onDelete,
-  scoresByPostId,
+  emptyMessageKey = "post.feedEmpty",
 }: Props) {
   const { color } = useAppTheme();
   const { t } = useLanguage();
+  const emptyIcon =
+    emptyMessageKey === "home.recommendedEmpty" ? "sparkles-outline" : "newspaper-outline";
 
   if (loading && posts.length === 0) {
     return (
@@ -71,7 +67,6 @@ export function PostList({
           currentUserId={currentUserId}
           onEdit={onEdit}
           onDelete={onDelete}
-          scoreInfo={scoresByPostId?.[item.id]}
         />
       )}
       ItemSeparatorComponent={() => <View style={{ height: 8, backgroundColor: color.backgroundSecondary }} />}
@@ -85,9 +80,9 @@ export function PostList({
             gap: 16,
           }}
         >
-          <Ionicons name="newspaper-outline" size={52} color={color.textSecondary} />
-          <ThemedText style={{ color: color.textSecondary, textAlign: "center" }}>
-            {t("post.feedEmpty")}
+          <Ionicons name={emptyIcon} size={52} color={color.textSecondary} />
+          <ThemedText style={{ color: color.textSecondary, textAlign: "center", paddingHorizontal: 24, lineHeight: 22 }}>
+            {t(emptyMessageKey)}
           </ThemedText>
         </View>
       }

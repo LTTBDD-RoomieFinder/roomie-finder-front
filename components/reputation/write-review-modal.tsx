@@ -108,7 +108,8 @@ export function WriteReviewModal({
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle="pageSheet"
+      presentationStyle="fullScreen"
+      statusBarTranslucent
       onRequestClose={onClose}
     >
       <KeyboardAvoidingView
@@ -120,7 +121,7 @@ export function WriteReviewModal({
             styles.header,
             {
               borderBottomColor: color.border + "80",
-              paddingTop: Platform.OS === "android" ? Math.max(insets.top, 8) : 8,
+              paddingTop: Math.max(insets.top, 8),
             },
           ]}
         >
@@ -130,14 +131,14 @@ export function WriteReviewModal({
             hitSlop={12}
             disabled={submitting}
           >
-            <ThemedText style={{ color: color.primary, fontWeight: "700", fontSize: 16 }}>
+            <ThemedText style={{ color: color.primary, fontWeight: "700", fontSize: 17 }}>
               {t("publicUser.writeReview.cancel")}
             </ThemedText>
           </Pressable>
           <ThemedText
             type="defaultSemiBold"
             style={[styles.headerTitle, { color: color.text }]}
-            numberOfLines={1}
+            numberOfLines={2}
           >
             {t("publicUser.writeReview.title")}
           </ThemedText>
@@ -147,12 +148,14 @@ export function WriteReviewModal({
         <ScrollView
           contentContainerStyle={[
             styles.body,
-            { paddingBottom: insets.bottom + 24 },
+            { paddingBottom: insets.bottom + 40 },
           ]}
           keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
+          showsVerticalScrollIndicator
+          bounces
+          overScrollMode="auto"
         >
-          <ThemedText style={[styles.subtitle, { color: color.textSecondary }]}>
+          <ThemedText style={[styles.subtitle, { color: color.text }]}>
             {t("publicUser.writeReview.subtitle", {
               name: revieweeName.trim() || t("common.user"),
             })}
@@ -164,7 +167,7 @@ export function WriteReviewModal({
             ]}
           >
             <Ionicons name="sparkles" size={18} color={color.primary} style={styles.whyIcon} />
-            <ThemedText style={[styles.whyText, { color: color.textSecondary }]}>
+            <ThemedText style={[styles.whyText, { color: color.text, alignSelf: "stretch" }]}>
               {t("publicUser.writeReview.valueProposition")}
             </ThemedText>
           </View>
@@ -184,7 +187,7 @@ export function WriteReviewModal({
               >
                 <Ionicons
                   name={n <= rating ? "star" : "star-outline"}
-                  size={36}
+                  size={42}
                   color={n <= rating ? "#F5A623" : color.border}
                 />
               </Pressable>
@@ -213,8 +216,9 @@ export function WriteReviewModal({
                 >
                   <ThemedText
                     style={{
-                      fontSize: 14,
+                      fontSize: 16,
                       fontWeight: "700",
+                      lineHeight: 22,
                       color: selected ? color.primary : color.text,
                       textAlign: "center",
                     }}
@@ -235,6 +239,8 @@ export function WriteReviewModal({
             placeholder={t("publicUser.writeReview.commentPlaceholder")}
             placeholderTextColor={color.textSecondary}
             multiline
+            scrollEnabled
+            textAlignVertical="top"
             editable={!submitting}
             style={[
               styles.input,
@@ -282,50 +288,51 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 8,
-    paddingBottom: 12,
+    paddingBottom: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   headerBtn: { minWidth: 72, paddingHorizontal: 8 },
-  headerTitle: { flex: 1, textAlign: "center", fontSize: 17 },
-  body: { paddingHorizontal: 20, paddingTop: 18 },
-  subtitle: { fontSize: 15, lineHeight: 22, marginBottom: 8 },
+  headerTitle: { flex: 1, textAlign: "center", fontSize: 19, fontWeight: "700" },
+  body: { paddingHorizontal: 20, paddingTop: 20, flexGrow: 1 },
+  subtitle: { fontSize: 17, lineHeight: 26, marginBottom: 10, fontWeight: "500", alignSelf: "stretch" },
   whyBox: {
     flexDirection: "row",
     alignItems: "flex-start",
-    gap: 10,
-    padding: 14,
+    gap: 12,
+    padding: 16,
     borderWidth: StyleSheet.hairlineWidth,
-    marginBottom: 18,
+    marginBottom: 22,
   },
-  whyIcon: { marginTop: 1 },
-  whyText: { flex: 1, fontSize: 13, lineHeight: 19 },
-  label: { fontSize: 14, fontWeight: "800", marginBottom: 10 },
+  whyIcon: { marginTop: 2 },
+  whyText: { flex: 1, fontSize: 15, lineHeight: 23 },
+  label: { fontSize: 16, fontWeight: "800", marginBottom: 12 },
   starRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingHorizontal: 4,
-    gap: 4,
+    paddingHorizontal: 2,
+    gap: 6,
   },
-  contextRow: { flexDirection: "row", gap: 10 },
+  contextRow: { flexDirection: "row", gap: 12 },
   contextChip: {
     flex: 1,
-    paddingVertical: 14,
-    paddingHorizontal: 10,
+    paddingVertical: 16,
+    paddingHorizontal: 12,
     borderWidth: StyleSheet.hairlineWidth,
   },
+  // Không set lineHeight trên TextInput multiline — Android hay bị cắt dòng/đáy chữ.
   input: {
-    minHeight: 120,
+    minHeight: 200,
+    maxHeight: 360,
     borderWidth: 1,
-    padding: 14,
-    fontSize: 15,
-    textAlignVertical: "top",
+    padding: 16,
+    fontSize: 17,
   },
-  hint: { fontSize: 12, marginTop: 8 },
+  hint: { fontSize: 13, marginTop: 10, lineHeight: 19 },
   submitBtn: {
-    marginTop: 24,
-    paddingVertical: 16,
+    marginTop: 28,
+    paddingVertical: 18,
     alignItems: "center",
     justifyContent: "center",
   },
-  submitText: { color: "#fff", fontSize: 16, fontWeight: "800" },
+  submitText: { color: "#fff", fontSize: 17, fontWeight: "800" },
 });

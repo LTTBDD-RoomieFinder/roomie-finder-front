@@ -23,6 +23,7 @@
   },
   "tabs": {
     "home": "Trang chủ",
+    "discover": "Gợi ý",
     "map": "Bản đồ",
     "room": "Phòng",
     "requests": "Yêu cầu",
@@ -78,14 +79,19 @@
     "title": "Roomie Finder",
     "subtitle": "Tìm bạn cùng phòng lý tưởng",
     "searchA11y": "Tìm kiếm",
+    "recommendedActionA11y": "Đề xuất cho bạn — tải bài phù hợp",
     "myPostsA11y": "Bài đăng của tôi",
     "feedTab": "Bảng tin",
     "recommendedTab": "Đề xuất",
+    "recommendedEmpty": "Chưa có gợi ý phù hợp.\nHoàn thiện hồ sơ hoặc thử lại sau — hệ thống sẽ ưu tiên bài đăng hợp với bạn nhất.",
     "deletePostTitle": "Xoá bài đăng",
     "deletePostMessage": "Bạn có chắc muốn xoá \"{{title}}\" không?",
     "deleteFailed": "Không thể xoá bài đăng.",
     "postEntryPrompt": "Bạn đang nghĩ gì, {{name}}?",
-    "postEntryYou": "bạn"
+    "postEntryYou": "bạn",
+    "lastPostBadge": "Bài gần nhất",
+    "lastPostA11y": "Bài đăng gần nhất: {{title}}",
+    "postEntryAvatarA11y": "Xem hồ sơ của bạn"
   },
   "map": {
     "title": "Bản đồ phòng",
@@ -97,6 +103,7 @@
     "pinCount": "{{count}} phòng trên bản đồ",
     "moreHidden": "+{{count}} chưa hiển thị (giới hạn hiệu năng)",
     "a11yMapArea": "Bản đồ phòng trọ",
+    "pinA11y": "Bài phòng, giá từ {{price}}",
     "androidNoGoogleKeyHint": "Chưa cấu hình Google Maps API key: bản đồ Android có thể hiển thị hạn chế. Thêm EXPO_PUBLIC_GOOGLE_MAPS_API_KEY và build lại native.",
     "iosAppleMapsNote": "iOS dùng Apple Maps — không cần API key Google.",
     "emptyHint": "Không có ghim trong vùng này. Thử zoom/kéo map hoặc kiểm tra bài PUBLISHED + phòng ACTIVE + địa chỉ có tọa độ.",
@@ -108,6 +115,12 @@
     "directionsOpenFailed": "Không mở được Google Maps.",
     "previewLoading": "Đang tải phòng…",
     "tapPinHint": "Nhấn vào ghim để xem trước phòng",
+    "locationPermissionTitle": "Cần quyền vị trí",
+    "locationPermissionBody": "Cho phép vị trí để dùng quét gần đây và nút tìm tôi trên bản đồ.",
+    "locationError": "Không lấy được vị trí hiện tại.",
+    "scanningNearby": "Đang quét phòng quanh bạn",
+    "locateA11y": "Căn giữa bản đồ tại vị trí của tôi",
+    "scanA11y": "Bật/tắt quét gần đây (vòng radar và tải lại ghim)",
     "reviewPosterCta": "Đánh giá người đăng",
     "reviewPosterLogin": "Đăng nhập để đánh giá người đăng"
   },
@@ -321,6 +334,7 @@
     "emptyTitle": "Chưa có phòng chat nào",
     "emptySub": "Chấp nhận lời mời kết bạn phòng để tạo phòng chat riêng tư.",
     "headerSubtitle": "Tin nhắn",
+    "headerWithPeer": "Với {{name}}",
     "roomFallback": "Phòng chat #{{id}}",
     "online": "Trực tuyến",
     "connecting": "Đang kết nối…",
@@ -421,6 +435,16 @@
     "close": "Đóng",
     "closeA11y": "Đóng"
   },
+  "smartMatch": {
+    "title": "Gợi ý thông minh",
+    "subtitle": "Dựa trên hồ sơ của bạn — gợi ý từ hệ thống matching",
+    "empty": "Chưa có gợi ý. Cập nhật hồ sống / sở thích trên hồ sơ, hoặc thử lại sau.",
+    "loadError": "Không tải được gợi ý. Thử lại hoặc kiểm tra mạng.",
+    "loginRequired": "Đăng nhập để xem người phù hợp hồ sơ roommate của bạn.",
+    "signIn": "Đăng nhập",
+    "tagCompatibility": "Độ phù hợp",
+    "defaultSubtitle": "Thành viên Roomie Finder"
+  },
   "dirtyLeave": {
     "title": "Bạn có thay đổi chưa lưu",
     "message": "Bạn muốn làm gì trước khi rời trang?",
@@ -504,6 +528,16 @@
   },
   "postCard": {
     "viewRoom": "Xem chi tiết phòng",
+    "requestCta": "Nhắn & gửi lời mời",
+    "requestQueueCta": "Xếp hàng chat",
+    "requestSentCta": "Đã gửi lời mời",
+    "chatLoginCta": "Đăng nhập để chat",
+    "chatRetryCta": "Thử lại",
+    "chatChecking": "Đang kiểm tra…",
+    "chatFullCta": "Phòng đầy",
+    "a11yEditPost": "Sửa bài đăng",
+    "a11yDeletePost": "Xóa bài đăng",
+    "openPosterProfileA11y": "Xem hồ sơ: {{name}}",
     "maxPeople": "Tối đa {{count}} người",
     "views": "{{count}} lượt xem",
     "expires": "HH:",
@@ -517,7 +551,10 @@
     "posterOpenReviewsA11y": "Mở toàn bộ đánh giá và nội dung",
     "posterViewProfileLink": "Hồ sơ, xác thực & an toàn",
     "posterTrustEmptyTitle": "Chưa có điểm cộng đồng",
-    "posterTrustEmptySub": "Vào hồ sơ để xem xác thực, hoặc để lại đánh giá sau khi liên hệ."
+    "posterTrustEmptySub": "Vào hồ sơ để xem xác thực, hoặc để lại đánh giá sau khi liên hệ.",
+    "posterTrustCompactTitle": "Tin cậy cộng đồng",
+    "posterTrustCompactEmpty": "Chưa có đánh giá · xem hồ sơ",
+    "posterTrustEmptyA11y": "Điểm tin cậy người đăng — mở hồ sơ"
   },
   "postSearch": {
     "anonymous": "Người dùng ẩn danh",
@@ -672,6 +709,7 @@
     "reviewCount": "{{count}} đánh giá",
     "noReviews": "Chưa có đánh giá nào.",
     "loadError": "Không tải được hồ sơ này.",
+    "serverError": "Máy chủ gặp lỗi khi tải hồ sơ (500). Có thể lỗi từ API — hãy xem log backend hoặc thử lại sau.",
     "invalidUser": "Thành viên không hợp lệ.",
     "openProfileA11y": "Xem hồ sơ và đánh giá người đăng",
     "reviewContext": {

@@ -13,6 +13,7 @@ import { useAppTheme } from "@/hooks/use-app-theme";
 import { useLanguage } from "@/hooks/use-language";
 import type { RequestResponse, RequestStatus } from "@/types/request";
 import { formatDate } from "@/utils/format-post";
+import { displayNameForUser } from "@/utils/normalize-user";
 
 type RequestCardProps = {
   request: RequestResponse;
@@ -41,7 +42,9 @@ export function RequestCard({
   const statusColor = REQUEST_STATUS_COLOR[request.status];
 
   const otherUser = variant === "incoming" ? request.sender : request.receiver;
-  const displayName = otherUser?.fullName || otherUser?.username || t("request.card.fallbackName");
+  const displayName = otherUser
+    ? displayNameForUser(otherUser, t("request.card.fallbackName"))
+    : t("request.card.fallbackName");
 
   const canRespond =
     variant === "incoming" &&

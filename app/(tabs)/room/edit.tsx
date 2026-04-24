@@ -28,8 +28,7 @@ export default function EditRoomScreen() {
 
   const fetchRoom = async () => {
     try {
-      const res = await roomService.getRoomById(Number(id));
-      const data = res.data;
+      const data = await roomService.getRoomById(Number(id));
       setRoom(data);
 
       const mappedInitialValues: RoomFormValues = {

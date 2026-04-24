@@ -62,8 +62,8 @@ export default function RoomDetailScreen() {
 
     setLoading(true);
     try {
-      const res = await roomService.getRoomById(roomId);
-      setRoom(res.data);
+      const data = await roomService.getRoomById(roomId);
+      setRoom(data);
     } catch (err) {
       console.error(err);
     } finally {

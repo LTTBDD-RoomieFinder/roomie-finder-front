@@ -175,25 +175,39 @@ axiosRequest.interceptors.response.use(
 
     if (data && typeof data === "object") {
       const obj = data as Record<string, unknown>;
-      const msg =
+      let msg =
         typeof obj.message === "string"
           ? obj.message
           : typeof obj.error === "string"
             ? obj.error
             : null;
+      if (msg && /uncategorized/i.test(msg.trim())) {
+        msg = null;
+      }
       message =
         msg && msg.trim() ? msg : `Server error (${status ?? "?"})`;
     } else if (typeof data === "string" && data.trim()) {
       message = data.length > 200 ? data.slice(0, 200) + "…" : data;
     } else {
-      message =
-        status === 403
-          ? "You don't have permission for this action"
-          : status === 404
-            ? "Not found"
-            : status === 500
-              ? "Server error, please try again later"
-              : `Unexpected error (${status ?? "?"})`;
+      if (status == null) {
+        const m =
+          typeof (error as AxiosError).message === "string"
+            ? (error as AxiosError).message
+            : "";
+        message =
+          m && m !== "Error"
+            ? m
+            : "No response from server (check network or EXPO_PUBLIC_API_URL).";
+      } else {
+        message =
+          status === 403
+            ? "You don't have permission for this action"
+            : status === 404
+              ? "Not found"
+              : status === 500
+                ? "Server error, please try again later"
+                : `Unexpected error (${status})`;
+      }
     }
 
     return Promise.reject(message);

@@ -19,6 +19,11 @@ import { Controller, FieldNamesMarkedBoolean, useForm } from "react-hook-form";
 
 import { profileApi } from "@/apis/profile";
 import { tagApi } from "@/apis/tag";
+import {
+  normalizeProfileFromServer,
+  normalizeTagListFromApi,
+  unwrapApiPayload,
+} from "@/utils/normalize-profile-api";
 import { Gender } from "@/constants/gender";
 import {
     BaseProfileRequest,
@@ -127,7 +132,9 @@ export default function ProfileScreen() {
   const [leaveModalVisible, setLeaveModalVisible] = useState(false);
   const [leaveSaving, setLeaveSaving] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const pendingNavRef = useRef<"home" | "map" | "room" | "requests" | "chats" | null>(null);
+  const pendingNavRef = useRef<
+    "home" | "discover" | "map" | "room" | "requests" | "chats" | null
+  >(null);
 
   /** Bump to tell safety-center sections to re-fetch after profile save. */
   const [safetyRefreshKey, setSafetyRefreshKey] = useState(0);
@@ -587,7 +594,11 @@ export default function ProfileScreen() {
   const fetchProfile = useCallback(async () => {
     try {
       const res = await profileApi.getProfile();
-      const p: Profile = res.data;
+      const p = normalizeProfileFromServer(unwrapApiPayload(res));
+      if (!p) {
+        setIsCreated(false);
+        return;
+      }
       setProfile(p);
       setIsCreated(true);
       populateForm(p);
@@ -605,7 +616,7 @@ export default function ProfileScreen() {
   const fetchTags = useCallback(async () => {
     try {
       const res = await tagApi.getTag();
-      setTags(res.data);
+      setTags(normalizeTagListFromApi(res));
     } catch (err: unknown) {
       console.log(err);
     }
@@ -730,9 +741,11 @@ export default function ProfileScreen() {
     setLeaveModalVisible(false);
     try {
       const res = await profileApi.getProfile();
-      const p: Profile = res.data;
-      setProfile(p);
-      populateForm(p);
+      const p = normalizeProfileFromServer(unwrapApiPayload(res));
+      if (p) {
+        setProfile(p);
+        populateForm(p);
+      }
     } catch {
       /* keep form if refetch fails */
     }

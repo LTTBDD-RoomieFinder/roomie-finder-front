@@ -84,8 +84,13 @@ export const useProfileAvatarStore = create<ProfileAvatarStore>((set, get) => ({
 
     set((s) => ({ fetching: { ...s.fetching, [key]: true } }));
 
+    const safeKey = String(userId).trim();
+    if (!safeKey) {
+      set((s) => ({ fetching: withoutKey(s.fetching, key) }));
+      return;
+    }
     profileApi
-      .getUserProfile(key)
+      .getUserProfile(safeKey)
       .then((res: unknown) => {
         const body = res as Record<string, unknown>;
         const data = (body?.data ?? body) as Record<string, unknown>;

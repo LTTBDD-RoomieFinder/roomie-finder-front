@@ -100,7 +100,7 @@ export function ReviewListItem({ item, t, locale, variant = "default" }: Props) 
           <View style={styles.metaRow}>
             <StarRow
               rating={item.rating}
-              size={compact ? 12 : 13}
+              size={compact ? 14 : 15}
               activeColor={STAR}
               mutedColor={color.border}
             />
@@ -114,15 +114,16 @@ export function ReviewListItem({ item, t, locale, variant = "default" }: Props) 
           { backgroundColor: color.primary + "12", borderColor: color.primary + "40" },
         ]}
       >
-        <ThemedText style={[styles.chipText, { color: color.primary }]} numberOfLines={1}>
+        <ThemedText style={[styles.chipText, { color: color.primary }]}>
           {ctxLabel}
         </ThemedText>
       </View>
       {item.comment?.trim() ? (
         <ThemedText
+          selectable
           style={[
             styles.comment,
-            { color: color.textSecondary },
+            { color: color.text, alignSelf: "stretch" },
             compact && styles.commentCompact,
           ]}
         >
@@ -140,11 +141,11 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 10,
   },
-  cardCompact: { padding: 12, gap: 8 },
+  cardCompact: { padding: 14, gap: 10 },
   top: { flexDirection: "row", alignItems: "center", gap: 12 },
   avatar: { alignItems: "center", justifyContent: "center" },
   nameCol: { flex: 1, minWidth: 0 },
-  name: { fontSize: 16 },
+  name: { fontSize: 17, fontWeight: "600" },
   metaRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -152,15 +153,16 @@ const styles = StyleSheet.create({
     marginTop: 4,
     flexWrap: "wrap",
   },
-  date: { fontSize: 12 },
+  date: { fontSize: 13 },
   chip: {
     alignSelf: "flex-start",
+    maxWidth: "100%",
     paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingVertical: 6,
     borderRadius: 20,
     borderWidth: StyleSheet.hairlineWidth,
   },
-  chipText: { fontSize: 12, fontWeight: "700" },
-  comment: { fontSize: 15, lineHeight: 22 },
-  commentCompact: { fontSize: 14, lineHeight: 20 },
+  chipText: { fontSize: 13, fontWeight: "700", lineHeight: 19 },
+  comment: { fontSize: 16, lineHeight: 25, width: "100%" },
+  commentCompact: { fontSize: 15, lineHeight: 24 },
 });

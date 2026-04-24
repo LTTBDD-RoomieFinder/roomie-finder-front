@@ -8,9 +8,10 @@ import { ReviewsDetailModal } from "@/components/reputation/reviews-detail-modal
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useLanguage } from "@/hooks/use-language";
 import { usePosterReviewSummary } from "@/hooks/use-poster-review-summary";
+
 function StarRow({
   rating,
-  size = 12,
+  size = 11,
   activeColor,
   mutedColor,
 }: {
@@ -41,7 +42,7 @@ type Props = {
 };
 
 /**
- * Thẻ “tin cậy” trên bài đăng: tóm tắt + mở modal xem toàn bộ (không nhét cả bình luận dài trên feed).
+ * Dòng điểm tin cậy người đăng (feed): gọn một hàng, bấm mở modal đánh giá hoặc hồ sơ.
  */
 export function PostPosterReviews({ posterUserId }: Props) {
   const { color, radius } = useAppTheme();
@@ -53,125 +54,76 @@ export function PostPosterReviews({ posterUserId }: Props) {
     return null;
   }
 
+  const goProfile = () => {
+    router.push({
+      pathname: "/user/[id]",
+      params: { id: posterUserId },
+    });
+  };
+
+  const baseBar = [
+    styles.bar,
+    {
+      borderRadius: radius.md,
+      borderColor: color.border + "66",
+      backgroundColor: color.backgroundSecondary,
+    },
+  ] as const;
+
   if (!summary || summary.totalReviews <= 0) {
     return (
       <Pressable
-        onPress={() =>
-          router.push({
-            pathname: "/user/[id]",
-            params: { id: posterUserId },
-          })
-        }
-        style={({ pressed }) => [
-          styles.emptyRow,
-          { backgroundColor: color.card, borderColor: color.border + "80" },
-          pressed && { opacity: 0.9 },
-        ]}
+        onPress={goProfile}
+        style={({ pressed }) => [...baseBar, pressed && { opacity: 0.88 }]}
         accessibilityRole="button"
-        accessibilityLabel={t("publicUser.openProfileA11y")}
+        accessibilityLabel={t("postCard.posterTrustEmptyA11y")}
       >
-        <View
-          style={[
-            styles.emptyIcon,
-            { backgroundColor: color.primary + "12", borderColor: color.primary + "30" },
-          ]}
-        >
-          <Ionicons name="shield-outline" size={20} color={color.primary} />
+        <View style={[styles.leadIcon, { backgroundColor: color.primary + "14" }]}>
+          <Ionicons name="shield-outline" size={18} color={color.primary} />
         </View>
-        <View style={styles.emptyBody}>
-          <ThemedText type="defaultSemiBold" style={[styles.emptyTitle, { color: color.text }]}>
-            {t("postCard.posterTrustEmptyTitle")}
+        <View style={styles.barTextCol}>
+          <ThemedText type="defaultSemiBold" style={[styles.leadTitle, { color: color.text }]} numberOfLines={1}>
+            {t("postCard.posterTrustCompactTitle")}
           </ThemedText>
-          <ThemedText style={[styles.emptySub, { color: color.textSecondary }]} numberOfLines={2}>
-            {t("postCard.posterTrustEmptySub")}
+          <ThemedText style={[styles.leadSub, { color: color.textSecondary }]} numberOfLines={1}>
+            {t("postCard.posterTrustCompactEmpty")}
           </ThemedText>
         </View>
-        <Ionicons name="chevron-forward" size={20} color={color.textSecondary} />
+        <Ionicons name="chevron-forward" size={18} color={color.textSecondary} />
       </Pressable>
     );
   }
 
   const avg = summary.averageRating;
   const avgLabel = avg > 0 ? avg.toFixed(1) : "—";
+
   return (
     <>
       <Pressable
         onPress={() => setModalOpen(true)}
-        style={({ pressed }) => [
-          styles.card,
-          {
-            borderColor: color.primary + "28",
-            backgroundColor: color.card,
-            borderRadius: radius.lg,
-            shadowColor: color.text,
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.07,
-            shadowRadius: 8,
-            elevation: 2,
-          },
-          pressed && { opacity: 0.95 },
-        ]}
+        style={({ pressed }) => [...baseBar, pressed && { opacity: 0.92 }]}
         accessibilityRole="button"
         accessibilityLabel={t("postCard.posterOpenReviewsA11y")}
       >
-        <View style={styles.cardInner}>
-          <View
-            style={[
-              styles.eyebrowRow,
-              { backgroundColor: color.primary + "10", borderRadius: radius.lg - 2 },
-            ]}
-          >
-            <Ionicons name="shield-checkmark" size={16} color={color.primary} />
-            <ThemedText
-              type="defaultSemiBold"
-              style={[styles.eyebrow, { color: color.primary }]}
-              numberOfLines={1}
-            >
-              {t("postCard.posterTrustEyebrow")}
+        <View style={[styles.leadIcon, { backgroundColor: color.primary + "14" }]}>
+          <Ionicons name="shield-checkmark" size={18} color={color.primary} />
+        </View>
+        <View style={styles.barMain}>
+          <View style={styles.barTopLine}>
+            <ThemedText type="defaultSemiBold" style={[styles.trustLabel, { color: color.textSecondary }]}>
+              {t("postCard.posterTrustCompactTitle")}
             </ThemedText>
           </View>
-          <ThemedText style={[styles.tagline, { color: color.textSecondary }]} numberOfLines={2}>
-            {t("postCard.posterTrustTagline")}
-          </ThemedText>
-          <View style={styles.scoreRow}>
-            <ThemedText style={[styles.bigScore, { color: color.text }]}>{avgLabel}</ThemedText>
-            <View style={styles.scoreMid}>
-              <StarRow
-                rating={avg}
-                size={16}
-                activeColor={STAR}
-                mutedColor={color.border}
-              />
-              <ThemedText style={[styles.count, { color: color.textSecondary }]}>
-                {t("publicUser.reviewCount", { count: summary.totalReviews })}
-              </ThemedText>
-            </View>
-            <View style={styles.openHint}>
-              <ThemedText style={[styles.openHintText, { color: color.primary }]}>
-                {t("postCard.posterOpenReviews")}
-              </ThemedText>
-              <Ionicons name="chevron-forward" size={18} color={color.primary} />
-            </View>
+          <View style={styles.scoreLine}>
+            <ThemedText style={[styles.scoreNum, { color: color.text }]}>{avgLabel}</ThemedText>
+            <StarRow rating={avg} size={14} activeColor={STAR} mutedColor={color.border} />
+            <View style={[styles.dot, { backgroundColor: color.textSecondary }]} />
+            <ThemedText style={[styles.reviewCount, { color: color.textSecondary }]}>
+              {t("publicUser.reviewCount", { count: summary.totalReviews })}
+            </ThemedText>
           </View>
         </View>
-      </Pressable>
-
-      <Pressable
-        onPress={() =>
-          router.push({
-            pathname: "/user/[id]",
-            params: { id: posterUserId },
-          })
-        }
-        style={({ pressed }) => [styles.profileLink, pressed && { opacity: 0.8 }]}
-        hitSlop={6}
-        accessibilityRole="link"
-        accessibilityLabel={t("publicUser.openProfileA11y")}
-      >
-        <Ionicons name="person-circle-outline" size={16} color={color.textSecondary} />
-        <ThemedText style={[styles.profileLinkText, { color: color.textSecondary }]}>
-          {t("postCard.posterViewProfileLink")}
-        </ThemedText>
+        <Ionicons name="chevron-forward" size={20} color={color.primary} style={styles.openChevron} />
       </Pressable>
 
       <ReviewsDetailModal
@@ -188,65 +140,71 @@ export function PostPosterReviews({ posterUserId }: Props) {
 
 const styles = StyleSheet.create({
   starRow: { flexDirection: "row", gap: 1, alignItems: "center" },
-  card: {
+  bar: {
     marginTop: 10,
+    marginHorizontal: 16,
     marginBottom: 2,
-    marginHorizontal: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     borderWidth: StyleSheet.hairlineWidth,
   },
-  cardInner: { padding: 14, gap: 8 },
-  eyebrowRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    alignSelf: "flex-start",
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  eyebrow: { fontSize: 12, textTransform: "uppercase", letterSpacing: 0.4 },
-  tagline: { fontSize: 13, lineHeight: 19 },
-  scoreRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    marginTop: 2,
-  },
-  bigScore: { fontSize: 32, fontWeight: "800" },
-  scoreMid: { flex: 1, gap: 2 },
-  count: { fontSize: 13, fontWeight: "600" },
-  openHint: { flexDirection: "row", alignItems: "center", gap: 2 },
-  openHintText: { fontSize: 14, fontWeight: "800" },
-  profileLink: {
-    flexDirection: "row",
+  leadIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
-    marginTop: 4,
-    marginBottom: 4,
-    paddingVertical: 4,
   },
-  profileLinkText: { fontSize: 13, fontWeight: "600" },
-  emptyRow: {
-    marginTop: 8,
-    marginHorizontal: 16,
-    marginBottom: 4,
+  barTextCol: {
+    flex: 1,
+    minWidth: 0,
+    gap: 2,
+  },
+  barMain: {
+    flex: 1,
+    minWidth: 0,
+    gap: 4,
+  },
+  barTopLine: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: 14,
-    borderWidth: StyleSheet.hairlineWidth,
   },
-  emptyIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+  trustLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 0.2,
+    textTransform: "uppercase",
+  },
+  leadTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  leadSub: {
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  scoreLine: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    borderWidth: StyleSheet.hairlineWidth,
+    flexWrap: "wrap",
+    gap: 8,
   },
-  emptyBody: { flex: 1, minWidth: 0, gap: 2 },
-  emptyTitle: { fontSize: 15 },
-  emptySub: { fontSize: 12, lineHeight: 16 },
+  scoreNum: {
+    fontSize: 20,
+    fontWeight: "800",
+    letterSpacing: -0.3,
+  },
+  reviewCount: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  dot: {
+    width: 3,
+    height: 3,
+    borderRadius: 2,
+  },
+  openChevron: { marginLeft: 2 },
 });

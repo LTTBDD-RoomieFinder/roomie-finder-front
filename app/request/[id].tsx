@@ -29,6 +29,7 @@ import type { RequestResponse, RequestStatus } from "@/types/request";
 import { syncTabBadgesToStore } from "@/services/tab-badge-service";
 import { decodeJwtPayload } from "@/utils/jwt";
 import { formatDateLongVi } from "@/utils/format-date";
+import { displayNameForUser } from "@/utils/normalize-user";
 
 export default function RequestDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -155,7 +156,9 @@ export default function RequestDetailScreen() {
 
   const variant: "incoming" | "outgoing" = storedVariant ?? "outgoing";
   const otherUser = variant === "incoming" ? request.sender : request.receiver;
-  const displayName = otherUser?.fullName || otherUser?.username || t("request.card.fallbackName");
+  const displayName = otherUser
+    ? displayNameForUser(otherUser, t("request.card.fallbackName"))
+    : t("request.card.fallbackName");
   const statusColor = REQUEST_STATUS_COLOR[request.status];
   const canRespond =
     variant === "incoming" &&

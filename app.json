@@ -13,6 +13,7 @@
       "bundleIdentifier": "com.roomiefinder.frontend"
     },
     "android": {
+      "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -51,7 +52,9 @@
         {
           "icon": "./assets/images/icon.png",
           "color": "#4F46E5",
-          "defaultChannel": "default"
+          "defaultChannel": "default",
+          "sounds": [],
+          "enableBackgroundRemoteNotifications": true
         }
       ]
     ],

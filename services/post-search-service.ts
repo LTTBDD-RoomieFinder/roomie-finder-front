@@ -7,12 +7,14 @@ export type PostSearchAuthorResponse = {
   fullName: string;
   username?: string;
   phoneNumber?: string;
+  avatarUrl?: string | null;
 };
 
 export type PostSearchUserResponse = {
   id?: number | string;
   fullName?: string;
   username?: string;
+  avatarUrl?: string | null;
 };
 
 export type PostSearchResponse = {
@@ -48,6 +50,62 @@ function str(v: unknown): string {
   return String(v).trim();
 }
 
+function numOr(v: unknown, d = 0): number {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : d;
+}
+
+/**
+ * Một số bản API bọc: `{ data: [...] }`, `{ data: { data, nextCursor } }`, hoặc trả mảng gốc.
+ */
+function extractArrayFromRecommendedBody(root: unknown): unknown[] {
+  if (root == null) return [];
+  if (Array.isArray(root)) return root;
+  if (typeof root !== "object") return [];
+  const o = root as Record<string, unknown>;
+
+  const d = o.data;
+  if (Array.isArray(d)) return d;
+  if (d && typeof d === "object" && !Array.isArray(d)) {
+    const inner = d as Record<string, unknown>;
+    if (Array.isArray(inner.data)) return inner.data;
+    if (Array.isArray(inner.content)) return inner.content;
+    if (Array.isArray(inner.records)) return inner.records;
+    if (Array.isArray(inner.items)) return inner.items;
+  }
+
+  if (Array.isArray(o.content)) return o.content;
+  if (Array.isArray(o.items)) return o.items;
+  if (Array.isArray(o.results)) return o.results;
+  return [];
+}
+
+function rowToRecommendedItem(row: unknown): RecommendedPostResponse | null {
+  if (row == null || typeof row !== "object") return null;
+  const o = row as Record<string, unknown>;
+
+  if (o.post != null) {
+    const postNorm = normaliseSearchPostRecord(o.post) as PostSearchResponse;
+    if (postNorm?.id == null) return null;
+    return {
+      post: postNorm,
+      profileAvgScore: numOr(o.profileAvgScore ?? o.profile_avg_score, 0),
+      roomScore: numOr(o.roomScore ?? o.room_score, 0),
+      totalScore: numOr(o.totalScore ?? o.total_score, 0),
+    };
+  }
+
+  if (o.id == null) return null;
+  const postNorm = normaliseSearchPostRecord(row) as PostSearchResponse;
+  if (postNorm?.id == null) return null;
+  return {
+    post: postNorm,
+    profileAvgScore: numOr(o.profileAvgScore ?? o.profile_avg_score, 0),
+    roomScore: numOr(o.roomScore ?? o.room_score, 0),
+    totalScore: numOr(o.totalScore ?? o.total_score, 0),
+  };
+}
+
 /** Gom tên hiển thị từ DTO user/author (camelCase + snake_case). */
 function pickDisplayName(o: Record<string, unknown>): string {
   return (
@@ -69,9 +127,17 @@ function pickUsername(o: Record<string, unknown>): string {
 }
 
 function pickAvatar(o: Record<string, unknown>): string | null {
-  const u = o.avatarUrl ?? o.avatar_url;
+  const u =
+    o.avatarUrl ??
+    o.avatar_url ??
+    o.profilePictureUrl ??
+    o.profile_picture_url ??
+    o.profileImageUrl ??
+    o.profile_image_url ??
+    o.photoUrl ??
+    o.photo_url;
   if (u == null || u === "") return null;
-  return typeof u === "string" ? u : null;
+  return typeof u === "string" ? u.trim() : null;
 }
 
 function toAuthorShape(o: Record<string, unknown> | undefined): {
@@ -161,33 +227,46 @@ export const postSearchService = {
 
   async getRecommendedPosts(params?: { cursor?: number; size?: number }) {
     try {
-      const response = await postSearchApi.getRecommendedPosts(params);
-      const raw = (response as any)?.data as
-        | CursorResponse<RecommendedPostResponse>
-        | undefined;
-      if (!raw || !Array.isArray(raw.data)) return raw;
+      const response = await postSearchApi.getRecommendedPosts({
+        size: 50,
+        ...params,
+      });
+      const body = response as unknown;
+      const list = extractArrayFromRecommendedBody(body);
+      const data = list
+        .map((row) => rowToRecommendedItem(row))
+        .filter((x): x is RecommendedPostResponse => x != null);
 
-      return {
-        ...raw,
-        data: raw.data.map((row) => {
-          if (!row || typeof row !== "object") return row;
-          const r = row as RecommendedPostResponse;
-          return {
-            ...r,
-            post: normaliseSearchPostRecord(r.post) as PostSearchResponse,
-          };
-        }),
+      let nextCursor: number | null = null;
+      let hasNext = false;
+      if (body && typeof body === "object" && !Array.isArray(body)) {
+        const b = body as Record<string, unknown>;
+        const pack = b.data;
+        const source =
+          pack && typeof pack === "object" && !Array.isArray(pack)
+            ? (pack as Record<string, unknown>)
+            : b;
+        const nc = source.nextCursor ?? source.next_cursor;
+        const hn = source.hasNext ?? source.has_next;
+        nextCursor = typeof nc === "number" && Number.isFinite(nc) ? nc : null;
+        hasNext = Boolean(hn);
+      }
+
+      return { data, nextCursor, hasNext } satisfies CursorResponse<RecommendedPostResponse>;
+    } catch (error: unknown) {
+      const anyErr = error as {
+        response?: { data?: { message?: string } };
+        message?: string;
       };
-    } catch (error: any) {
       console.error("🚨 [Recommended API Error]:", {
-        status: error?.response?.status,
-        message: error?.message,
-        backendError: error?.response?.data,
+        status: (error as { response?: { status?: number } })?.response?.status,
+        message: anyErr?.message,
+        backendError: anyErr?.response?.data,
       });
 
       const errorMessage =
-        error?.response?.data?.message ||
-        error?.message ||
+        anyErr?.response?.data?.message ||
+        anyErr?.message ||
         "Đã có lỗi xảy ra khi tải danh sách đề xuất.";
       throw new Error(errorMessage);
     }

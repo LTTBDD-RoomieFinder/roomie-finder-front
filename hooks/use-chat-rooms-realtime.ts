@@ -88,7 +88,6 @@ export function useChatRoomsRealtime(
                     body: msg.content || "Bạn có tin nhắn mới.",
                     data: { chatRoomId: msg.chatRoomId },
                     sound: true,
-                    channelId: "default",
                   },
                   trigger: null,
                 });
