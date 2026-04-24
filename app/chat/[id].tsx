@@ -25,6 +25,7 @@ import { useChatMessages } from "@/hooks/use-chat-messages";
 import { useChatRoomDetails } from "@/hooks/use-chat-room-details";
 import { useChatSocket } from "@/hooks/use-chat-socket";
 import { chatService } from "@/services/chat-service";
+import { useActiveChatStore } from "@/stores/use-active-chat-store";
 import { useAuthStore } from "@/stores/useAuthStore";
 import type { ChatMessage } from "@/types/chat";
 import { syncTabBadgesToStore } from "@/services/tab-badge-service";
@@ -85,6 +86,14 @@ export default function ChatRoomScreen() {
       setMyUserId(Number(claims.userId));
     }
   }, [accessToken]);
+
+  // 🔔 Track active chat room for smart-mute (suppress push while viewing this room)
+  useEffect(() => {
+    useActiveChatStore.getState().setActiveChatRoomId(chatRoomId);
+    return () => {
+      useActiveChatStore.getState().setActiveChatRoomId(null);
+    };
+  }, [chatRoomId]);
 
   const {
     messages,

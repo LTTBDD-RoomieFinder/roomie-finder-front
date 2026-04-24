@@ -3,6 +3,7 @@ import {
   DefaultTheme,
   ThemeProvider,
 } from "@react-navigation/native";
+import * as Notifications from "expo-notifications";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useMemo, useRef } from "react";
@@ -17,10 +18,22 @@ import { useGlobalChatBadgeRealtime } from "@/hooks/use-global-chat-badge-realti
 import { useNotificationSocket } from "@/hooks/use-notification-socket";
 import { useTabBadgeSync } from "@/hooks/use-tab-badge-sync";
 import { syncTabBadgesToStore } from "@/services/tab-badge-service";
+import { useActiveChatStore } from "@/stores/use-active-chat-store";
 import { useNotificationStore } from "@/stores/use-notification-store";
 import { useRequestListRealtimeStore } from "@/stores/use-request-list-realtime-store";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { isRequestNotificationType } from "@/utils/notification-helpers";
+
+// Cấu hình hiển thị thông báo khi app đang mở (foreground)
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
 
 export const unstable_settings = {
   anchor: "(tabs)",
@@ -69,6 +82,34 @@ function RootLayoutInner() {
     null,
   );
 
+  // Xin quyền thông báo khi đăng nhập
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const requestPermissions = async () => {
+      const { status } = await Notifications.getPermissionsAsync();
+      if (status !== "granted") {
+        await Notifications.requestPermissionsAsync();
+      }
+    };
+    requestPermissions();
+  }, [isAuthenticated]);
+
+  // Khi bấm vào thông báo → điều hướng đến phòng chat tương ứng
+  useEffect(() => {
+    const subscription = Notifications.addNotificationResponseReceivedListener(
+      (response) => {
+        const data = response.notification.request.content.data as
+          | Record<string, unknown>
+          | undefined;
+        const chatRoomId = data?.chatRoomId;
+        if (chatRoomId != null) {
+          router.push(`/chat/${chatRoomId}` as any);
+        }
+      },
+    );
+    return () => subscription.remove();
+  }, [router]);
+
   useNotificationSocket((notif) => {
     useNotificationStore.getState().notify(notif);
     const isReq = isRequestNotificationType(notif.type);
@@ -91,8 +132,37 @@ function RootLayoutInner() {
         requestBadgeSyncFollowUpRef.current = null;
         void syncTabBadgesToStore();
       }, 1200);
+
+      // 🔔 Gửi thông báo đẩy cho yêu cầu mới
+      Notifications.scheduleNotificationAsync({
+        content: {
+          title: notif.title || "📋 Yêu cầu mới",
+          body: notif.content || "Bạn có một thông báo yêu cầu mới.",
+        },
+        trigger: null,
+      });
     } else {
       void syncTabBadgesToStore();
+
+      // 🔔 Gửi thông báo đẩy cho tin nhắn mới
+      if (String(notif.type ?? "") === "NEW_MESSAGE") {
+        // Smart mute: không hiện thông báo nếu đang ở trong phòng chat đó
+        const chatRoomId =
+          notif.referenceId != null ? Number(notif.referenceId) : null;
+        const activeChatRoomId =
+          useActiveChatStore.getState().activeChatRoomId;
+
+        if (chatRoomId == null || activeChatRoomId !== chatRoomId) {
+          Notifications.scheduleNotificationAsync({
+            content: {
+              title: notif.title || "💬 Tin nhắn mới",
+              body: notif.content || "Bạn có tin nhắn mới.",
+              data: chatRoomId != null ? { chatRoomId } : {},
+            },
+            trigger: null,
+          });
+        }
+      }
     }
   });
 
