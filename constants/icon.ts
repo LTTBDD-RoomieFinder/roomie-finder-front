@@ -14,9 +14,34 @@ export const ICON_MAPPING = {
   "paperplane.fill": "send",
   "chevron.left.forwardslash.chevron.right": "code",
   "chevron.right": "chevron-right",
+  "chevron.left": "chevron-left",
 
   "map.fill": "map",
   "location.fill": "location-on",
   "person.fill": "person",
+
+  "bed.double.fill": "hotel",
+
+  eye: "visibility",
+  "eye.slash": "visibility-off",
   magnifyingglass: "search",
+  "checkmark.circle.fill": "check-circle",
+  "xmark.circle.fill": "cancel",
+  "envelope.fill": "mail",
+  "tray.and.arrow.down.fill": "inbox",
+  "tray.and.arrow.up.fill": "send",
+
+  "info.circle.fill": "info",
+  "exclamationmark.circle.fill": "error",
+  "clock.fill": "schedule",
+  "checkmark.seal.fill": "verified",
+  "bubble.left.and.bubble.right.fill": "chat",
+  "questionmark.circle": "help",
+
+  "bell.fill": "notifications",
+  "camera.fill": "camera-front",
+  "heart.fill": "monitor-heart",
+  "dollarsign.circle.fill": "money",
+  "tag.fill": "tag-faces",
+  "gearshape.fill": "settings",
 } as IconMapping;

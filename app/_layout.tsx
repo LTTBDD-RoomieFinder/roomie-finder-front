@@ -3,25 +3,225 @@ import {
   DefaultTheme,
   ThemeProvider,
 } from "@react-navigation/native";
-import { Stack } from "expo-router";
+import * as Notifications from "expo-notifications";
+import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import React, { useEffect, useMemo, useRef } from "react";
 import "react-native-reanimated";
 
+import { AppThemeProvider } from "@/contexts/app-theme-context";
+import { I18nProvider } from "@/contexts/i18n-context";
+import { useAppTheme } from "@/hooks/use-app-theme";
 import { useColorScheme } from "@/hooks/use-color-scheme";
+import { useFcmToken } from "@/hooks/use-fcm-token";
+import { useGlobalChatBadgeRealtime } from "@/hooks/use-global-chat-badge-realtime";
+import { useNotificationSocket } from "@/hooks/use-notification-socket";
+import { useTabBadgeSync } from "@/hooks/use-tab-badge-sync";
+import { syncTabBadgesToStore } from "@/services/tab-badge-service";
+import { useActiveChatStore } from "@/stores/use-active-chat-store";
+import { useNotificationStore } from "@/stores/use-notification-store";
+import { useRequestListRealtimeStore } from "@/stores/use-request-list-realtime-store";
+import { useAuthStore } from "@/stores/useAuthStore";
+import { isRequestNotificationType } from "@/utils/notification-helpers";
+
+// Cấu hình hiển thị thông báo khi app đang mở (foreground)
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
 
 export const unstable_settings = {
   anchor: "(tabs)",
 };
 
 export default function RootLayout() {
+  return (
+    <AppThemeProvider>
+      <I18nProvider>
+        <RootLayoutInner />
+      </I18nProvider>
+    </AppThemeProvider>
+  );
+}
+
+function RootLayoutInner() {
   const colorScheme = useColorScheme();
+  const { palette } = useAppTheme();
+  const navigationTheme = useMemo(() => {
+    const base = colorScheme === "dark" ? DarkTheme : DefaultTheme;
+    return {
+      ...base,
+      colors: {
+        ...base.colors,
+        primary: palette.primary,
+        background: palette.background,
+        card: palette.card,
+        text: palette.text,
+        border: palette.border,
+        notification: palette.error,
+      },
+    };
+  }, [colorScheme, palette]);
+
+  const router = useRouter();
+  const segments = useSegments();
+
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const isInitialized = useAuthStore((s) => s.isInitialized);
+  const initialize = useAuthStore((s) => s.initialize);
+
+  const requestBadgeSyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const requestBadgeSyncFollowUpRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+
+  // Xin quyền thông báo khi đăng nhập
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const requestPermissions = async () => {
+      const { status } = await Notifications.getPermissionsAsync();
+      if (status !== "granted") {
+        await Notifications.requestPermissionsAsync();
+      }
+    };
+    requestPermissions();
+  }, [isAuthenticated]);
+
+  // Khi bấm vào thông báo → điều hướng đến phòng chat tương ứng
+  useEffect(() => {
+    const subscription = Notifications.addNotificationResponseReceivedListener(
+      (response) => {
+        const data = response.notification.request.content.data as
+          | Record<string, unknown>
+          | undefined;
+        const chatRoomId = data?.chatRoomId;
+        if (chatRoomId != null) {
+          router.push(`/chat/${chatRoomId}` as any);
+        }
+      },
+    );
+    return () => subscription.remove();
+  }, [router]);
+
+  useNotificationSocket((notif) => {
+    useNotificationStore.getState().notify(notif);
+    const isReq = isRequestNotificationType(notif.type);
+    if (isReq) {
+      useRequestListRealtimeStore.getState().bumpRequestList();
+      // Sau commit notification trên BE, GET thường đã đúng; sync ngay để badge khỏi chờ debounce/poll.
+      void syncTabBadgesToStore();
+      // Debounce thêm để bù race hiếm hoặc replica chậm.
+      if (requestBadgeSyncTimerRef.current) {
+        clearTimeout(requestBadgeSyncTimerRef.current);
+      }
+      if (requestBadgeSyncFollowUpRef.current) {
+        clearTimeout(requestBadgeSyncFollowUpRef.current);
+      }
+      requestBadgeSyncTimerRef.current = setTimeout(() => {
+        requestBadgeSyncTimerRef.current = null;
+        void syncTabBadgesToStore();
+      }, 450);
+      requestBadgeSyncFollowUpRef.current = setTimeout(() => {
+        requestBadgeSyncFollowUpRef.current = null;
+        void syncTabBadgesToStore();
+      }, 1200);
+
+      // 🔔 Gửi thông báo đẩy cho yêu cầu mới
+      Notifications.scheduleNotificationAsync({
+        content: {
+          title: notif.title || "📋 Yêu cầu mới",
+          body: notif.content || "Bạn có một thông báo yêu cầu mới.",
+        },
+        trigger: null,
+      });
+    } else {
+      void syncTabBadgesToStore();
+
+      // 🔔 Gửi thông báo đẩy cho tin nhắn mới
+      if (String(notif.type ?? "") === "NEW_MESSAGE") {
+        // Smart mute: không hiện thông báo nếu đang ở trong phòng chat đó
+        const chatRoomId =
+          notif.referenceId != null ? Number(notif.referenceId) : null;
+        const activeChatRoomId =
+          useActiveChatStore.getState().activeChatRoomId;
+
+        if (chatRoomId == null || activeChatRoomId !== chatRoomId) {
+          Notifications.scheduleNotificationAsync({
+            content: {
+              title: notif.title || "💬 Tin nhắn mới",
+              body: notif.content || "Bạn có tin nhắn mới.",
+              data: chatRoomId != null ? { chatRoomId } : {},
+            },
+            trigger: null,
+          });
+        }
+      }
+    }
+  });
+
+  // Upload FCM token to backend so we can push when app is background/killed.
+  useFcmToken();
+
+  useTabBadgeSync();
+
+  // Badge + đồng bộ danh sách phòng khi có tin (không cần mở tab Chats trước).
+  useGlobalChatBadgeRealtime();
+
+  useEffect(() => {
+    initialize();
+  }, [initialize]);
+
+  useEffect(() => {
+    if (!isInitialized) return;
+
+    // `useSegments()` typing can be strict; cast to string[] for safe includes().
+    const seg = segments as unknown as string[];
+    const first = seg[0];
+    const inAuthGroup = seg.some((s) => s === "(auth)" || s.startsWith("(auth)"));
+    const inTabsGroup = seg.some((s) => s === "(tabs)" || s.startsWith("(tabs)"));
+    // Expo-router segments may vary by anchor/navigation; be tolerant.
+    const inChat = seg.some((s) => s === "chat" || s.startsWith("chat"));
+    const inRequest = seg.some((s) => s === "request" || s.startsWith("request"));
+    const inPost = seg.some((s) => s === "post" || s.startsWith("post"));
+    const inUser = seg.some((s) => s === "user" || s.startsWith("user"));
+
+    if (!isAuthenticated && !inAuthGroup) {
+      router.replace("/(auth)/login");
+      return;
+    }
+
+    if (isAuthenticated && inAuthGroup) {
+      router.replace("/(tabs)/home");
+      return;
+    }
+
+    if (isAuthenticated && !inTabsGroup && !inAuthGroup && !inChat && !inRequest && !inPost) {
+      router.replace("/(tabs)/home");
+    }
+  }, [isAuthenticated, isInitialized, router, segments]);
+
+  if (!isInitialized) {
+    return null;
+  }
 
   return (
-    <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+    <ThemeProvider value={navigationTheme}>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="request" />
+        <Stack.Screen name="chat/[id]" />
+        <Stack.Screen name="post" />
+        <Stack.Screen name="user/[id]" />
       </Stack>
-      <StatusBar style="auto" />
+      <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
     </ThemeProvider>
   );
 }
