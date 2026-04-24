@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -16,22 +16,28 @@ import {
   View,
 } from "react-native";
 import { Image } from "expo-image";
+import * as Haptics from "expo-haptics";
 import { router, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Animated, { FadeIn, SlideInDown } from "react-native-reanimated";
 
 import { ThemedText } from "@/components/themed-text";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { useIsAdmin } from "@/hooks/use-is-admin";
 import { useLanguage } from "@/hooks/use-language";
 import { verificationService } from "@/services/verification-service";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { VerificationStatus } from "@/types/enums";
 import type { VerificationResponse } from "@/types/reputation";
-import { decodeJwtPayload } from "@/utils/jwt";
-
 // ── Constants ──────────────────────────────────────────────────────────────────
 const SCREEN_W = Dimensions.get("window").width;
+const SCREEN_H = Dimensions.get("window").height;
 const IMG_H = 200;
+/** Chiều cao sheet cố định để ScrollView bên trong có bound — tránh flex:1 vỡ trên Android/iOS. */
+function detailSheetHeight() {
+  return Math.min(SCREEN_H * 0.9, 680);
+}
 
 type StatusFilter = VerificationStatus | "ALL";
 type ReviewAction = "approve" | "reject";
@@ -50,21 +56,6 @@ const STATUS_META: Record<VerificationStatus, { icon: string; bgLight: string; b
   [VerificationStatus.EXPIRED]: { icon: "⚠", bgLight: "#F5F5F5", bgDark: "#2a2a2a", fg: "#9E9E9E" },
 };
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-function useIsAdmin(): boolean {
-  const user = useAuthStore((s) => s.user);
-  const accessToken = useAuthStore((s) => s.accessToken);
-  return useMemo(() => {
-    if (user?.roles?.includes("ADMIN")) return true;
-    if (!accessToken) return false;
-    const jwt = decodeJwtPayload(accessToken);
-    if (!jwt) return false;
-    if (jwt.scope === "ADMIN") return true;
-    if (Array.isArray(jwt.roles) && (jwt.roles as string[]).includes("ADMIN")) return true;
-    return false;
-  }, [user, accessToken]);
-}
-
 // ═════════════════════════════════════════════════════════════════════════════
 export default function AdminVerificationsScreen() {
   const { color, scheme } = useAppTheme();
@@ -74,9 +65,11 @@ export default function AdminVerificationsScreen() {
 
   // ── Auth guard (screen-level, NOT layout-level) ────────────────────────────
   const isAdmin = useIsAdmin();
+  const authInitialized = useAuthStore((s) => s.isInitialized);
   useEffect(() => {
+    if (!authInitialized) return;
     if (!isAdmin) router.replace("/(tabs)/profile");
-  }, [isAdmin]);
+  }, [isAdmin, authInitialized]);
 
   // ── State ──────────────────────────────────────────────────────────────────
   const [filter, setFilter] = useState<StatusFilter>("PENDING" as StatusFilter);
@@ -125,6 +118,7 @@ export default function AdminVerificationsScreen() {
 
   // ── Actions ────────────────────────────────────────────────────────────────
   const openDetail = (item: VerificationResponse) => {
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSelected(item);
     setReviewAction(null);
     setReviewNote("");
@@ -168,9 +162,6 @@ export default function AdminVerificationsScreen() {
       </View>
     );
   }
-
-  // ── Counts per status for tab badges ────────────────────────────────────
-  const pendingCount = items.filter((i) => i.status === VerificationStatus.PENDING).length;
 
   // ── Status chip ─────────────────────────────────────────────────────────
   const StatusBadge = ({ status }: { status: VerificationStatus }) => {
@@ -239,37 +230,60 @@ export default function AdminVerificationsScreen() {
   };
 
   // ── Render ──────────────────────────────────────────────────────────────────
+  const headerSubtitle =
+    items.length > 0
+      ? t("adminVerify.headerCount", { count: items.length })
+      : t("adminVerify.subtitle");
+
   return (
     <View style={[s.root, { backgroundColor: color.background }]}>
-      {/* ─── Header ─────────────────────────────────────────────── */}
-      <View style={[s.header, { backgroundColor: color.primary }]}>
+      {/* ─── Header (gọn, typography chuẩn dashboard) ───────────────── */}
+      <View
+        style={[
+          s.header,
+          {
+            paddingTop: insets.top + 10,
+            backgroundColor: color.card,
+            borderBottomColor: color.border,
+          },
+        ]}
+      >
         <View style={s.headerContent}>
           <Pressable
-            style={({ pressed }) => [s.headerBackBtn, pressed && { opacity: 0.7 }]}
+            accessibilityRole="button"
+            accessibilityLabel={t("common.goBack")}
+            style={({ pressed }) => [
+              s.headerIconBtn,
+              { backgroundColor: color.backgroundSecondary },
+              pressed && { opacity: 0.72 },
+            ]}
             onPress={() => router.back()}
             hitSlop={12}
           >
-            <Ionicons name="arrow-back" size={22} color={color.primaryText} />
+            <Ionicons name="chevron-back" size={22} color={color.text} />
           </Pressable>
-          <View style={[s.headerIconWrap, { backgroundColor: "rgba(255,255,255,0.2)" }]}>
-            <Ionicons name="shield-checkmark" size={28} color={color.primaryText} />
-          </View>
-          <View style={s.headerTextWrap}>
-            <ThemedText style={[s.headerTitle, { color: color.primaryText }]}>
+          <View style={s.headerTextBlock}>
+            <ThemedText style={[s.headerEyebrow, { color: color.textSecondary }]}>
+              {t("adminVerify.headerEyebrow")}
+            </ThemedText>
+            <ThemedText style={[s.headerTitle, { color: color.text }]} numberOfLines={1}>
               {t("adminVerify.title")}
             </ThemedText>
-            <ThemedText style={[s.headerSub, { color: color.primaryText, opacity: 0.9 }]}>
-              {items.length > 0
-                ? `${items.length} ${t("adminVerify.filterAll").toLowerCase()}`
-                : t("adminVerify.subtitle")}
+            <ThemedText style={[s.headerSub, { color: color.textSecondary }]} numberOfLines={1}>
+              {headerSubtitle}
             </ThemedText>
           </View>
           <Pressable
-            style={({ pressed }) => [s.headerBackBtn, pressed && { opacity: 0.7 }]}
+            accessibilityRole="button"
+            style={({ pressed }) => [
+              s.headerIconBtn,
+              { backgroundColor: color.backgroundSecondary },
+              pressed && { opacity: 0.72 },
+            ]}
             onPress={() => fetchList(filter, true)}
             hitSlop={12}
           >
-            <Ionicons name="refresh" size={20} color={color.primaryText} />
+            <Ionicons name="refresh-outline" size={20} color={color.text} />
           </Pressable>
         </View>
       </View>
@@ -288,7 +302,10 @@ export default function AdminVerificationsScreen() {
                     ? { backgroundColor: color.primary, borderColor: color.primary }
                     : { backgroundColor: "transparent", borderColor: color.border },
                 ]}
-                onPress={() => setFilter(tab.key)}
+                onPress={() => {
+                  void Haptics.selectionAsync();
+                  setFilter(tab.key);
+                }}
               >
                 <Ionicons
                   name={tab.icon as any}
@@ -364,42 +381,69 @@ export default function AdminVerificationsScreen() {
       {/* ════════════════ DETAIL MODAL ════════════════════════════════ */}
       <Modal
         visible={!!selected}
-        animationType="slide"
+        animationType="fade"
         transparent
+        statusBarTranslucent
         onRequestClose={closeDetail}
       >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={[s.modalOverlay]}
-        >
-          <Pressable style={StyleSheet.absoluteFill} onPress={closeDetail} />
-          <View style={[s.modalSheet, { backgroundColor: color.background, paddingBottom: insets.bottom + 16 }]}>
-            {/* Handle */}
-            <View style={s.modalHandleWrap}>
-              <View style={[s.modalHandle, { backgroundColor: color.border }]} />
-            </View>
+        <View style={s.modalRoot}>
+          <Animated.View
+            entering={FadeIn.duration(220)}
+            style={[StyleSheet.absoluteFill, { zIndex: 0 }]}
+          >
+            <Pressable
+              style={[s.modalBackdrop, StyleSheet.absoluteFill]}
+              onPress={closeDetail}
+              accessibilityRole="button"
+              accessibilityLabel={t("common.close")}
+            />
+          </Animated.View>
 
-            {/* Modal Header */}
-            <View style={[s.modalHeader, { borderBottomColor: color.border }]}>
-              <ThemedText style={[s.modalTitle, { color: color.text }]}>
-                {t("adminVerify.detailTitle")}
-              </ThemedText>
-              <Pressable
-                onPress={closeDetail}
-                style={({ pressed }) => [s.modalCloseBtn, { backgroundColor: pressed ? color.backgroundSecondary : "transparent" }]}
-                hitSlop={12}
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
+            style={s.modalKeyboardWrap}
+            pointerEvents="box-none"
+          >
+            {selected ? (
+              <Animated.View
+                entering={SlideInDown.springify().damping(22).stiffness(280).mass(0.85)}
+                style={[
+                  s.modalSheet,
+                  {
+                    backgroundColor: color.background,
+                    height: detailSheetHeight(),
+                    paddingBottom: insets.bottom + 12,
+                  },
+                ]}
               >
-                <Ionicons name="close" size={22} color={color.textSecondary} />
-              </Pressable>
-            </View>
+                <View style={s.modalHandleWrap}>
+                  <View style={[s.modalHandle, { backgroundColor: color.border }]} />
+                </View>
 
-            {selected && (
-              <ScrollView
-                style={{ flex: 1 }}
-                contentContainerStyle={s.modalBody}
-                keyboardShouldPersistTaps="handled"
-                showsVerticalScrollIndicator={false}
-              >
+                <View style={[s.modalHeader, { borderBottomColor: color.border }]}>
+                  <ThemedText style={[s.modalTitle, { color: color.text }]}>
+                    {t("adminVerify.detailTitle")}
+                  </ThemedText>
+                  <Pressable
+                    onPress={closeDetail}
+                    style={({ pressed }) => [
+                      s.modalCloseBtn,
+                      { backgroundColor: pressed ? color.backgroundSecondary : "transparent" },
+                    ]}
+                    hitSlop={12}
+                  >
+                    <Ionicons name="close" size={22} color={color.textSecondary} />
+                  </Pressable>
+                </View>
+
+                <ScrollView
+                  style={s.modalScroll}
+                  contentContainerStyle={s.modalBody}
+                  keyboardShouldPersistTaps="handled"
+                  showsVerticalScrollIndicator={false}
+                  nestedScrollEnabled
+                  bounces
+                >
                 {/* ── Status banner ─── */}
                 <View style={[s.statusBanner, { backgroundColor: isDark ? STATUS_META[selected.status].bgDark : STATUS_META[selected.status].bgLight }]}>
                   <View style={[s.statusBannerIcon, { backgroundColor: STATUS_META[selected.status].fg + "22" }]}>
@@ -421,6 +465,7 @@ export default function AdminVerificationsScreen() {
                     label={t("adminVerify.fieldDocNum")}
                     value={selected.documentNumber || selected.documentNumberMasked || "—"}
                     color={color}
+                    valueLines={6}
                   />
                   <View style={[s.infoDivider, { backgroundColor: color.border }]} />
                   <InfoRow label={t("adminVerify.fieldSubmitted")} value={new Date(selected.createdAt).toLocaleString()} color={color} />
@@ -564,10 +609,11 @@ export default function AdminVerificationsScreen() {
                     )}
                   </View>
                 )}
-              </ScrollView>
-            )}
-          </View>
-        </KeyboardAvoidingView>
+                </ScrollView>
+              </Animated.View>
+            ) : null}
+          </KeyboardAvoidingView>
+        </View>
       </Modal>
 
       {/* ════════════════ FULLSCREEN IMAGE VIEWER ══════════════════════ */}
@@ -597,11 +643,24 @@ export default function AdminVerificationsScreen() {
 
 // ── Sub-components ──────────────────────────────────────────────────────────────
 
-function InfoRow({ label, value, color }: { label: string; value: string; color: any }) {
+function InfoRow({
+  label,
+  value,
+  color,
+  valueLines = 4,
+}: {
+  label: string;
+  value: string;
+  color: any;
+  valueLines?: number;
+}) {
   return (
     <View style={s.infoRow}>
       <ThemedText style={[s.infoLabel, { color: color.textSecondary }]}>{label}</ThemedText>
-      <ThemedText style={[s.infoValue, { color: color.text }]} numberOfLines={1}>
+      <ThemedText
+        style={[s.infoValue, { color: color.text }]}
+        numberOfLines={valueLines}
+      >
         {value}
       </ThemedText>
     </View>
@@ -636,37 +695,27 @@ function ImageCard({
 const s = StyleSheet.create({
   root: { flex: 1 },
 
-  // Header — synced with Profile / Chats / Requests / Map pattern
   header: {
-    height: 100,
-    marginTop: 40,
-    justifyContent: "flex-end",
-    paddingHorizontal: 20,
-    paddingVertical: 20,
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   headerContent: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 14,
+    gap: 12,
   },
-  headerBackBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "rgba(255,255,255,0.18)",
+  headerIconBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
   },
-  headerIconWrap: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerTextWrap: { flex: 1 },
-  headerTitle: { fontSize: 24, fontWeight: "700", letterSpacing: 0.3 },
-  headerSub: { fontSize: 14, marginTop: 4, lineHeight: 20 },
+  headerTextBlock: { flex: 1, minWidth: 0, gap: 2 },
+  headerEyebrow: { fontSize: 11, fontWeight: "600", letterSpacing: 0.6, textTransform: "uppercase" },
+  headerTitle: { fontSize: 17, fontWeight: "600", letterSpacing: -0.2 },
+  headerSub: { fontSize: 12, fontWeight: "400", lineHeight: 16, marginTop: 1 },
 
   // Tabs
   tabBar: { borderBottomWidth: StyleSheet.hairlineWidth, paddingVertical: 10 },
@@ -706,14 +755,43 @@ const s = StyleSheet.create({
   retryBtnText: { color: "#fff", fontWeight: "700", fontSize: 14 },
 
   // Modal
-  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
-  modalSheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: "94%", overflow: "hidden" },
-  modalHandleWrap: { alignItems: "center", paddingTop: 12 },
-  modalHandle: { width: 40, height: 4, borderRadius: 2 },
-  modalHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: StyleSheet.hairlineWidth },
-  modalTitle: { fontSize: 18, fontWeight: "700" },
+  modalRoot: { flex: 1, justifyContent: "flex-end" },
+  modalBackdrop: { backgroundColor: "rgba(0,0,0,0.48)" },
+  modalKeyboardWrap: {
+    flex: 1,
+    justifyContent: "flex-end",
+    zIndex: 2,
+    elevation: 24,
+  },
+  modalSheet: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    overflow: "hidden",
+    width: "100%",
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: -4 },
+        shadowOpacity: 0.12,
+        shadowRadius: 16,
+      },
+      android: { elevation: 16 },
+    }),
+  },
+  modalHandleWrap: { alignItems: "center", paddingTop: 10, paddingBottom: 4 },
+  modalHandle: { width: 36, height: 4, borderRadius: 2 },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  modalTitle: { fontSize: 16, fontWeight: "600", letterSpacing: -0.1, flex: 1, marginRight: 8 },
   modalCloseBtn: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center" },
-  modalBody: { padding: 20, gap: 16, paddingBottom: 40 },
+  modalScroll: { flex: 1 },
+  modalBody: { padding: 18, gap: 14, paddingBottom: 28 },
 
   // Status banner
   statusBanner: { flexDirection: "row", alignItems: "center", gap: 14, padding: 16, borderRadius: 14 },
@@ -723,9 +801,9 @@ const s = StyleSheet.create({
 
   // Info card
   infoCard: { borderRadius: 14, borderWidth: StyleSheet.hairlineWidth, overflow: "hidden" },
-  infoRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, paddingVertical: 12 },
-  infoLabel: { fontSize: 13 },
-  infoValue: { fontSize: 14, fontWeight: "600", flexShrink: 1, textAlign: "right", maxWidth: "60%" },
+  infoRow: { paddingHorizontal: 16, paddingVertical: 12, gap: 4 },
+  infoLabel: { fontSize: 11, fontWeight: "600", letterSpacing: 0.4, textTransform: "uppercase" },
+  infoValue: { fontSize: 15, fontWeight: "600", lineHeight: 22 },
   infoDivider: { height: StyleSheet.hairlineWidth, marginHorizontal: 16 },
 
   // Note card

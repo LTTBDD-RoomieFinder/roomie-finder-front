@@ -1,6 +1,10 @@
 import { reportApi } from "@/apis/report-api";
 import type { SubmitReportRequest } from "@/data/request";
 import type { ReportResponse } from "@/types/reputation";
+import {
+  extractReportList,
+  normalizeReportResponse,
+} from "@/utils/normalize-report";
 
 function unwrap<T>(res: unknown): T {
   if (res !== null && typeof res === "object" && "data" in res) {
@@ -9,19 +13,29 @@ function unwrap<T>(res: unknown): T {
   return res as T;
 }
 
+function unwrapRaw(res: unknown): unknown {
+  if (res !== null && typeof res === "object" && "data" in res) {
+    return (res as Record<string, unknown>).data;
+  }
+  return res;
+}
+
 export const reportService = {
   async submit(body: SubmitReportRequest): Promise<ReportResponse> {
-    return unwrap<ReportResponse>(await reportApi.submit(body));
+    const raw = unwrap<unknown>(await reportApi.submit(body));
+    return normalizeReportResponse(raw);
   },
 
   async adminList(status?: string): Promise<ReportResponse[]> {
-    return unwrap<ReportResponse[]>(await reportApi.adminList(status));
+    const raw = unwrapRaw(await reportApi.adminList(status));
+    return extractReportList(raw);
   },
 
   async adminUpdate(
     id: number,
-    body: { status: string; adminNote?: string }
+    body: { status: string; adminNote?: string | null },
   ): Promise<ReportResponse> {
-    return unwrap<ReportResponse>(await reportApi.adminUpdate(id, body));
+    const raw = unwrap<unknown>(await reportApi.adminUpdate(id, body));
+    return normalizeReportResponse(raw);
   },
 };

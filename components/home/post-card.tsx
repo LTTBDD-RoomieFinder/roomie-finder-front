@@ -1,10 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
-import React from "react";
-import { Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from "react-native";
-import { router } from "expo-router";
+import React, { useState } from "react";
+import { Alert, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from "react-native";
+import { type Href, router } from "expo-router";
 
+import { PostPosterReviews } from "@/components/home/post-poster-reviews";
 import { PostRequestChatIcon } from "@/components/post/post-request-chat-icon";
+import { ReportTriggerButton, SubmitReportModal } from "@/components/report/submit-report-modal";
 import { ThemedText } from "@/components/themed-text";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { PostResponse } from "@/data/response";
@@ -12,6 +14,7 @@ import { useAppTheme } from "@/hooks/use-app-theme";
 import { useLanguage } from "@/hooks/use-language";
 import { usePostsJoinEligibility } from "@/hooks/use-posts-join-eligibility";
 import { formatDate } from "@/utils/format-post";
+import { ReportTargetType } from "@/types/enums";
 import { formatRoomPrice } from "@/utils/format-room";
 
 type Props = {
@@ -42,33 +45,63 @@ export function PostCard({ post, currentUserId, onEdit, onDelete, scoreInfo }: P
     refresh: refreshElig,
   } = usePostsJoinEligibility([post.id], Boolean(myUserIdNumber && !isOwner));
   const elig = eligibilityByPostId[post.id];
+  const [reportOpen, setReportOpen] = useState(false);
 
   return (
     <View style={[styles.card]}>
       <View style={styles.header}>
-        <UserAvatar
-          userId={post.user.id}
-          hintUrl={post.user.avatarUrl}
-          name={post.user.fullName || post.user.username}
-          size={44}
-          style={[styles.avatar, { backgroundColor: color.backgroundSecondary }]}
-        />
-        <View style={{ flex: 1 }}>
-          <ThemedText type="defaultSemiBold" style={styles.userName}>
-            {post.user.fullName || post.user.username}
-          </ThemedText>
-          <View style={styles.metaRow}>
-            <ThemedText style={[styles.metaText, { color: color.textSecondary }]}>
-              {formatDate(post.createdAt)}
+        <Pressable
+          style={({ pressed }) => [{ flexDirection: "row", flex: 1, opacity: pressed ? 0.85 : 1 }]}
+          onPress={() =>
+            router.push({
+              pathname: "/user/[id]",
+              params: { id: String(post.user.id) },
+            })
+          }
+        >
+          <UserAvatar
+            userId={post.user.id}
+            hintUrl={post.user.avatarUrl}
+            name={post.user.fullName || post.user.username}
+            size={44}
+            style={[styles.avatar, { backgroundColor: color.backgroundSecondary }]}
+          />
+          <View style={{ flex: 1 }}>
+            <ThemedText type="defaultSemiBold" style={styles.userName}>
+              {post.user.fullName || post.user.username}
             </ThemedText>
-            <ThemedText style={{ color: color.textSecondary, fontSize: 12, marginHorizontal: 4 }}>·</ThemedText>
-            <Ionicons
-              name={post.status === "PUBLISHED" ? "earth" : post.status === "DRAFT" ? "document-text" : "eye-off"}
-              size={12}
-              color={color.textSecondary}
-            />
+            <View style={styles.metaRow}>
+              <ThemedText style={[styles.metaText, { color: color.textSecondary }]}>
+                {formatDate(post.createdAt)}
+              </ThemedText>
+              <ThemedText style={{ color: color.textSecondary, fontSize: 12, marginHorizontal: 4 }}>·</ThemedText>
+              <Ionicons
+                name={post.status === "PUBLISHED" ? "earth" : post.status === "DRAFT" ? "document-text" : "eye-off"}
+                size={12}
+                color={color.textSecondary}
+              />
+            </View>
           </View>
-        </View>
+        </Pressable>
+
+        {!isOwner ? (
+          <ReportTriggerButton
+            onPress={() => {
+              if (currentUserId === undefined || currentUserId === null || currentUserId === "") {
+                Alert.alert(t("report.loginRequiredTitle"), t("report.loginRequiredMsg"), [
+                  { text: t("common.cancel"), style: "cancel" },
+                  {
+                    text: t("publicUser.writeReview.loginCta"),
+                    onPress: () => router.push("/(auth)/login" as Href),
+                  },
+                ]);
+                return;
+              }
+              setReportOpen(true);
+            }}
+            accessibilityLabel={t("report.a11yOpen")}
+          />
+        ) : null}
 
         {/* Owner actions menu */}
         {isOwner && (
@@ -94,6 +127,15 @@ export function PostCard({ post, currentUserId, onEdit, onDelete, scoreInfo }: P
           </View>
         )}
       </View>
+
+      <SubmitReportModal
+        visible={reportOpen}
+        onClose={() => setReportOpen(false)}
+        targetType={ReportTargetType.POST}
+        targetId={post.id}
+        contextLabel={post.title}
+      />
+
       {scoreInfo ? (
         <View style={styles.scoreRow}>
           <View style={[styles.scoreChip, { backgroundColor: color.backgroundSecondary }]}>
@@ -116,6 +158,8 @@ export function PostCard({ post, currentUserId, onEdit, onDelete, scoreInfo }: P
           {post.content}
         </ThemedText>
       </View>
+
+      <PostPosterReviews posterUserId={String(post.user.id)} />
 
       {post.room && (
         <View style={[styles.roomAttachment, { backgroundColor: color.backgroundSecondary }]}>

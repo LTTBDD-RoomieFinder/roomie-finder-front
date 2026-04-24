@@ -113,7 +113,6 @@ function RootLayoutInner() {
 
     // `useSegments()` typing can be strict; cast to string[] for safe includes().
     const seg = segments as unknown as string[];
-    const first = seg[0];
     const inAuthGroup = seg.some((s) => s === "(auth)" || s.startsWith("(auth)"));
     const inTabsGroup = seg.some((s) => s === "(tabs)" || s.startsWith("(tabs)"));
     // Expo-router segments may vary by anchor/navigation; be tolerant.
@@ -121,6 +120,8 @@ function RootLayoutInner() {
     const inRequest = seg.some((s) => s === "request" || s.startsWith("request"));
     const inPost = seg.some((s) => s === "post" || s.startsWith("post"));
     const inUser = seg.some((s) => s === "user" || s.startsWith("user"));
+    const inAdmin = seg.some((s) => s === "admin" || s.startsWith("admin"));
+    const inSearch = seg.some((s) => s === "search" || s.startsWith("search"));
 
     if (!isAuthenticated && !inAuthGroup) {
       router.replace("/(auth)/login");
@@ -132,7 +133,17 @@ function RootLayoutInner() {
       return;
     }
 
-    if (isAuthenticated && !inTabsGroup && !inAuthGroup && !inChat && !inRequest && !inPost) {
+    if (
+      isAuthenticated &&
+      !inTabsGroup &&
+      !inAuthGroup &&
+      !inChat &&
+      !inRequest &&
+      !inPost &&
+      !inUser &&
+      !inAdmin &&
+      !inSearch
+    ) {
       router.replace("/(tabs)/home");
     }
   }, [isAuthenticated, isInitialized, router, segments]);
@@ -150,6 +161,8 @@ function RootLayoutInner() {
         <Stack.Screen name="chat/[id]" />
         <Stack.Screen name="post" />
         <Stack.Screen name="user/[id]" />
+        <Stack.Screen name="admin" />
+        <Stack.Screen name="search" />
       </Stack>
       <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
     </ThemeProvider>

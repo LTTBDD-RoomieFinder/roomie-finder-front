@@ -16,6 +16,8 @@
     "user": "Người dùng",
     "optional": "tùy chọn",
     "success": "Thành công",
+    "close": "Đóng",
+    "goBack": "Quay lại",
     "permissionTitle": "Cần quyền truy cập",
     "mediaLibraryPermission": "Cần quyền truy cập thư viện ảnh để thêm hình."
   },
@@ -105,7 +107,9 @@
     "directionsNoCoords": "Bài đăng không có tọa độ để chỉ đường.",
     "directionsOpenFailed": "Không mở được Google Maps.",
     "previewLoading": "Đang tải phòng…",
-    "tapPinHint": "Nhấn vào ghim để xem trước phòng"
+    "tapPinHint": "Nhấn vào ghim để xem trước phòng",
+    "reviewPosterCta": "Đánh giá người đăng",
+    "reviewPosterLogin": "Đăng nhập để đánh giá người đăng"
   },
   "post": {
     "status": {
@@ -206,7 +210,8 @@
       "tenantRequirement": "Yêu cầu người ở",
       "amenities": "Tiện ích nổi bật",
       "host": "Chủ phòng",
-      "hostLoading": "Đang tải…"
+      "hostLoading": "Đang tải…",
+      "hostNamePending": "Thành viên"
     },
     "form": {
       "basicSection": "Thông tin cơ bản",
@@ -502,7 +507,17 @@
     "maxPeople": "Tối đa {{count}} người",
     "views": "{{count}} lượt xem",
     "expires": "HH:",
-    "perMonth": "/tháng"
+    "perMonth": "/tháng",
+    "posterReviewsTitle": "Đánh giá về người đăng",
+    "posterReviewsNone": "Chưa có đánh giá — vào hồ sơ để xem độ tin cậy hoặc để lại đánh giá sau khi liên hệ.",
+    "posterReviewsSeeAll": "Xem toàn bộ đánh giá",
+    "posterTrustEyebrow": "Tin cậy trên Roomie",
+    "posterTrustTagline": "Điểm từ người từng ở ghép / thuê thật — rõ ràng hơn so với cảm tính trên group Facebook.",
+    "posterOpenReviews": "Xem đánh giá",
+    "posterOpenReviewsA11y": "Mở toàn bộ đánh giá và nội dung",
+    "posterViewProfileLink": "Hồ sơ, xác thực & an toàn",
+    "posterTrustEmptyTitle": "Chưa có điểm cộng đồng",
+    "posterTrustEmptySub": "Vào hồ sơ để xem xác thực, hoặc để lại đánh giá sau khi liên hệ."
   },
   "postSearch": {
     "anonymous": "Người dùng ẩn danh",
@@ -585,6 +600,10 @@
     "averageRating": "Điểm TB: {{score}}",
     "totalReviews": "{{count}} đánh giá",
     "noReviews": "Chưa có đánh giá nào.",
+    "modalTitle": "Đánh giá về {{name}}",
+    "modalTitleGeneric": "Đánh giá thành viên",
+    "modalLead": "Ý kiến từ người đã tìm phòng trên Roomie — có ngữ cảnh, có vai trò, khác cảm tính ẩn danh trên mạng xã hội.",
+    "viewMemberProfile": "Mở hồ sơ đầy đủ",
     "errors": {
       "9001": "Không tìm thấy đánh giá.",
       "9002": "Bạn không thể tự đánh giá bản thân.",
@@ -594,6 +613,10 @@
     }
   },
   "report": {
+    "modalTitle": "Báo cáo cho đội kiểm duyệt",
+    "a11yOpen": "Báo cáo vi phạm",
+    "loginRequiredTitle": "Cần đăng nhập",
+    "loginRequiredMsg": "Vui lòng đăng nhập để gửi báo cáo tới đội ngũ xử lý.",
     "sectionTitle": "Báo cáo vi phạm",
     "targetType_USER": "Người dùng",
     "targetType_POST": "Bài đăng",
@@ -643,6 +666,9 @@
   "publicUser": {
     "title": "Hồ sơ thành viên",
     "reviewsSection": "Đánh giá",
+    "reviewsSectionLead": "Trải nghiệm từ người từng ở ghép / thuê với thành viên này. Kết hợp với xác thực và công cụ an toàn trong app — tín hiệu rõ hơn group Facebook.",
+    "reviewsOpenExpanded": "Mở rộng",
+    "reviewsOpenExpandedA11y": "Mở danh sách đánh giá toàn màn hình",
     "reviewCount": "{{count}} đánh giá",
     "noReviews": "Chưa có đánh giá nào.",
     "loadError": "Không tải được hồ sơ này.",
@@ -651,11 +677,66 @@
     "reviewContext": {
       "ROOMMATE_EXPERIENCE": "Trải nghiệm ở ghép",
       "LANDLORD_EXPERIENCE": "Trải nghiệm chủ nhà / cho thuê"
+    },
+    "writeReview": {
+      "title": "Viết đánh giá",
+      "subtitle": "Chia sẻ trải nghiệm thật của bạn với {{name}}.",
+      "valueProposition": "Đánh giá của bạn giúp cả cộng đồng chọn bạn ở ghép / chủ nhà đáng tin. Nội dung nằm đúng ngữ cảnh tìm phòng ở đây, không bị lẫn vào bảng tin viral.",
+      "ratingLabel": "Điểm tổng thể",
+      "contextLabel": "Đánh giá này về",
+      "contextLandlord": "Chủ phòng / bài đăng",
+      "contextRoommate": "Bạn cùng phòng",
+      "commentLabel": "Nhận xét (tuỳ chọn)",
+      "commentPlaceholder": "Điều bạn hài lòng hoặc chưa hài lòng…",
+      "commentHint": "Tối đa {{max}} ký tự.",
+      "submit": "Gửi đánh giá",
+      "cancel": "Huỷ",
+      "success": "Cảm ơn bạn! Đánh giá đã hiển thị trên hồ sơ này.",
+      "failed": "Không gửi được. Có thể bạn đã đánh giá người này, hoặc yêu cầu không hợp lệ.",
+      "cta": "Viết đánh giá",
+      "loginCta": "Đăng nhập để đánh giá",
+      "stars": "sao"
     }
   },
+  "adminHub": {
+    "eyebrow": "Vận hành",
+    "title": "Trung tâm quản trị",
+    "subtitle": "An toàn, tin cậy và danh tính cho tìm bạn trọ",
+    "cardVerifyTitle": "Duyệt xác thực danh tính",
+    "cardVerifyDesc": "Xem CCCD / giấy tờ để cộng đồng yên tâm hơn khi liên hệ.",
+    "cardReportsTitle": "Hàng đợi báo cáo",
+    "cardReportsDesc": "Xử lý lừa đảo, phòng ảo, quấy rối, spam… từ người dùng.",
+    "footerHint": "Ứng dụng đã có deal-breaker, điểm tin cậy, đánh giá và báo cáo trong app. Hai mục trên giúp admin xử lý các vụ nghiêm trọng."
+  },
+  "adminReports": {
+    "title": "Báo cáo vi phạm",
+    "subtitle": "Hàng đợi an toàn cộng đồng",
+    "headerCount": "{{count}} báo cáo trong danh sách",
+    "detailTitle": "Chi tiết báo cáo",
+    "empty": "Không có báo cáo ở bộ lọc này",
+    "filterAll": "Tất cả",
+    "filterPending": "Chờ xử lý",
+    "filterReviewed": "Đã xem",
+    "filterDismissed": "Bỏ qua",
+    "filterActioned": "Đã xử lý",
+    "fieldReporter": "Người báo cáo",
+    "fieldCreated": "Thời gian gửi",
+    "fieldReviewed": "Thời gian xử lý",
+    "adminNoteLabel": "Ghi chú nội bộ (tuỳ chọn)",
+    "adminNotePh": "Ghi chú lưu vết…",
+    "resolveTitle": "Kết luận",
+    "btnReviewed": "Đã xem xét",
+    "btnDismissed": "Không vi phạm",
+    "btnActioned": "Đã xử lý",
+    "updatedMsg": "Đã cập nhật trạng thái báo cáo.",
+    "updateFailed": "Không cập nhật được. Kiểm tra quyền hoặc luồng trạng thái.",
+    "closedHint": "Báo cáo đã đóng. Ghi chú phía trên chỉ để xem lịch sử."
+  },
   "adminVerify": {
-    "title": "Quản lý xác thực",
-    "subtitle": "Duyệt và xác minh danh tính",
+    "title": "Duyệt xác thực",
+    "headerEyebrow": "Quản trị",
+    "headerCount": "{{count}} đơn trong danh sách",
+    "subtitle": "Xem và duyệt CCCD đã gửi",
     "filterAll": "Tất cả",
     "filterPending": "Chờ duyệt",
     "filterVerified": "Đã duyệt",
@@ -688,7 +769,7 @@
     "approvedMsg": "Đã duyệt xác thực thành công.",
     "rejectedMsg": "Đã từ chối xác thực.",
     "reviewFailed": "Không thể gửi kết quả duyệt. Vui lòng thử lại.",
-    "adminPanelBtn": "Admin Panel",
+    "adminPanelBtn": "Bảng quản trị",
     "adminPanelVerify": "Duyệt xác thực CCCD đang chờ"
   }
 }

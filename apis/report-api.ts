@@ -12,6 +12,6 @@ export const reportApi = {
   adminList: (status?: string) =>
     axiosRequest.get(ADMIN_PATH, { params: status ? { status } : undefined }),
 
-  adminUpdate: (id: number, body: { status: string; adminNote?: string }) =>
+  adminUpdate: (id: number, body: { status: string; adminNote?: string | null }) =>
     axiosRequest.put(`${ADMIN_PATH}/${id}`, body),
 };

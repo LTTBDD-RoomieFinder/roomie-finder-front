@@ -33,9 +33,11 @@ export type PostSearchResult = {
 type Props = {
   post: PostSearchResult;
   onPress: () => void;
+  /** Khi có, chạm hàng tác giả mở profile công khai (đánh giá). */
+  onAuthorPress?: () => void;
 };
 
-export function PostSearchResultCard({ post, onPress }: Props) {
+export function PostSearchResultCard({ post, onPress, onAuthorPress }: Props) {
   const { color } = useAppTheme();
   const { t, locale } = useLanguage();
 
@@ -176,6 +178,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 12,
+  },
+  authorRowHit: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    marginRight: 8,
+  },
+  cardMainPress: {
+    borderRadius: 12,
   },
   avatar: {
     width: 40,

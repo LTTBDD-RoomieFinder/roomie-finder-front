@@ -1,6 +1,7 @@
 import {
     ActivityIndicator,
     Alert,
+    Platform,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -8,6 +9,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import * as Haptics from "expo-haptics";
 
 import { ThemedText } from "@/components/themed-text";
 import { authService } from "@/services/auth";
@@ -42,11 +44,12 @@ import { TrustScoreSection } from "@/components/profile/trust-score-section";
 import { VerificationSection } from "@/components/profile/verification-section";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useAppTheme } from "@/hooks/use-app-theme";
+import { useIsAdmin } from "@/hooks/use-is-admin";
 import { useLanguage } from "@/hooks/use-language";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useProfileAvatarStore } from "@/stores/useProfileAvatarStore";
 import { profileTabGuard } from "@/utils/profile-tab-guard";
-import { router } from "expo-router";
+import { router, type Href } from "expo-router";
 
 type FormValues = {
   fullName: string;
@@ -107,7 +110,7 @@ export default function ProfileScreen() {
   const { color, scheme, radius } = useAppTheme();
   const { t } = useLanguage();
   const authUser = useAuthStore((s) => s.user);
-  const isAdmin = authUser?.roles?.includes("ADMIN") ?? false;
+  const isAdmin = useIsAdmin();
   const setAvatarInCache = useProfileAvatarStore((s) => s.setAvatar);
   const refreshAvatar = useProfileAvatarStore((s) => s.fetchAvatar);
 
@@ -251,6 +254,63 @@ export default function ProfileScreen() {
       shadowRadius: 4,
       elevation: 3,
       borderWidth: 1,
+      borderColor: color.border,
+    },
+    adminPanelCard: {
+      paddingVertical: 16,
+      paddingHorizontal: 18,
+      borderLeftWidth: 3,
+      borderLeftColor: color.primary,
+      borderCurve: "continuous",
+    },
+    adminPanelRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 14,
+    },
+    adminPanelIconWrap: {
+      width: 44,
+      height: 44,
+      borderRadius: 12,
+      borderCurve: "continuous",
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: primaryLight,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: primaryBorder,
+    },
+    adminPanelTextCol: {
+      flex: 1,
+      minWidth: 0,
+      gap: 3,
+    },
+    adminPanelEyebrow: {
+      fontSize: 10,
+      fontWeight: "700",
+      letterSpacing: 0.8,
+      textTransform: "uppercase",
+      color: color.textSecondary,
+    },
+    adminPanelTitle: {
+      fontSize: 16,
+      fontWeight: "600",
+      letterSpacing: -0.2,
+      color: color.text,
+    },
+    adminPanelSub: {
+      fontSize: 13,
+      fontWeight: "400",
+      lineHeight: 18,
+      color: color.textSecondary,
+    },
+    adminPanelChevronWrap: {
+      width: 34,
+      height: 34,
+      borderRadius: 17,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: isDark ? color.background : color.card,
+      borderWidth: StyleSheet.hairlineWidth,
       borderColor: color.border,
     },
     sectionHeader: {
@@ -724,45 +784,37 @@ export default function ProfileScreen() {
         <VerificationSection onVerificationSubmitted={() => setSafetyRefreshKey((k) => k + 1)} />
         <DealBreakerSection />
 
-        {/* ── Admin Panel (only for ADMIN role) ─────────────────── */}
+        {/* ── Admin: duyệt xác thực (chỉ ADMIN) ─────────────────── */}
         {isAdmin && (
-          <TouchableOpacity
-            activeOpacity={0.82}
-            onPress={() => router.push("/admin/verifications")}
-            style={[
+          <Pressable
+            accessibilityRole="button"
+            accessibilityHint={t("adminVerify.adminPanelVerify")}
+            onPress={() => {
+              void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              router.push("/admin" as Href);
+            }}
+            style={({ pressed }) => [
               styles.card,
-              {
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 14,
-                borderWidth: 1.5,
-                borderColor: "#f59e0b",
-                backgroundColor: isDark ? "#2a2a1f" : "#fffbe6",
-              },
+              styles.adminPanelCard,
+              pressed && { opacity: Platform.OS === "ios" ? 0.88 : 1 },
+              pressed && Platform.OS === "ios" ? { transform: [{ scale: 0.985 }] } : null,
             ]}
+            android_ripple={{ color: `${color.primary}24`, borderless: false }}
           >
-            <View
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 20,
-                backgroundColor: "#f59e0b22",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <IconSymbol name="shield.fill" size={20} color="#f59e0b" />
+            <View style={styles.adminPanelRow}>
+              <View style={styles.adminPanelIconWrap}>
+                <IconSymbol name="checkmark.seal.fill" size={22} color={color.primary} />
+              </View>
+              <View style={styles.adminPanelTextCol}>
+                <ThemedText style={styles.adminPanelEyebrow}>{t("adminVerify.headerEyebrow")}</ThemedText>
+                <ThemedText style={styles.adminPanelTitle}>{t("adminVerify.adminPanelVerify")}</ThemedText>
+                <ThemedText style={styles.adminPanelSub}>{t("adminVerify.adminPanelBtn")}</ThemedText>
+              </View>
+              <View style={styles.adminPanelChevronWrap}>
+                <IconSymbol name="chevron.right" size={14} color={color.textSecondary} />
+              </View>
             </View>
-            <View style={{ flex: 1 }}>
-              <ThemedText style={{ fontWeight: "700", fontSize: 15, color: "#92400e" }}>
-                {t("adminVerify.adminPanelBtn")}
-              </ThemedText>
-              <ThemedText style={{ fontSize: 13, color: "#b45309", marginTop: 2 }}>
-                {t("adminVerify.adminPanelVerify")}
-              </ThemedText>
-            </View>
-            <IconSymbol name="chevron.right" size={16} color="#b45309" />
-          </TouchableOpacity>
+          </Pressable>
         )}
 
         {/* ── Profile form ──────────────────────────────────────── */}

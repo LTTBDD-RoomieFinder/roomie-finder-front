@@ -268,6 +268,14 @@ export default function SearchScreen() {
           renderItem={({ item }) => (
             <PostSearchResultCard
               post={item}
+              onAuthorPress={() => {
+                const uid = item.author?.id ?? item.user?.id;
+                if (uid == null || String(uid).length === 0) return;
+                router.push({
+                  pathname: "/user/[id]",
+                  params: { id: String(uid) },
+                });
+              }}
               onPress={() => {
                 const roomId = item.room?.id;
                 if (roomId == null) return;

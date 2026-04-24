@@ -364,6 +364,15 @@ export function HomeSearchOverlay({ visible, onClose }: Props) {
                 <PostSearchResultCard
                   key={p.id}
                   post={p}
+                  onAuthorPress={() => {
+                    const uid = p.author?.id ?? p.user?.id;
+                    if (uid == null || String(uid).length === 0) return;
+                    closeAnimated();
+                    router.push({
+                      pathname: "/user/[id]",
+                      params: { id: String(uid) },
+                    });
+                  }}
                   onPress={() => {
                     const roomId = p.room?.id;
                     if (roomId == null) return;

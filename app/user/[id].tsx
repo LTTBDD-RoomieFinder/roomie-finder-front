@@ -12,15 +12,25 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 import { profileApi } from "@/apis/profile";
 import { ThemedText } from "@/components/themed-text";
+import {
+  formatPublicDisplayName,
+  humanizeLoginHandle,
+  isNumericUserIdParam,
+} from "@/utils/display-name";
 import { ThemedView } from "@/components/themed-view";
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { ReportTriggerButton, SubmitReportModal } from "@/components/report/submit-report-modal";
+import { ReviewListItem } from "@/components/reputation/review-list-item";
+import { ReviewsDetailModal } from "@/components/reputation/reviews-detail-modal";
+import { WriteReviewModal } from "@/components/reputation/write-review-modal";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useLanguage } from "@/hooks/use-language";
 import { reviewService } from "@/services/review-service";
+import { useAuthStore } from "@/stores/useAuthStore";
 import { useProfileAvatarStore } from "@/stores/useProfileAvatarStore";
-import { ReviewContext } from "@/types/enums";
-import type { ReviewResponse, ReviewSummaryResponse } from "@/types/reputation";
+import { ReportTargetType } from "@/types/enums";
+import type { ReviewSummaryResponse } from "@/types/reputation";
 
 type PublicProfile = {
   fullName: string;
@@ -74,103 +84,26 @@ function StarRow({
   );
 }
 
-function ReviewCard({
-  item,
-  t,
-  locale,
-  color,
-}: {
-  item: ReviewResponse;
-  t: (key: string) => string;
-  locale: string;
-  color: ReturnType<typeof useAppTheme>["color"];
-}) {
-  const ctxKey =
-    item.context === ReviewContext.LANDLORD_EXPERIENCE
-      ? "publicUser.reviewContext.LANDLORD_EXPERIENCE"
-      : "publicUser.reviewContext.ROOMMATE_EXPERIENCE";
-  const ctxLabel = t(ctxKey);
-  let dateLabel = item.createdAt;
-  try {
-    dateLabel = new Date(item.createdAt.replace(" ", "T")).toLocaleDateString(
-      locale === "vi" ? "vi-VN" : "en-US",
-      { day: "2-digit", month: "short", year: "numeric" },
-    );
-  } catch {
-    /* keep raw */
-  }
-
-  return (
-    <View
-      style={[
-        styles.reviewCard,
-        { borderColor: color.border + "55", backgroundColor: color.card },
-      ]}
-    >
-      <View style={styles.reviewTop}>
-        <UserAvatar
-          userId={item.reviewerId > 0 ? item.reviewerId : undefined}
-          hintUrl={item.reviewerAvatarUrl}
-          name={item.reviewerFullName}
-          size={44}
-          style={styles.reviewerAvatar}
-        />
-        <View style={{ flex: 1 }}>
-          <ThemedText
-            type="defaultSemiBold"
-            style={{ color: color.text }}
-            numberOfLines={1}
-          >
-            {item.reviewerFullName?.trim() || t("common.user")}
-          </ThemedText>
-          <View style={styles.reviewMetaRow}>
-            <StarRow
-              rating={item.rating}
-              size={13}
-              activeColor="#F5A623"
-              mutedColor={color.border}
-            />
-            <ThemedText style={[styles.reviewDate, { color: color.icon }]}>
-              {dateLabel}
-            </ThemedText>
-          </View>
-        </View>
-      </View>
-      <View
-        style={[
-          styles.contextChip,
-          { backgroundColor: color.primary + "14", borderColor: color.primary + "35" },
-        ]}
-      >
-        <ThemedText style={[styles.contextChipText, { color: color.primary }]}>
-          {ctxLabel}
-        </ThemedText>
-      </View>
-      {item.comment?.trim() ? (
-        <ThemedText style={[styles.reviewComment, { color: color.textSecondary }]}>
-          {item.comment.trim()}
-        </ThemedText>
-      ) : null}
-    </View>
-  );
-}
-
 export default function PublicUserProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { color, radius } = useAppTheme();
   const { t, locale } = useLanguage();
+  const authUser = useAuthStore((s) => s.user);
   const setAvatarCache = useProfileAvatarStore((s) => s.setAvatar);
 
   const idParam = Array.isArray(id) ? id[0] : id;
   const userIdKey = idParam?.trim() ?? "";
-  const userIdNum = Number(userIdKey);
-  const idValid = userIdKey.length > 0 && Number.isFinite(userIdNum);
+  const idValid = userIdKey.length > 0;
+  const revieweeNumericId = isNumericUserIdParam(userIdKey) ? parseInt(userIdKey, 10) : 0;
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [profile, setProfile] = useState<PublicProfile | null>(null);
   const [summary, setSummary] = useState<ReviewSummaryResponse | null>(null);
+  const [writeReviewOpen, setWriteReviewOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reviewsDetailOpen, setReviewsDetailOpen] = useState(false);
 
   const load = useCallback(async () => {
     if (!idValid) {
@@ -204,10 +137,28 @@ export default function PublicUserProfileScreen() {
     void load();
   }, [load]);
 
-  const displayName =
-    profile?.fullName?.trim() ||
-    (profile?.username ? `@${profile.username}` : "") ||
-    t("common.user");
+  const displayName = profile
+    ? formatPublicDisplayName(profile.fullName, profile.username, t("common.user"))
+    : t("common.user");
+
+  const isOwnProfile =
+    authUser?.id != null && String(authUser.id) === userIdKey;
+  const canWriteReview = Boolean(
+    authUser &&
+      profile &&
+      !isOwnProfile &&
+      idValid &&
+      revieweeNumericId > 0,
+  );
+  const showLoginToReview = Boolean(!authUser && profile && !loading && !error);
+  const canReportThisUser = Boolean(
+    authUser &&
+      !isOwnProfile &&
+      profile &&
+      !loading &&
+      !error &&
+      revieweeNumericId > 0,
+  );
 
   return (
     <>
@@ -226,7 +177,16 @@ export default function PublicUserProfileScreen() {
             <ThemedText style={[styles.headerTitle, { color: color.text }]} numberOfLines={1}>
               {t("publicUser.title")}
             </ThemedText>
-            <View style={{ width: 40 }} />
+            <View style={styles.headerRightSlot}>
+              {canReportThisUser ? (
+                <ReportTriggerButton
+                  onPress={() => setReportOpen(true)}
+                  accessibilityLabel={t("report.a11yOpen")}
+                />
+              ) : (
+                <View style={{ width: 34 }} />
+              )}
+            </View>
           </View>
 
           {loading ? (
@@ -271,57 +231,111 @@ export default function PublicUserProfileScreen() {
                 <ThemedText type="title" style={[styles.name, { color: color.text }]}>
                   {displayName}
                 </ThemedText>
-                {profile?.username?.trim() ? (
+                {profile?.username?.trim() && profile.fullName?.trim() ? (
                   <ThemedText style={[styles.username, { color: color.textSecondary }]}>
-                    @{profile.username.trim()}
+                    @{humanizeLoginHandle(profile.username)}
+                  </ThemedText>
+                ) : null}
+
+                {summary != null && summary.totalReviews > 0 ? (
+                  <View
+                    style={[
+                      styles.heroReviewBadge,
+                      { backgroundColor: color.backgroundSecondary, borderColor: color.border },
+                    ]}
+                  >
+                    <StarRow
+                      rating={Math.round(summary.averageRating)}
+                      size={15}
+                      activeColor="#E8A23C"
+                      mutedColor={color.border}
+                    />
+                    <ThemedText type="defaultSemiBold" style={{ color: color.text, fontSize: 16 }}>
+                      {summary.averageRating.toFixed(1)}
+                    </ThemedText>
+                    <ThemedText style={[styles.heroReviewMeta, { color: color.textSecondary }]}>
+                      · {t("publicUser.reviewCount", { count: summary.totalReviews })}
+                    </ThemedText>
+                  </View>
+                ) : profile ? (
+                  <ThemedText style={[styles.heroNoReviews, { color: color.textSecondary }]}>
+                    {t("publicUser.noReviews")}
                   </ThemedText>
                 ) : null}
               </View>
 
-              <ThemedText style={[styles.sectionTitle, { color: color.text }]}>
-                {t("publicUser.reviewsSection")}
+              <View style={styles.reviewsHeaderRow}>
+                <ThemedText style={[styles.sectionTitle, { color: color.text, marginBottom: 0, flex: 1 }]}>
+                  {t("publicUser.reviewsSection")}
+                </ThemedText>
+                {summary && summary.totalReviews > 0 ? (
+                  <Pressable
+                    onPress={() => setReviewsDetailOpen(true)}
+                    hitSlop={10}
+                    style={({ pressed }) => [styles.reviewsExpandBtn, pressed && { opacity: 0.75 }]}
+                    accessibilityRole="button"
+                    accessibilityLabel={t("publicUser.reviewsOpenExpandedA11y")}
+                  >
+                    <Ionicons name="albums-outline" size={20} color={color.primary} />
+                    <ThemedText style={[styles.reviewsExpandText, { color: color.primary }]}>
+                      {t("publicUser.reviewsOpenExpanded")}
+                    </ThemedText>
+                  </Pressable>
+                ) : null}
+              </View>
+              <ThemedText style={[styles.reviewsSectionLead, { color: color.textSecondary }]}>
+                {t("publicUser.reviewsSectionLead")}
               </ThemedText>
 
-              {summary && summary.totalReviews > 0 ? (
-                <View
-                  style={[
-                    styles.summaryCard,
-                    { backgroundColor: color.backgroundSecondary, borderRadius: radius.lg },
+              {canWriteReview ? (
+                <Pressable
+                  onPress={() => setWriteReviewOpen(true)}
+                  style={({ pressed }) => [
+                    styles.writeCta,
+                    {
+                      borderColor: color.primary + "45",
+                      backgroundColor: pressed
+                        ? color.primary + "22"
+                        : color.primary + "12",
+                      borderRadius: radius.lg,
+                    },
                   ]}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("publicUser.writeReview.cta")}
                 >
-                  <View style={styles.summaryRow}>
-                    <ThemedText style={[styles.avgBig, { color: color.primary }]}>
-                      {summary.averageRating.toFixed(1)}
-                    </ThemedText>
-                    <View style={{ flex: 1 }}>
-                      <StarRow
-                        rating={Math.round(summary.averageRating)}
-                        size={18}
-                        activeColor="#F5A623"
-                        mutedColor={color.border}
-                      />
-                      <ThemedText style={[styles.muted, { color: color.textSecondary, marginTop: 4 }]}>
-                        {t("publicUser.reviewCount", { count: summary.totalReviews })}
-                      </ThemedText>
-                    </View>
-                  </View>
-                </View>
-              ) : (
-                <ThemedText style={[styles.emptyReviews, { color: color.textSecondary }]}>
-                  {t("publicUser.noReviews")}
-                </ThemedText>
-              )}
+                  <Ionicons name="create-outline" size={22} color={color.primary} />
+                  <ThemedText style={[styles.writeCtaText, { color: color.primary }]}>
+                    {t("publicUser.writeReview.cta")}
+                  </ThemedText>
+                  <Ionicons name="chevron-forward" size={18} color={color.primary} />
+                </Pressable>
+              ) : showLoginToReview && !isOwnProfile ? (
+                <Pressable
+                  onPress={() => router.push("/(auth)/login")}
+                  style={({ pressed }) => [
+                    styles.writeCta,
+                    {
+                      borderColor: color.border,
+                      backgroundColor: pressed
+                        ? color.backgroundSecondary
+                        : color.card,
+                      borderRadius: radius.lg,
+                    },
+                  ]}
+                  accessibilityRole="button"
+                >
+                  <Ionicons name="log-in-outline" size={22} color={color.primary} />
+                  <ThemedText style={[styles.writeCtaText, { color: color.text }]}>
+                    {t("publicUser.writeReview.loginCta")}
+                  </ThemedText>
+                  <Ionicons name="chevron-forward" size={18} color={color.icon} />
+                </Pressable>
+              ) : null}
 
               {summary?.reviews?.length ? (
                 <View style={styles.reviewList}>
                   {summary.reviews.map((r) => (
-                    <ReviewCard
-                      key={r.id}
-                      item={r}
-                      t={t}
-                      locale={locale}
-                      color={color}
-                    />
+                    <ReviewListItem key={r.id} item={r} t={t} locale={locale} />
                   ))}
                 </View>
               ) : null}
@@ -329,6 +343,32 @@ export default function PublicUserProfileScreen() {
           )}
         </ThemedView>
       </SafeAreaView>
+
+      <WriteReviewModal
+        visible={writeReviewOpen}
+        onClose={() => setWriteReviewOpen(false)}
+        revieweeId={revieweeNumericId}
+        revieweeName={displayName}
+        onSuccess={() => void load()}
+      />
+
+      <SubmitReportModal
+        visible={reportOpen}
+        onClose={() => setReportOpen(false)}
+        targetType={ReportTargetType.USER}
+        targetId={revieweeNumericId}
+        contextLabel={displayName}
+        onSubmitted={() => void load()}
+      />
+
+      <ReviewsDetailModal
+        visible={reviewsDetailOpen}
+        onClose={() => setReviewsDetailOpen(false)}
+        memberName={displayName}
+        memberUserId={userIdKey}
+        summary={summary}
+        hideProfileCta
+      />
     </>
   );
 }
@@ -345,6 +385,11 @@ const styles = StyleSheet.create({
   },
   backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
   headerTitle: { flex: 1, textAlign: "center", fontSize: 17, fontWeight: "800" },
+  headerRightSlot: {
+    width: 40,
+    alignItems: "flex-end",
+    justifyContent: "center",
+  },
   centered: { flex: 1, justifyContent: "center", alignItems: "center", padding: 24 },
   muted: { fontSize: 14 },
   retryBtn: {
@@ -369,42 +414,40 @@ const styles = StyleSheet.create({
   },
   name: { fontSize: 22, textAlign: "center" },
   username: { fontSize: 14, marginTop: 4 },
-  sectionTitle: { fontSize: 16, fontWeight: "800", marginBottom: 12 },
-  summaryCard: { padding: 16, marginBottom: 16 },
-  summaryRow: { flexDirection: "row", alignItems: "center", gap: 16 },
-  avgBig: { fontSize: 36, fontWeight: "800", minWidth: 56 },
-  emptyReviews: { fontSize: 14, marginBottom: 8 },
-  reviewList: { gap: 12 },
-  reviewCard: {
+  heroReviewBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
     borderRadius: 14,
     borderWidth: StyleSheet.hairlineWidth,
-    padding: 14,
-    gap: 10,
   },
-  reviewTop: { flexDirection: "row", alignItems: "center", gap: 12 },
-  reviewerAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  heroReviewMeta: { fontSize: 14, fontWeight: "600" },
+  heroNoReviews: { fontSize: 13, marginTop: 12, textAlign: "center" },
+  reviewsHeaderRow: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "space-between",
+    gap: 8,
+    marginBottom: 6,
   },
-  reviewMetaRow: {
+  sectionTitle: { fontSize: 18, fontWeight: "800", marginBottom: 12 },
+  reviewsSectionLead: { fontSize: 14, lineHeight: 20, marginBottom: 14 },
+  reviewsExpandBtn: { flexDirection: "row", alignItems: "center", gap: 4 },
+  reviewsExpandText: { fontSize: 13, fontWeight: "800" },
+  writeCta: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    marginTop: 4,
-    flexWrap: "wrap",
-  },
-  reviewDate: { fontSize: 12 },
-  contextChip: {
-    alignSelf: "flex-start",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
     borderWidth: StyleSheet.hairlineWidth,
+    marginBottom: 14,
   },
-  contextChipText: { fontSize: 12, fontWeight: "700" },
-  reviewComment: { fontSize: 14, lineHeight: 20 },
+  writeCtaText: { flex: 1, fontSize: 15, fontWeight: "800" },
+  reviewList: { gap: 12 },
   starRow: { flexDirection: "row", gap: 2, alignItems: "center" },
 });

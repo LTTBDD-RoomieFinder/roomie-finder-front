@@ -16,6 +16,8 @@
     "user": "User",
     "optional": "optional",
     "success": "Success",
+    "close": "Close",
+    "goBack": "Go back",
     "permissionTitle": "Permission needed",
     "mediaLibraryPermission": "Photo library access is required to add images."
   },
@@ -105,7 +107,9 @@
     "directionsNoCoords": "This listing has no coordinates for navigation.",
     "directionsOpenFailed": "Could not open Google Maps.",
     "previewLoading": "Loading room…",
-    "tapPinHint": "Tap a pin to preview the room"
+    "tapPinHint": "Tap a pin to preview the room",
+    "reviewPosterCta": "Rate the poster",
+    "reviewPosterLogin": "Log in to rate the poster"
   },
   "post": {
     "status": {
@@ -206,7 +210,8 @@
       "tenantRequirement": "Tenant preference",
       "amenities": "Amenities",
       "host": "Host",
-      "hostLoading": "Loading…"
+      "hostLoading": "Loading…",
+      "hostNamePending": "Member"
     },
     "form": {
       "basicSection": "Basics",
@@ -502,7 +507,17 @@
     "maxPeople": "Up to {{count}} people",
     "views": "{{count}} views",
     "expires": "Exp:",
-    "perMonth": "/mo"
+    "perMonth": "/mo",
+    "posterReviewsTitle": "Reviews about the poster",
+    "posterReviewsNone": "No reviews yet — open profile to read trust details or leave one after you connect.",
+    "posterReviewsSeeAll": "See all reviews",
+    "posterTrustEyebrow": "On Roomie",
+    "posterTrustTagline": "Ratings from people who really rented or roomed here — not random group-chat noise.",
+    "posterOpenReviews": "View reviews",
+    "posterOpenReviewsA11y": "View member reviews and full text",
+    "posterViewProfileLink": "Open profile, verification & reports",
+    "posterTrustEmptyTitle": "No community score yet",
+    "posterTrustEmptySub": "Open their profile to see verification and leave a review after you connect."
   },
   "postSearch": {
     "anonymous": "Anonymous",
@@ -585,6 +600,10 @@
     "averageRating": "Avg: {{score}}",
     "totalReviews": "{{count}} reviews",
     "noReviews": "No reviews yet.",
+    "modalTitle": "Reviews for {{name}}",
+    "modalTitleGeneric": "Member reviews",
+    "modalLead": "Context from people who used Roomie to find a home — with clear roles and dates, not anonymous comments like on a social feed.",
+    "viewMemberProfile": "Open full profile",
     "errors": {
       "9001": "Review not found.",
       "9002": "You cannot review yourself.",
@@ -594,6 +613,10 @@
     }
   },
   "report": {
+    "modalTitle": "Report to moderators",
+    "a11yOpen": "Report a problem",
+    "loginRequiredTitle": "Sign in required",
+    "loginRequiredMsg": "Please sign in to send a report to the team.",
     "sectionTitle": "Report",
     "targetType_USER": "User",
     "targetType_POST": "Listing",
@@ -643,6 +666,9 @@
   "publicUser": {
     "title": "Member profile",
     "reviewsSection": "Reviews",
+    "reviewsSectionLead": "Real experiences from this member’s roommates and renters. Use them alongside verification and in-app safety tools — more signal than a random Facebook post.",
+    "reviewsOpenExpanded": "Gallery",
+    "reviewsOpenExpandedA11y": "Open the full review list",
     "reviewCount": "{{count}} reviews",
     "noReviews": "No reviews yet.",
     "loadError": "Could not load this profile.",
@@ -651,11 +677,66 @@
     "reviewContext": {
       "ROOMMATE_EXPERIENCE": "Roommate experience",
       "LANDLORD_EXPERIENCE": "Landlord experience"
+    },
+    "writeReview": {
+      "title": "Write a review",
+      "subtitle": "Share your honest experience with {{name}}.",
+      "valueProposition": "Your review helps everyone choose better roommates and hosts. It stays in context here — we’re built for room search and trust, not for viral feeds.",
+      "ratingLabel": "Overall rating",
+      "contextLabel": "This review is about",
+      "contextLandlord": "Host or listing",
+      "contextRoommate": "Roommate experience",
+      "commentLabel": "Comment (optional)",
+      "commentPlaceholder": "What went well? What could be better?",
+      "commentHint": "Up to {{max}} characters.",
+      "submit": "Submit review",
+      "cancel": "Cancel",
+      "success": "Thanks! Your review is now visible on this profile.",
+      "failed": "Could not submit. You may have already reviewed this person, or the request was invalid.",
+      "cta": "Write a review",
+      "loginCta": "Log in to leave a review",
+      "stars": "stars"
     }
   },
+  "adminHub": {
+    "eyebrow": "Operations",
+    "title": "Admin center",
+    "subtitle": "Trust, safety, and identity for roommate search",
+    "cardVerifyTitle": "Identity verifications",
+    "cardVerifyDesc": "Review ID submissions so users know who they are dealing with.",
+    "cardReportsTitle": "Reports queue",
+    "cardReportsDesc": "Handle scams, fake listings, harassment, and spam reports from the community.",
+    "footerHint": "User-facing tools like deal-breakers, trust scores, reviews, and in-app reporting already reduce risk. These queues close the loop for serious cases."
+  },
+  "adminReports": {
+    "title": "Reports",
+    "subtitle": "Community safety queue",
+    "headerCount": "{{count}} reports in this list",
+    "detailTitle": "Report detail",
+    "empty": "No reports in this filter",
+    "filterAll": "All",
+    "filterPending": "Pending",
+    "filterReviewed": "Reviewed",
+    "filterDismissed": "Dismissed",
+    "filterActioned": "Actioned",
+    "fieldReporter": "Reporter",
+    "fieldCreated": "Submitted",
+    "fieldReviewed": "Reviewed at",
+    "adminNoteLabel": "Internal note (optional)",
+    "adminNotePh": "Note for audit trail…",
+    "resolveTitle": "Resolve",
+    "btnReviewed": "Reviewed",
+    "btnDismissed": "Dismiss",
+    "btnActioned": "Actioned",
+    "updatedMsg": "Report status updated.",
+    "updateFailed": "Could not update. Check permissions or status rules.",
+    "closedHint": "This report is closed. Notes above are read-only for history."
+  },
   "adminVerify": {
-    "title": "Verification Management",
-    "subtitle": "Review & approve user identities",
+    "title": "Verifications",
+    "headerEyebrow": "Admin",
+    "headerCount": "{{count}} in this list",
+    "subtitle": "Review identity submissions",
     "filterAll": "All",
     "filterPending": "Pending",
     "filterVerified": "Verified",
@@ -688,7 +769,7 @@
     "approvedMsg": "Verification approved successfully.",
     "rejectedMsg": "Verification rejected.",
     "reviewFailed": "Failed to submit review. Please try again.",
-    "adminPanelBtn": "Admin Panel",
+    "adminPanelBtn": "Admin dashboard",
     "adminPanelVerify": "Review pending verifications"
   }
 }

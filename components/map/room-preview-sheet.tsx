@@ -26,12 +26,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { WriteReviewModal } from "@/components/reputation/write-review-modal";
 import { ThemedText } from "@/components/themed-text";
 import { UserAvatar } from "@/components/ui/user-avatar";
 import type { PostResponse } from "@/data/response";
 import { useAppTheme } from "@/hooks/use-app-theme";
 import { useLanguage } from "@/hooks/use-language";
 import { genderReqLabelKey, roomTypeLabelKey } from "@/lib/i18n-labels";
+import { useAuthStore } from "@/stores/useAuthStore";
 import { formatRoomPrice } from "@/utils/format-room";
 import { openGoogleMapsDirections } from "@/utils/open-google-directions";
 
@@ -62,6 +64,7 @@ function RoomPreviewSheetInner({
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const isDark = scheme === "dark";
+  const authUser = useAuthStore((s) => s.user);
 
   // Slide animation
   const translateY = useRef(new Animated.Value(SHEET_HEIGHT)).current;
@@ -69,6 +72,7 @@ function RoomPreviewSheetInner({
   // Image carousel state
   const [imgPage, setImgPage] = useState(0);
   const carouselRef = useRef<ScrollView>(null);
+  const [writeReviewOpen, setWriteReviewOpen] = useState(false);
 
   // Animate in/out
   useEffect(() => {
@@ -87,6 +91,10 @@ function RoomPreviewSheetInner({
     setImgPage(0);
     carouselRef.current?.scrollTo({ x: 0, animated: false });
   }, [post?.id, visible]);
+
+  useEffect(() => {
+    if (!visible || !post) setWriteReviewOpen(false);
+  }, [visible, post?.id]);
 
   // Swipe-down to close
   const panResponder = useMemo(
@@ -148,7 +156,16 @@ function RoomPreviewSheetInner({
     .join(", ");
 
   const ownerName = post?.user?.fullName || post?.user?.username || t("common.user");
-  const ownerLetter = ownerName.trim().charAt(0).toUpperCase();
+  const posterNumericId = post?.user?.id != null ? Number(post.user.id) : NaN;
+  const posterIdValid = Number.isFinite(posterNumericId) && posterNumericId > 0;
+  const isOwnPost =
+    authUser?.id != null &&
+    posterIdValid &&
+    String(authUser.id) === String(post?.user?.id);
+  const canReviewPoster = Boolean(
+    authUser && posterIdValid && !isOwnPost,
+  );
+  const showLoginToReviewPoster = Boolean(!authUser && posterIdValid);
 
   const destForDirections =
     directionsTarget ??
@@ -406,6 +423,52 @@ function RoomPreviewSheetInner({
                 ) : null}
               </Pressable>
 
+              {posterIdValid && (canReviewPoster || showLoginToReviewPoster) ? (
+                <Pressable
+                  onPress={() => {
+                    if (canReviewPoster) setWriteReviewOpen(true);
+                    else router.push("/(auth)/login");
+                  }}
+                  style={({ pressed }) => [
+                    styles.reviewPosterCta,
+                    {
+                      borderColor: canReviewPoster ? color.primary + "40" : color.border,
+                      backgroundColor: canReviewPoster
+                        ? pressed
+                          ? color.primary + "20"
+                          : color.primary + "10"
+                        : pressed
+                          ? color.backgroundSecondary
+                          : color.card,
+                      borderRadius: radius.lg,
+                    },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    canReviewPoster
+                      ? t("map.reviewPosterCta")
+                      : t("map.reviewPosterLogin")
+                  }
+                >
+                  <Ionicons
+                    name={canReviewPoster ? "star-half-outline" : "log-in-outline"}
+                    size={20}
+                    color={color.primary}
+                  />
+                  <ThemedText
+                    style={[
+                      styles.reviewPosterCtaText,
+                      { color: canReviewPoster ? color.primary : color.text },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {canReviewPoster
+                      ? t("map.reviewPosterCta")
+                      : t("map.reviewPosterLogin")}
+                  </ThemedText>
+                </Pressable>
+              ) : null}
+
               {/* ── Amenities ────── */}
               {(room?.amenities?.length ?? 0) > 0 && (
                 <View style={styles.amenitiesSection}>
@@ -504,6 +567,16 @@ function RoomPreviewSheetInner({
           </View>
         )}
       </Animated.View>
+
+      {posterIdValid ? (
+        <WriteReviewModal
+          visible={writeReviewOpen}
+          onClose={() => setWriteReviewOpen(false)}
+          revieweeId={posterNumericId}
+          revieweeName={ownerName}
+          onSuccess={() => setWriteReviewOpen(false)}
+        />
+      ) : null}
     </>
   );
 }
@@ -665,6 +738,22 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  reviewPosterCta: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  reviewPosterCtaText: {
+    fontSize: 14,
+    fontWeight: "800",
+    flexShrink: 1,
+    textAlign: "center",
   },
   ownerAvatar: {
     width: 44,

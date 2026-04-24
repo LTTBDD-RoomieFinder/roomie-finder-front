@@ -1,4 +1,4 @@
-import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import { type Href, useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import React, { useCallback, useEffect, useState } from "react";
 import {
     ActivityIndicator,
@@ -10,6 +10,7 @@ import {
     View,
 } from "react-native";
 
+import { SubmitReportModal } from "@/components/report/submit-report-modal";
 import { ProfileMatchSection } from "@/components/matching/profile-match-section";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
@@ -22,7 +23,8 @@ import { profileApi } from "@/apis/profile";
 import { roomService } from "@/services/room-service";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useProfileAvatarStore } from "@/stores/useProfileAvatarStore";
-import { GenderRequirement, RoomType } from "@/types/enums";
+import { GenderRequirement, ReportTargetType, RoomType } from "@/types/enums";
+import { formatPublicDisplayName } from "@/utils/display-name";
 import { formatRoomAddress, formatRoomPrice } from "@/utils/format-room";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Image } from "expo-image";
@@ -41,6 +43,7 @@ export default function RoomDetailScreen() {
   const [hostName, setHostName] = useState("");
   const [hostAvatarHint, setHostAvatarHint] = useState<string | null>(null);
   const [hostLoading, setHostLoading] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const applyHint = useProfileAvatarStore((s) => s.applyHint);
 
   const roomId = Number(Array.isArray(id) ? id[0] : id);
@@ -87,13 +90,15 @@ export default function RoomDetailScreen() {
         if (cancelled) return;
         const body = res as Record<string, unknown>;
         const data = (body?.data ?? body) as Record<string, unknown>;
-        const name =
+        const fullName =
           (typeof data.fullName === "string" && data.fullName.trim()) ||
           (typeof data.full_name === "string" && data.full_name.trim()) ||
+          "";
+        const login =
           (typeof data.username === "string" && data.username.trim()) ||
           (typeof data.user_name === "string" && data.user_name.trim()) ||
           "";
-        setHostName(name);
+        setHostName(formatPublicDisplayName(fullName || null, login || null, ""));
         const av =
           typeof data.avatarUrl === "string"
             ? data.avatarUrl.trim() || null
@@ -189,29 +194,58 @@ export default function RoomDetailScreen() {
               </View>
             </Pressable>
 
-            {String(user?.id) === String(room.ownerId) && (
-              <View style={styles.headerRight}>
+            <View style={styles.headerRight}>
+              {String(user?.id) !== String(room.ownerId) &&
+              room.ownerId != null &&
+              Number.isFinite(Number(room.ownerId)) ? (
                 <Pressable
-                  onPress={() =>
-                    router.push({
-                      pathname: "/(tabs)/room/edit",
-                      params: { id: room.id },
-                    })
-                  }
+                  onPress={() => {
+                    if (!user) {
+                      Alert.alert(t("report.loginRequiredTitle"), t("report.loginRequiredMsg"), [
+                        { text: t("common.cancel"), style: "cancel" },
+                        {
+                          text: t("publicUser.writeReview.loginCta"),
+                          onPress: () => router.push("/(auth)/login"),
+                        },
+                      ]);
+                      return;
+                    }
+                    setReportOpen(true);
+                  }}
                   style={styles.iconBtn}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("report.a11yOpen")}
                 >
                   <View style={styles.glassBtn}>
-                    <MaterialIcons name="edit" size={24} color="#fff" />
+                    <MaterialIcons name="flag" size={22} color="#fff" />
                   </View>
                 </Pressable>
+              ) : null}
 
-                <Pressable onPress={handleDelete} style={styles.iconBtn}>
-                  <View style={styles.glassBtn}>
-                    <MaterialIcons name="delete" size={24} color="#ff4444" />
-                  </View>
-                </Pressable>
-              </View>
-            )}
+              {String(user?.id) === String(room.ownerId) ? (
+                <>
+                  <Pressable
+                    onPress={() =>
+                      router.push({
+                        pathname: "/(tabs)/room/edit",
+                        params: { id: room.id },
+                      })
+                    }
+                    style={styles.iconBtn}
+                  >
+                    <View style={styles.glassBtn}>
+                      <MaterialIcons name="edit" size={24} color="#fff" />
+                    </View>
+                  </Pressable>
+
+                  <Pressable onPress={handleDelete} style={styles.iconBtn}>
+                    <View style={styles.glassBtn}>
+                      <MaterialIcons name="delete" size={24} color="#ff4444" />
+                    </View>
+                  </Pressable>
+                </>
+              ) : null}
+            </View>
           </View>
         </View>
 
@@ -225,10 +259,25 @@ export default function RoomDetailScreen() {
             </ThemedText>
           </View>
 
-          <View
-            style={[
+          <Pressable
+            disabled={
+              hostLoading ||
+              room.ownerId == null ||
+              !Number.isFinite(Number(room.ownerId))
+            }
+            onPress={() => {
+              if (room.ownerId == null || !Number.isFinite(Number(room.ownerId))) return;
+              const uid = String(room.ownerId).trim();
+              if (!uid) return;
+              router.push(`/user/${uid}` as Href);
+            }}
+            style={({ pressed }) => [
               styles.hostRow,
-              { backgroundColor: color.card, borderColor: color.border },
+              {
+                backgroundColor: color.card,
+                borderColor: color.border,
+                opacity: pressed ? 0.92 : 1,
+              },
             ]}
           >
             <UserAvatar
@@ -242,11 +291,11 @@ export default function RoomDetailScreen() {
               <ThemedText style={[styles.hostLabel, { color: color.textSecondary }]}>
                 {t("room.detail.host")}
               </ThemedText>
-              <ThemedText type="defaultSemiBold" style={{ color: color.text }} numberOfLines={1}>
-                {hostLoading ? t("room.detail.hostLoading") : hostName || "—"}
+              <ThemedText type="defaultSemiBold" style={{ color: color.text }}>
+                {hostLoading ? t("room.detail.hostLoading") : hostName.trim() || t("room.detail.hostNamePending")}
               </ThemedText>
             </View>
-          </View>
+          </Pressable>
 
           <View style={styles.matchSection}>
             <ProfileMatchSection
@@ -329,6 +378,15 @@ export default function RoomDetailScreen() {
           <View style={styles.bottomSpacer} />
         </View>
       </ScrollView>
+
+      <SubmitReportModal
+        visible={reportOpen}
+        onClose={() => setReportOpen(false)}
+        targetType={ReportTargetType.USER}
+        targetId={Number(room.ownerId)}
+        contextLabel={room.title}
+        onSubmitted={() => setReportOpen(false)}
+      />
     </ThemedView>
   );
 }
